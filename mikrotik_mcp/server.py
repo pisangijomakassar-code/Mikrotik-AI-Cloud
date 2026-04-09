@@ -1720,6 +1720,613 @@ def check_all_routers_health(user_id: str) -> list[dict]:
 
 
 # ─────────────────────────────────────────────
+#  DHCP CLIENT
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_dhcp_clients(user_id: str, router: str = "") -> list[dict]:
+    """List DHCP client configurations (interfaces getting IP via DHCP).
+    Different from DHCP leases — this shows interfaces where the router GETS its IP from an upstream DHCP server.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/dhcp-client", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  WIRELESS EXTENDED
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_wireless_interfaces(user_id: str, router: str = "") -> list[dict]:
+    """List wireless interface configurations (SSID, frequency, band, mode).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/interface/wireless", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "No wireless interface or not supported on this router"}]
+
+
+@mcp.tool()
+def list_wireless_security_profiles(user_id: str, router: str = "") -> list[dict]:
+    """List wireless security profiles (WPA/WPA2 auth modes). Keys/passwords are stripped from output.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        rows = _query_path("/interface/wireless/security-profiles", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        # Strip sensitive key fields
+        for row in rows:
+            row.pop("wpa-pre-shared-key", None)
+            row.pop("wpa2-pre-shared-key", None)
+        return rows
+    except Exception:
+        return [{"info": "No wireless interface or not supported on this router"}]
+
+
+@mcp.tool()
+def list_wireless_access_list(user_id: str, router: str = "") -> list[dict]:
+    """List wireless access list (MAC filter allow/deny rules).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/interface/wireless/access-list", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "No wireless interface or not supported on this router"}]
+
+
+# ─────────────────────────────────────────────
+#  PPP EXTENDED
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_ppp_profiles(user_id: str, router: str = "") -> list[dict]:
+    """List PPP profiles (rate limits, DNS, IP pools for PPPoE/PPTP/L2TP users).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ppp/profile", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_l2tp_server(user_id: str, router: str = "") -> list[dict]:
+    """List L2TP server configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/l2tp-server/server", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_pptp_server(user_id: str, router: str = "") -> list[dict]:
+    """List PPTP server configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/pptp-server/server", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_sstp_server(user_id: str, router: str = "") -> list[dict]:
+    """List SSTP server configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/sstp-server/server", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  QUEUE EXTENDED (Read)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_queue_tree(user_id: str, router: str = "") -> list[dict]:
+    """List queue tree entries (hierarchical bandwidth management).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/queue/tree", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_queue_types(user_id: str, router: str = "") -> list[dict]:
+    """List queue types (PCQ, SFQ, FIFO, etc).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/queue/type", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  SYSTEM EXTENDED (Read) — Packages, License, Logging, NTP
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_system_packages(user_id: str, router: str = "") -> list[dict]:
+    """List installed RouterOS packages with versions.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/system/package", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def get_system_license(user_id: str, router: str = "") -> dict:
+    """Get RouterOS license information (level, features).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/system/license", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {"info": "No license data available"}
+
+
+@mcp.tool()
+def list_system_logging(user_id: str, router: str = "") -> list[dict]:
+    """List logging rules (what gets logged where).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/system/logging", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def get_system_ntp_client(user_id: str, router: str = "") -> dict:
+    """Get NTP client configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/system/ntp/client", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {}
+
+
+# ─────────────────────────────────────────────
+#  ROUTING (OSPF, BGP, Filters)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_routing_ospf_instances(user_id: str, router: str = "") -> list[dict]:
+    """List OSPF instances. Requires the routing package to be installed.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/routing/ospf/instance", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "Routing package not installed"}]
+
+
+@mcp.tool()
+def list_routing_ospf_neighbors(user_id: str, router: str = "") -> list[dict]:
+    """List OSPF neighbors. Requires the routing package to be installed.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/routing/ospf/neighbor", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "Routing package not installed"}]
+
+
+@mcp.tool()
+def list_routing_bgp_sessions(user_id: str, router: str = "") -> list[dict]:
+    """List BGP sessions/peers. Requires the routing package to be installed.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/routing/bgp/session", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "Routing package not installed"}]
+
+
+@mcp.tool()
+def list_routing_filters(user_id: str, router: str = "") -> list[dict]:
+    """List routing filter rules. Requires the routing package to be installed.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/routing/filter/rule", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "Routing package not installed"}]
+
+
+# ─────────────────────────────────────────────
+#  TOOLS / MONITORING
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_netwatch(user_id: str, router: str = "") -> list[dict]:
+    """List netwatch entries (host monitoring with up/down scripts).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/tool/netwatch", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def get_cloud_status(user_id: str, router: str = "") -> dict:
+    """Get MikroTik Cloud (DDNS) status and DNS name.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/ip/cloud", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {"info": "Cloud/DDNS not available"}
+
+
+@mcp.tool()
+def list_snmp_settings(user_id: str, router: str = "") -> dict:
+    """Get SNMP configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/snmp", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {}
+
+
+@mcp.tool()
+def list_upnp_settings(user_id: str, router: str = "") -> dict:
+    """Get UPnP configuration.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/ip/upnp", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {}
+
+
+# ─────────────────────────────────────────────
+#  INTERFACE TUNNELS
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_eoip_tunnels(user_id: str, router: str = "") -> list[dict]:
+    """List EoIP tunnel interfaces.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/eoip", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_gre_tunnels(user_id: str, router: str = "") -> list[dict]:
+    """List GRE tunnel interfaces.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/gre", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_ipip_tunnels(user_id: str, router: str = "") -> list[dict]:
+    """List IPIP tunnel interfaces.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/ipip", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_bonding_interfaces(user_id: str, router: str = "") -> list[dict]:
+    """List bonding (link aggregation) interfaces.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/bonding", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  FIREWALL EXTENDED (Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def add_firewall_filter(user_id: str, chain: str, action: str, protocol: str = "",
+                        src_address: str = "", dst_address: str = "", dst_port: str = "",
+                        comment: str = "", router: str = "") -> dict:
+    """Add a firewall filter rule. WRITE operation.
+
+    Args:
+        user_id: Telegram user ID
+        chain: Chain name (input, forward, output)
+        action: Action (accept, drop, reject, jump, etc)
+        protocol: Protocol (tcp, udp, icmp, etc). Empty = any.
+        src_address: Source IP/subnet. Empty = any.
+        dst_address: Destination IP/subnet. Empty = any.
+        dst_port: Destination port(s). Empty = any.
+        comment: Rule comment/description.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params: dict[str, str] = {"chain": chain, "action": action}
+            if protocol:
+                params["protocol"] = protocol
+            if src_address:
+                params["src-address"] = src_address
+            if dst_address:
+                params["dst-address"] = dst_address
+            if dst_port:
+                params["dst-port"] = dst_port
+            if comment:
+                params["comment"] = comment
+            api.path("/ip/firewall/filter").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Firewall filter rule added: chain={chain}, action={action}"}
+    except Exception as e:
+        return {"error": f"Failed to add firewall filter rule: {e}"}
+
+
+@mcp.tool()
+def remove_firewall_filter(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Remove a firewall filter rule by its .id. WRITE operation.
+
+    Args:
+        user_id: Telegram user ID
+        rule_id: The .id of the firewall filter rule to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/filter").remove(rule_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Firewall filter rule '{rule_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove firewall filter rule: {e}"}
+
+
+@mcp.tool()
+def add_nat_rule(user_id: str, chain: str, action: str, protocol: str = "",
+                 src_address: str = "", dst_address: str = "", dst_port: str = "",
+                 to_addresses: str = "", to_ports: str = "", comment: str = "",
+                 router: str = "") -> dict:
+    """Add a NAT rule. WRITE operation.
+
+    Args:
+        user_id: Telegram user ID
+        chain: Chain name (srcnat, dstnat)
+        action: Action (masquerade, dst-nat, src-nat, etc)
+        protocol: Protocol (tcp, udp, etc). Empty = any.
+        src_address: Source IP/subnet. Empty = any.
+        dst_address: Destination IP/subnet. Empty = any.
+        dst_port: Destination port(s). Empty = any.
+        to_addresses: NAT destination address(es). Empty = not set.
+        to_ports: NAT destination port(s). Empty = not set.
+        comment: Rule comment/description.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params: dict[str, str] = {"chain": chain, "action": action}
+            if protocol:
+                params["protocol"] = protocol
+            if src_address:
+                params["src-address"] = src_address
+            if dst_address:
+                params["dst-address"] = dst_address
+            if dst_port:
+                params["dst-port"] = dst_port
+            if to_addresses:
+                params["to-addresses"] = to_addresses
+            if to_ports:
+                params["to-ports"] = to_ports
+            if comment:
+                params["comment"] = comment
+            api.path("/ip/firewall/nat").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"NAT rule added: chain={chain}, action={action}"}
+    except Exception as e:
+        return {"error": f"Failed to add NAT rule: {e}"}
+
+
+@mcp.tool()
+def remove_nat_rule(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Remove a NAT rule by its .id. WRITE operation.
+
+    Args:
+        user_id: Telegram user ID
+        rule_id: The .id of the NAT rule to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/nat").remove(rule_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"NAT rule '{rule_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove NAT rule: {e}"}
+
+
+# ─────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────
 

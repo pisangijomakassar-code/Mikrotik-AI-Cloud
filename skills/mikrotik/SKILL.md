@@ -36,10 +36,10 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `list_routers` | `user_id` | List all routers registered by this user. No confirmation needed. |
-| `register_router` | `user_id, name, host, port, username, password, label?` | Register a new router. **CONFIRM before calling.** |
-| `remove_router` | `user_id, name` | Remove a registered router. **CONFIRM before calling.** |
-| `set_default_router` | `user_id, name` | Change the user's default router. **CONFIRM before calling.** |
+| `list_routers` | `user_id` | List all routers registered by this user |
+| `register_router` | `user_id, name, host, port, username, password, label?` | Register a new router. **CONFIRM.** |
+| `remove_router` | `user_id, name` | Remove a registered router. **CONFIRM.** |
+| `set_default_router` | `user_id, name` | Change the user's default router. **CONFIRM.** |
 | `test_connection` | `host, port, username, password` | Test if a router is reachable. No user_id needed. |
 
 ### System
@@ -55,78 +55,84 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_system_scheduler` | `user_id, router?` | Scheduled tasks |
 | `list_system_scripts` | `user_id, router?` | RouterOS scripts |
 | `run_system_script` | `user_id, script_name, router?` | Run a script. **DOUBLE CONFIRM.** |
+| `list_system_packages` | `user_id, router?` | Installed packages |
+| `get_system_license` | `user_id, router?` | License level and features |
+| `list_system_logging` | `user_id, router?` | Logging rules and actions |
+| `get_system_ntp_client` | `user_id, router?` | NTP client configuration |
 | `reboot_router` | `user_id, router?` | Reboot router. **DOUBLE CONFIRM.** |
+| `check_all_routers_health` | `user_id` | Quick health check across ALL registered routers |
 
-### Network
+### Interfaces
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_interfaces` | `user_id, router?` | All interfaces with traffic stats |
 | `get_interface_traffic` | `user_id, interface, router?` | Traffic for a specific interface |
-| `list_ip_addresses` | `user_id, router?` | IP addresses on interfaces |
-| `list_ip_routes` | `user_id, router?` | Routing table |
-| `list_dns_settings` | `user_id, router?` | DNS configuration |
-
-### Interface Management
-
-| Tool | Parameters | Description |
-|------|-----------|-------------|
 | `enable_interface` | `user_id, name, router?` | Enable interface. **CONFIRM.** |
 | `disable_interface` | `user_id, name, router?` | Disable interface. **CONFIRM.** |
 | `list_bridge_ports` | `user_id, router?` | Bridge port assignments |
 | `list_vlans` | `user_id, router?` | VLAN interfaces |
+| `list_bonding_interfaces` | `user_id, router?` | Bonding interfaces |
+| `list_eoip_tunnels` | `user_id, router?` | EoIP tunnel interfaces |
+| `list_gre_tunnels` | `user_id, router?` | GRE tunnel interfaces |
+| `list_ipip_tunnels` | `user_id, router?` | IPIP tunnel interfaces |
 
-### IP Management
+### Wireless
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
+| `list_wireless_interfaces` | `user_id, router?` | Wireless interfaces and config |
+| `list_wireless_clients` | `user_id, router?` | Connected WiFi clients |
+| `list_wireless_security_profiles` | `user_id, router?` | Wireless security profiles |
+| `list_wireless_access_list` | `user_id, router?` | Wireless access list (MAC filter) |
+
+### IP Addresses
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_ip_addresses` | `user_id, router?` | IP addresses on interfaces |
 | `add_ip_address` | `user_id, address, interface, comment?, router?` | Add IP to interface. **CONFIRM.** |
 | `remove_ip_address` | `user_id, address_id, router?` | Remove IP. **CONFIRM.** |
 | `list_ip_pools` | `user_id, router?` | IP address pools |
 | `list_ip_services` | `user_id, router?` | Enabled services (api, ssh, winbox, www) |
+| `list_ip_routes` | `user_id, router?` | Routing table |
+| `get_cloud_status` | `user_id, router?` | MikroTik Cloud (DDNS) status |
 
-### Clients & Devices
+### DNS
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `list_dhcp_leases` | `user_id, router?` | All DHCP clients (IP, MAC, hostname, status) |
-| `count_active_clients` | `user_id, router?` | Quick count of online clients |
-| `list_arp_table` | `user_id, router?` | All devices seen by the router |
-| `list_neighbors` | `user_id, router?` | CDP/MNDP/LLDP discovered devices |
-| `list_wireless_clients` | `user_id, router?` | Connected WiFi clients |
+| `list_dns_settings` | `user_id, router?` | DNS configuration |
+| `list_dns_static` | `user_id, router?` | Static DNS entries |
+| `add_dns_static` | `user_id, name, address, router?` | Add static DNS. **CONFIRM.** |
+| `remove_dns_static` | `user_id, entry_id, router?` | Remove static DNS. **CONFIRM.** |
 
-### DHCP Extended
+### DHCP
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_dhcp_servers` | `user_id, router?` | DHCP server configs |
 | `list_dhcp_networks` | `user_id, router?` | DHCP network configs |
+| `list_dhcp_leases` | `user_id, router?` | All DHCP clients (IP, MAC, hostname, status) |
+| `list_dhcp_clients` | `user_id, router?` | DHCP client interfaces (when router is DHCP client) |
+| `count_active_clients` | `user_id, router?` | Quick count of online clients |
 | `make_dhcp_static` | `user_id, lease_id, router?` | Convert dynamic lease to static. **CONFIRM.** |
 | `remove_dhcp_lease` | `user_id, lease_id, router?` | Remove DHCP lease, force client reconnect. **CONFIRM.** |
 
-### DNS Management
-
-| Tool | Parameters | Description |
-|------|-----------|-------------|
-| `list_dns_static` | `user_id, router?` | Static DNS entries |
-| `add_dns_static` | `user_id, name, address, router?` | Add static DNS. **CONFIRM.** |
-| `remove_dns_static` | `user_id, entry_id, router?` | Remove static DNS. **CONFIRM.** |
-
-### Security
+### Firewall
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_firewall_filter` | `user_id, router?` | Firewall filter rules |
+| `add_firewall_filter` | `user_id, chain, action, src_address?, dst_address?, protocol?, dst_port?, comment?, router?` | Add filter rule. **CONFIRM.** |
+| `remove_firewall_filter` | `user_id, rule_id, router?` | Remove filter rule. **CONFIRM.** |
 | `list_firewall_nat` | `user_id, router?` | NAT rules |
-
-### Firewall Extended
-
-| Tool | Parameters | Description |
-|------|-----------|-------------|
+| `add_nat_rule` | `user_id, chain, action, src_address?, dst_address?, to_addresses?, to_ports?, protocol?, dst_port?, comment?, router?` | Add NAT rule. **CONFIRM.** |
+| `remove_nat_rule` | `user_id, rule_id, router?` | Remove NAT rule. **CONFIRM.** |
+| `list_firewall_mangle` | `user_id, router?` | Mangle rules |
 | `list_firewall_address_lists` | `user_id, router?` | Address lists |
 | `add_to_address_list` | `user_id, list_name, address, comment?, timeout?, router?` | Add IP to address list. **CONFIRM.** |
 | `remove_from_address_list` | `user_id, entry_id, router?` | Remove from address list. **CONFIRM.** |
-| `list_firewall_mangle` | `user_id, router?` | Mangle rules |
 | `list_connections` | `user_id, router?` | Active connections (first 100) |
 
 ### Hotspot
@@ -134,29 +140,32 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_hotspot_active` | `user_id, router?` | Currently connected hotspot users |
-| `list_hotspot_users` | `user_id, router?` | All hotspot user accounts |
-| `add_hotspot_user` | `user_id, username, password, profile?, router?` | Create hotspot user. **CONFIRM before calling.** |
-| `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM before calling.** |
 | `kick_hotspot_user` | `user_id, session_id, router?` | Disconnect active hotspot session. **CONFIRM.** |
-
-### Hotspot Extended
-
-| Tool | Parameters | Description |
-|------|-----------|-------------|
-| `list_hotspot_profiles` | `user_id, router?` | Hotspot profiles with rate limits |
+| `list_hotspot_users` | `user_id, router?` | All hotspot user accounts |
+| `add_hotspot_user` | `user_id, username, password, profile?, router?` | Create hotspot user. **CONFIRM.** |
+| `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM.** |
+| `list_hotspot_user_profiles` | `user_id, router?` | Hotspot user profiles with rate limits (e.g. 5rb, Free) |
+| `list_hotspot_server_profiles` | `user_id, router?` | Hotspot server profiles (login page, DNS, etc) |
+| `list_hotspot_servers` | `user_id, router?` | Hotspot server instances |
 | `list_hotspot_ip_bindings` | `user_id, router?` | IP bindings (bypass/block) |
+| `list_hotspot_cookies` | `user_id, router?` | Hotspot cookies (auto-login sessions) |
+| `list_hotspot_walled_garden` | `user_id, router?` | Walled garden rules (allowed before login) |
 
 ### PPP/VPN
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_ppp_active` | `user_id, router?` | Active PPP/VPN connections |
+| `kick_ppp_user` | `user_id, session_id, router?` | Disconnect active PPP/VPN session. **CONFIRM.** |
 | `list_ppp_secrets` | `user_id, router?` | PPP user accounts |
 | `add_ppp_secret` | `user_id, name, password, service?, profile?, router?` | Add PPP user. **CONFIRM.** |
 | `remove_ppp_secret` | `user_id, name, router?` | Remove PPP user. **CONFIRM.** |
-| `kick_ppp_user` | `user_id, session_id, router?` | Disconnect active PPP/VPN session. **CONFIRM.** |
+| `list_ppp_profiles` | `user_id, router?` | PPP profiles (rate limits, DNS, etc) |
+| `list_l2tp_server` | `user_id, router?` | L2TP server config and status |
+| `list_pptp_server` | `user_id, router?` | PPTP server config and status |
+| `list_sstp_server` | `user_id, router?` | SSTP server config and status |
 
-### Bandwidth
+### Queue / Bandwidth
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
@@ -165,18 +174,44 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `remove_simple_queue` | `user_id, queue_id, router?` | Remove queue. **CONFIRM.** |
 | `enable_simple_queue` | `user_id, queue_id, router?` | Enable queue. **CONFIRM.** |
 | `disable_simple_queue` | `user_id, queue_id, router?` | Disable queue. **CONFIRM.** |
+| `list_queue_tree` | `user_id, router?` | Queue tree rules (advanced shaping) |
+| `list_queue_types` | `user_id, router?` | Queue types (PCQ, SFQ, etc) |
 
-### Logs
+### Routing
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
+| `list_routing_ospf_instances` | `user_id, router?` | OSPF instances |
+| `list_routing_ospf_neighbors` | `user_id, router?` | OSPF neighbor adjacencies |
+| `list_routing_bgp_sessions` | `user_id, router?` | BGP peer sessions |
+| `list_routing_filters` | `user_id, router?` | Routing filter rules |
+
+### Monitoring / Tools
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_netwatch` | `user_id, router?` | Netwatch hosts and status |
 | `get_recent_logs` | `user_id, count?, router?` | Recent system logs |
+| `list_arp_table` | `user_id, router?` | All devices seen by the router |
+| `list_neighbors` | `user_id, router?` | CDP/MNDP/LLDP discovered devices |
+| `list_snmp_settings` | `user_id, router?` | SNMP configuration |
+| `list_upnp_settings` | `user_id, router?` | UPnP configuration |
 
 ### Advanced
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `run_routeros_query` | `user_id, api_path, router?` | Query any RouterOS API path directly. **DOUBLE CONFIRM before calling.** |
+| `run_routeros_query` | `user_id, api_path, router?` | Query any RouterOS API path directly. **DOUBLE CONFIRM.** |
+
+### Fallback: run_routeros_query
+If a user asks about a MikroTik feature not covered by the tools above, use `run_routeros_query(user_id, api_path, router?)` to query ANY RouterOS API path. Example paths:
+- /ip/proxy — proxy settings
+- /ip/socks — SOCKS proxy
+- /ip/traffic-flow — traffic flow
+- /certificate — certificates
+- /system/note — system notes
+- /interface/ethernet — ethernet settings
+NEVER say "I can't do that" — try run_routeros_query first.
 
 ## Scheduled Tasks & Reports
 
@@ -225,22 +260,26 @@ Before ANY write/destructive operation:
 - `register_router`
 - `remove_router`
 - `set_default_router`
+- `enable_interface`
+- `disable_interface`
+- `add_ip_address`
+- `remove_ip_address`
+- `add_dns_static`
+- `remove_dns_static`
+- `make_dhcp_static`
+- `remove_dhcp_lease`
+- `add_firewall_filter`
+- `remove_firewall_filter`
+- `add_nat_rule`
+- `remove_nat_rule`
+- `add_to_address_list`
+- `remove_from_address_list`
 - `add_hotspot_user`
 - `remove_hotspot_user`
 - `kick_hotspot_user`
-- `remove_dhcp_lease`
-- `kick_ppp_user`
-- `enable_interface`
-- `disable_interface`
-- `add_to_address_list`
-- `remove_from_address_list`
-- `add_ip_address`
-- `remove_ip_address`
-- `make_dhcp_static`
-- `add_dns_static`
-- `remove_dns_static`
 - `add_ppp_secret`
 - `remove_ppp_secret`
+- `kick_ppp_user`
 - `add_simple_queue`
 - `remove_simple_queue`
 - `enable_simple_queue`
