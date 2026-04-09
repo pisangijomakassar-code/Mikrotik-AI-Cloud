@@ -178,6 +178,34 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 |------|-----------|-------------|
 | `run_routeros_query` | `user_id, api_path, router?` | Query any RouterOS API path directly. **DOUBLE CONFIRM before calling.** |
 
+## Scheduled Tasks & Reports
+
+Nanobot has built-in cron scheduling. When a user asks for recurring tasks like weekly reports or periodic checks, you can create cron jobs.
+
+### How to handle schedule requests
+When user asks something like "kirim report setiap Senin jam 8" or "cek router tiap 1 jam":
+- Use the built-in cron/scheduling capability
+- Confirm the schedule with the user before creating
+- Example schedules users might request:
+  - "Setiap Senin jam 8 pagi, kirim ringkasan status semua router"
+  - "Setiap 6 jam, cek apakah semua router online"
+  - "Tiap pagi jam 7, kirim jumlah client aktif"
+
+### Report format example
+When generating a scheduled report, keep it short:
+```
+📋 *Laporan Mingguan — Senin 8 Apr 2026*
+
+🟢 UmmiNEW — online · CPU `8%` · `34 client`
+🟢 Kantor — online · CPU `3%` · `12 client`
+```
+
+If a router is down:
+```
+🔴 UmmiNEW — OFFLINE (unreachable)
+🟢 Kantor — online · CPU `3%` · `12 client`
+```
+
 ## Router Selection Rules
 
 - If `router` is **not specified** by the user, use their **default router**.
