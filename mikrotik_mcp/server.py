@@ -11,7 +11,9 @@ user's default router when omitted.
 import os
 import sys
 import logging
+import random
 import socket
+import string
 import time
 from contextlib import contextmanager
 from typing import Any
@@ -1533,6 +1535,543 @@ def list_hotspot_walled_garden(user_id: str, router: str = "") -> list[dict]:
     result = _query_path("/ip/hotspot/walled-garden", conn["host"], conn["port"], conn["username"], conn["password"])
     registry.update_last_seen(user_id, conn["name"])
     return result
+
+
+# ─────────────────────────────────────────────
+#  HOTSPOT VOUCHER MANAGEMENT (Mikhmon-like)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: str = "",
+                               password_length: int = 6, username_length: int = 6,
+                               limit_uptime: str = "", limit_bytes_total: str = "",
+                               comment: str = "", router: str = "") -> dict:
+    """Generate multiple hotspot voucher users in bulk (like Mikhmon).
+
+    Creates random username/password pairs and adds them as hotspot users.
+    Useful for generating voucher cards for resale or distribution.
+
+    Args:
+        user_id: Telegram user ID
+        count: Number of vouchers to generate (max 100)
+        profile: Hotspot user profile to assign (e.g., '5rb', 'Free')
+        prefix: Optional prefix for usernames (e.g., 'V' produces V3k8m2)
+        password_length: Length of generated password (default 6)
+        username_length: Length of random part of username (default 6)
+        limit_uptime: Per-user uptime limit (e.g., '1h', '3h', '1d')
+        limit_bytes_total: Per-user data limit (e.g., '100M', '1G')
+        comment: Comment for all generated users (e.g., 'Batch 2026-04-09')
+        router: Router name. Empty = default router.
+    """
+    if count < 1:
+        return {"error": "Count must be at least 1."}
+    if count > 100:
+        return {"error": "Maximum 100 vouchers per batch to prevent abuse. Split into multiple batches."}
+    if username_length < 4 or username_length > 16:
+        return {"error": "username_length must be between 4 and 16."}
+    if password_length < 4 or password_length > 16:
+        return {"error": "password_length must be between 4 and 16."}
+
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            # Validate profile exists
+            profiles = list(api.path("/ip/hotspot/user/profile"))
+            profile_names = [p.get("name", "") for p in profiles]
+            if profile not in profile_names:
+                return {"error": f"Profile '{profile}' not found. Available profiles: {', '.join(profile_names)}"}
+
+            # Get existing usernames to avoid collisions
+            existing = {u.get("name", "") for u in api.path("/ip/hotspot/user")}
+
+            charset = string.ascii_lowercase + string.digits
+            resource = api.path("/ip/hotspot/user")
+            vouchers = []
+            errors = []
+
+            for i in range(count):
+                # Generate unique username
+                for _ in range(10):  # max 10 retries for uniqueness
+                    uname = prefix + "".join(random.choices(charset, k=username_length))
+                    if uname not in existing:
+                        break
+                else:
+                    errors.append(f"Voucher #{i+1}: failed to generate unique username after 10 retries")
+                    continue
+
+                pwd = "".join(random.choices(charset, k=password_length))
+
+                params: dict[str, str] = {
+                    "name": uname,
+                    "password": pwd,
+                    "profile": profile,
+                }
+                if limit_uptime:
+                    params["limit-uptime"] = limit_uptime
+                if limit_bytes_total:
+                    params["limit-bytes-total"] = limit_bytes_total
+                if comment:
+                    params["comment"] = comment
+
+                try:
+                    resource.add(**params)
+                    existing.add(uname)
+                    vouchers.append({"username": uname, "password": pwd})
+                except Exception as e:
+                    errors.append(f"Voucher #{i+1} ({uname}): {e}")
+
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {
+                "status": "ok",
+                "count": len(vouchers),
+                "profile": profile,
+                "vouchers": vouchers,
+            }
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to generate vouchers: {e}"}
+
+
+@mcp.tool()
+def get_hotspot_voucher_stats(user_id: str, router: str = "") -> dict:
+    """Get hotspot user statistics: total, active, disabled, expired, by profile.
+
+    Like Mikhmon's dashboard showing user counts per profile.
+
+    Args:
+        user_id: Telegram user ID (required)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            users = list(api.path("/ip/hotspot/user"))
+            registry.update_last_seen(user_id, conn["name"])
+
+            total = len(users)
+            enabled = 0
+            disabled = 0
+            by_profile: dict[str, int] = {}
+
+            for u in users:
+                if u.get("disabled", "false") == "true":
+                    disabled += 1
+                else:
+                    enabled += 1
+                prof = u.get("profile", "unknown")
+                by_profile[prof] = by_profile.get(prof, 0) + 1
+
+            return {
+                "total": total,
+                "enabled": enabled,
+                "disabled": disabled,
+                "by_profile": by_profile,
+            }
+    except Exception as e:
+        return {"error": f"Failed to get voucher stats: {e}"}
+
+
+@mcp.tool()
+def get_hotspot_user_detail(user_id: str, username: str, router: str = "") -> dict:
+    """Get detailed info about a specific hotspot user including usage stats.
+
+    Returns all available fields: name, profile, uptime-used, bytes-in/out,
+    packets-in/out, limits, disabled status, comment, last-logged-out, etc.
+
+    Args:
+        user_id: Telegram user ID (required)
+        username: The hotspot username to look up
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                return {"error": f"Hotspot user '{username}' not found."}
+            registry.update_last_seen(user_id, conn["name"])
+            u = users[0]
+            return {
+                "name": u.get("name"),
+                "profile": u.get("profile"),
+                "disabled": u.get("disabled"),
+                "comment": u.get("comment", ""),
+                "limit_uptime": u.get("limit-uptime", ""),
+                "limit_bytes_total": u.get("limit-bytes-total", ""),
+                "uptime_used": u.get("uptime", ""),
+                "bytes_in": u.get("bytes-in", "0"),
+                "bytes_out": u.get("bytes-out", "0"),
+                "packets_in": u.get("packets-in", "0"),
+                "packets_out": u.get("packets-out", "0"),
+                "last_logged_out": u.get("last-logged-out", ""),
+            }
+    except Exception as e:
+        return {"error": f"Failed to get hotspot user detail: {e}"}
+
+
+@mcp.tool()
+def bulk_enable_hotspot_users(user_id: str, usernames: str, router: str = "") -> dict:
+    """Enable multiple hotspot users at once.
+
+    Args:
+        user_id: Telegram user ID (required)
+        usernames: Comma-separated list of usernames to enable
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    name_list = [n.strip() for n in usernames.split(",") if n.strip()]
+    if not name_list:
+        return {"error": "No usernames provided. Pass a comma-separated list."}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            enabled = []
+            errors = []
+            for uname in name_list:
+                try:
+                    users = list(resource.select(librouteros.query.Key("name") == uname))
+                    if not users:
+                        errors.append(f"{uname}: not found")
+                        continue
+                    resource.update(**{".id": users[0][".id"], "disabled": "false"})
+                    enabled.append(uname)
+                except Exception as e:
+                    errors.append(f"{uname}: {e}")
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {"status": "ok", "enabled": enabled, "count": len(enabled)}
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to bulk enable hotspot users: {e}"}
+
+
+@mcp.tool()
+def bulk_disable_hotspot_users(user_id: str, usernames: str, router: str = "") -> dict:
+    """Disable/suspend multiple hotspot users at once.
+
+    Args:
+        user_id: Telegram user ID (required)
+        usernames: Comma-separated list of usernames to disable
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    name_list = [n.strip() for n in usernames.split(",") if n.strip()]
+    if not name_list:
+        return {"error": "No usernames provided. Pass a comma-separated list."}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            disabled = []
+            errors = []
+            for uname in name_list:
+                try:
+                    users = list(resource.select(librouteros.query.Key("name") == uname))
+                    if not users:
+                        errors.append(f"{uname}: not found")
+                        continue
+                    resource.update(**{".id": users[0][".id"], "disabled": "true"})
+                    disabled.append(uname)
+                except Exception as e:
+                    errors.append(f"{uname}: {e}")
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {"status": "ok", "disabled": disabled, "count": len(disabled)}
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to bulk disable hotspot users: {e}"}
+
+
+@mcp.tool()
+def bulk_remove_hotspot_users(user_id: str, usernames: str, router: str = "") -> dict:
+    """Remove multiple hotspot users at once. DANGEROUS — removed users cannot be recovered.
+
+    Args:
+        user_id: Telegram user ID (required)
+        usernames: Comma-separated list of usernames to remove
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    name_list = [n.strip() for n in usernames.split(",") if n.strip()]
+    if not name_list:
+        return {"error": "No usernames provided. Pass a comma-separated list."}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            removed = []
+            errors = []
+            for uname in name_list:
+                try:
+                    users = list(resource.select(librouteros.query.Key("name") == uname))
+                    if not users:
+                        errors.append(f"{uname}: not found")
+                        continue
+                    resource.remove(users[0][".id"])
+                    removed.append(uname)
+                except Exception as e:
+                    errors.append(f"{uname}: {e}")
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {"status": "ok", "removed": removed, "count": len(removed)}
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to bulk remove hotspot users: {e}"}
+
+
+@mcp.tool()
+def remove_disabled_hotspot_users(user_id: str, router: str = "") -> dict:
+    """Remove ALL disabled hotspot users (cleanup). DANGEROUS — this permanently deletes
+    every hotspot user that is currently disabled. Cannot be undone.
+
+    Args:
+        user_id: Telegram user ID (required)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            all_users = list(resource)
+            disabled_users = [u for u in all_users if u.get("disabled", "false") == "true"]
+            if not disabled_users:
+                return {"status": "ok", "count": 0, "message": "No disabled users found."}
+
+            removed = []
+            errors = []
+            for u in disabled_users:
+                try:
+                    resource.remove(u[".id"])
+                    removed.append(u.get("name", u[".id"]))
+                except Exception as e:
+                    errors.append(f"{u.get('name', u['.id'])}: {e}")
+
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {"status": "ok", "removed": removed, "count": len(removed)}
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to remove disabled hotspot users: {e}"}
+
+
+@mcp.tool()
+def remove_expired_hotspot_users(user_id: str, router: str = "") -> dict:
+    """Remove hotspot users that have exceeded their uptime or data limit. DANGEROUS —
+    permanently deletes expired users. Cannot be undone.
+
+    A user is considered expired if:
+    - It has a limit-uptime set AND uptime >= limit-uptime, OR
+    - It has a limit-bytes-total set AND (bytes-in + bytes-out) >= limit-bytes-total
+
+    Args:
+        user_id: Telegram user ID (required)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+
+    def _parse_ros_time(s: str) -> int:
+        """Parse RouterOS time string (e.g., '1h30m', '2d3h', '45m10s') to seconds."""
+        if not s:
+            return 0
+        total = 0
+        num = ""
+        for ch in s:
+            if ch.isdigit():
+                num += ch
+            else:
+                if num:
+                    n = int(num)
+                    if ch == "w":
+                        total += n * 604800
+                    elif ch == "d":
+                        total += n * 86400
+                    elif ch == "h":
+                        total += n * 3600
+                    elif ch == "m":
+                        total += n * 60
+                    elif ch == "s":
+                        total += n
+                    num = ""
+        if num:
+            total += int(num)
+        return total
+
+    def _parse_ros_bytes(s: str) -> int:
+        """Parse RouterOS byte string (e.g., '100M', '1G', '500K', '1048576') to bytes."""
+        if not s:
+            return 0
+        s = s.strip().upper()
+        multipliers = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
+        if s[-1] in multipliers:
+            try:
+                return int(float(s[:-1]) * multipliers[s[-1]])
+            except ValueError:
+                return 0
+        try:
+            return int(s)
+        except ValueError:
+            return 0
+
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            all_users = list(resource)
+            expired_users = []
+
+            for u in all_users:
+                limit_uptime = u.get("limit-uptime", "")
+                limit_bytes = u.get("limit-bytes-total", "")
+
+                if not limit_uptime and not limit_bytes:
+                    continue  # no limits set, can't expire
+
+                is_expired = False
+
+                if limit_uptime:
+                    used_uptime = u.get("uptime", "0s")
+                    if _parse_ros_time(used_uptime) >= _parse_ros_time(limit_uptime) and _parse_ros_time(limit_uptime) > 0:
+                        is_expired = True
+
+                if not is_expired and limit_bytes:
+                    bytes_in = int(u.get("bytes-in", "0") or "0")
+                    bytes_out = int(u.get("bytes-out", "0") or "0")
+                    limit_val = _parse_ros_bytes(limit_bytes)
+                    if limit_val > 0 and (bytes_in + bytes_out) >= limit_val:
+                        is_expired = True
+
+                if is_expired:
+                    expired_users.append(u)
+
+            if not expired_users:
+                return {"status": "ok", "count": 0, "message": "No expired users found."}
+
+            removed = []
+            errors = []
+            for u in expired_users:
+                try:
+                    resource.remove(u[".id"])
+                    removed.append(u.get("name", u[".id"]))
+                except Exception as e:
+                    errors.append(f"{u.get('name', u['.id'])}: {e}")
+
+            registry.update_last_seen(user_id, conn["name"])
+            result: dict = {"status": "ok", "removed": removed, "count": len(removed)}
+            if errors:
+                result["errors"] = errors
+            return result
+    except Exception as e:
+        return {"error": f"Failed to remove expired hotspot users: {e}"}
+
+
+@mcp.tool()
+def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
+                                 shared_users: int = 0, session_timeout: str = "",
+                                 keepalive_timeout: str = "", router: str = "") -> dict:
+    """Update an existing hotspot user profile settings.
+
+    Args:
+        user_id: Telegram user ID (required)
+        name: Profile name to update (e.g., '5rb', 'Free', 'Premium')
+        rate_limit: New upload/download limit (e.g., '1M/2M'). Empty = don't change.
+        shared_users: New max concurrent sessions (0 = don't change)
+        session_timeout: New session timeout (e.g., '1h', '8h'). Empty = don't change.
+        keepalive_timeout: New keepalive timeout (e.g., '2m'). Empty = don't change.
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user/profile")
+            profiles = list(resource.select(librouteros.query.Key("name") == name))
+            if not profiles:
+                all_profiles = list(resource)
+                available = [p.get("name", "") for p in all_profiles]
+                return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
+
+            update_params: dict[str, str] = {".id": profiles[0][".id"]}
+            changes = []
+            if rate_limit:
+                update_params["rate-limit"] = rate_limit
+                changes.append(f"rate-limit={rate_limit}")
+            if shared_users > 0:
+                update_params["shared-users"] = str(shared_users)
+                changes.append(f"shared-users={shared_users}")
+            if session_timeout:
+                update_params["session-timeout"] = session_timeout
+                changes.append(f"session-timeout={session_timeout}")
+            if keepalive_timeout:
+                update_params["keepalive-timeout"] = keepalive_timeout
+                changes.append(f"keepalive-timeout={keepalive_timeout}")
+
+            if not changes:
+                return {"error": "No changes specified. Provide rate_limit, shared_users, session_timeout, or keepalive_timeout."}
+
+            resource.update(**update_params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Profile '{name}' updated: {', '.join(changes)}"}
+    except Exception as e:
+        return {"error": f"Failed to update hotspot user profile: {e}"}
+
+
+@mcp.tool()
+def remove_hotspot_user_profile(user_id: str, name: str, router: str = "") -> dict:
+    """Remove a hotspot user profile. Will fail if users are still assigned to it.
+
+    Args:
+        user_id: Telegram user ID (required)
+        name: Profile name to remove
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    if name.lower() == "default":
+        return {"error": "Cannot remove the 'default' profile."}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user/profile")
+            profiles = list(resource.select(librouteros.query.Key("name") == name))
+            if not profiles:
+                all_profiles = list(resource)
+                available = [p.get("name", "") for p in all_profiles]
+                return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
+
+            # Check if any users are assigned to this profile
+            users = list(api.path("/ip/hotspot/user").select(
+                librouteros.query.Key("profile") == name
+            ))
+            if users:
+                return {"error": f"Cannot remove profile '{name}': {len(users)} user(s) still assigned to it. "
+                        f"Reassign or remove those users first."}
+
+            resource.remove(profiles[0][".id"])
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot user profile '{name}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove hotspot user profile: {e}"}
 
 
 # ─────────────────────────────────────────────
