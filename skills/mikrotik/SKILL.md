@@ -160,6 +160,21 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_hotspot_cookies` | `user_id, router?` | Hotspot cookies (auto-login sessions) |
 | `list_hotspot_walled_garden` | `user_id, router?` | Walled garden rules (allowed before login) |
 
+### Hotspot Voucher Management (Mikhmon-like)
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `generate_hotspot_vouchers` | `user_id, count, profile, prefix?, password_length?, username_length?, limit_uptime?, limit_bytes_total?, comment?, router?` | Bulk generate voucher users (max 100). **CONFIRM.** |
+| `get_hotspot_voucher_stats` | `user_id, router?` | Dashboard stats: total/enabled/disabled, breakdown by profile |
+| `get_hotspot_user_detail` | `user_id, username, router?` | Full user detail with usage stats (bytes, uptime, limits) |
+| `bulk_enable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Enable multiple users at once. **CONFIRM.** |
+| `bulk_disable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Disable/suspend multiple users. **CONFIRM.** |
+| `bulk_remove_hotspot_users` | `user_id, usernames (comma-separated), router?` | Remove multiple users. **DOUBLE CONFIRM.** |
+| `remove_disabled_hotspot_users` | `user_id, router?` | Remove ALL disabled users (cleanup). **DOUBLE CONFIRM.** |
+| `remove_expired_hotspot_users` | `user_id, router?` | Remove users that exceeded uptime/data limits. **DOUBLE CONFIRM.** |
+| `update_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, keepalive_timeout?, router?` | Update existing profile settings. **CONFIRM.** |
+| `remove_hotspot_user_profile` | `user_id, name, router?` | Remove a profile (fails if users assigned). **CONFIRM.** |
+
 ### PPP/VPN
 
 | Tool | Parameters | Description |
@@ -292,6 +307,11 @@ Before ANY write/destructive operation:
 - `update_hotspot_user`
 - `add_hotspot_user_profile`
 - `kick_hotspot_user`
+- `generate_hotspot_vouchers`
+- `bulk_enable_hotspot_users`
+- `bulk_disable_hotspot_users`
+- `update_hotspot_user_profile`
+- `remove_hotspot_user_profile`
 - `add_ppp_secret`
 - `remove_ppp_secret`
 - `kick_ppp_user`
@@ -304,6 +324,9 @@ Before ANY write/destructive operation:
 - `run_routeros_query` — You must show the exact `api_path` you intend to use, explain what it does, then ask for confirmation twice before executing.
 - `run_system_script` — You must show the script name, explain what it does, then ask for confirmation twice before executing.
 - `reboot_router` — You must state the router name, warn about downtime, then ask for confirmation twice before executing.
+- `bulk_remove_hotspot_users` — You must list the usernames and confirm twice.
+- `remove_disabled_hotspot_users` — You must warn this removes ALL disabled users, confirm twice.
+- `remove_expired_hotspot_users` — You must warn this removes expired users, confirm twice.
 
 ## Response Guidelines
 
