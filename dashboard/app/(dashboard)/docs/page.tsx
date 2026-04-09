@@ -53,15 +53,16 @@ export default function DocsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <header className="mb-10">
-        <h2 className="text-4xl font-bold tracking-tight text-[#dae2fd] font-headline">
-          Documentation
-        </h2>
-        <p className="text-slate-400 mt-2 font-medium">
-          Guides, API reference, and administration docs for MikroTik AI Agent.
-        </p>
-      </header>
+      {/* Header - consistent with user page */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Documentation</h2>
+          <p className="text-[#bcc9cd] flex items-center gap-2">
+            <BookOpen className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            Guides, API reference, and administration docs for MikroTik AI Agent.
+          </p>
+        </div>
+      </div>
 
       {/* Search */}
       <div className="relative mb-8 max-w-md">

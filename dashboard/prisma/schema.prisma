@@ -25,6 +25,7 @@ model User {
   name          String
   telegramId    String     @unique
   botToken      String?
+  agentUrl      String?
   role          UserRole   @default(USER)
   status        UserStatus @default(ACTIVE)
   isProvisioned Boolean    @default(false)
@@ -34,6 +35,9 @@ model User {
 
   routers      Router[]
   activityLogs ActivityLog[]
+  subscription Subscription?
+  tokenUsages  TokenUsage[]
+  invoices     Invoice[]
 
   @@index([telegramId])
   @@index([status])
@@ -86,4 +90,80 @@ model SystemSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ── Billing Models (Phase 11) ──
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  plan             SubscriptionPlan   @default(FREE)
+  status           SubscriptionStatus @default(ACTIVE)
+  tokenLimit       Int                @default(20000)
+  tokensUsed       Int                @default(0)
+  billingCycleStart DateTime          @default(now())
+  billingCycleEnd   DateTime?
+  externalId       String?            @unique // Payment gateway subscription ID
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TokenUsage {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  tokensIn    Int      @default(0)
+  tokensOut   Int      @default(0)
+  model       String   @default("")
+  sessionId   String?
+  durationMs  Int?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  number      String        @unique @default(cuid())
+  status      InvoiceStatus @default(DRAFT)
+  amount      Int           @default(0)  // in cents
+  currency    String        @default("IDR")
+  periodStart DateTime
+  periodEnd   DateTime
+  tokensUsed  Int           @default(0)
+  externalId  String?       @unique // Payment gateway invoice ID
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }

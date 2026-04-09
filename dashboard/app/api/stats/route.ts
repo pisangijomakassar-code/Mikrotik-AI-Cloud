@@ -8,7 +8,10 @@ export async function GET() {
   }
 
   try {
-    const stats = await getUserStats()
+    // Non-admin: scope stats to their own data
+    const userId =
+      session.user.role === "ADMIN" ? undefined : (session.user.id as string)
+    const stats = await getUserStats(userId)
     return Response.json(stats)
   } catch (error) {
     console.error("Failed to fetch stats:", error)

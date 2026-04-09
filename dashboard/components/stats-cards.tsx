@@ -2,9 +2,11 @@
 
 import { Users, Router, Wifi, Bot } from "lucide-react"
 import { useStats } from "@/hooks/use-stats"
+import { useAuth } from "@/hooks/use-auth"
 
 export function StatsCards() {
   const { data: stats, isLoading } = useStats()
+  const { isAdmin } = useAuth()
 
   if (isLoading) {
     return (
@@ -30,33 +32,61 @@ export function StatsCards() {
     )
   }
 
-  const cards = [
-    {
-      label: "Active Users",
-      value: stats?.activeUsers ?? 0,
-      sub: `of ${stats?.totalUsers ?? 0} total users`,
-      icon: Users,
-    },
-    {
-      label: "Total Routers",
-      value: stats?.totalRouters ?? 0,
-      sub: `${stats?.totalLogs ?? 0} total logs`,
-      icon: Router,
-    },
-    {
-      label: "Recent Activity",
-      value: stats?.recentActivity ?? 0,
-      sub: "events in last 24h",
-      icon: Wifi,
-    },
-    {
-      label: "LLM Status",
-      value: "Ready",
-      sub: null,
-      icon: Bot,
-      badge: true,
-    },
-  ]
+  const cards = isAdmin
+    ? [
+        {
+          label: "Active Users",
+          value: stats?.activeUsers ?? 0,
+          sub: `of ${stats?.totalUsers ?? 0} total users`,
+          icon: Users,
+        },
+        {
+          label: "Total Routers",
+          value: stats?.totalRouters ?? 0,
+          sub: `${stats?.totalLogs ?? 0} total logs`,
+          icon: Router,
+        },
+        {
+          label: "Recent Activity",
+          value: stats?.recentActivity ?? 0,
+          sub: "events in last 24h",
+          icon: Wifi,
+        },
+        {
+          label: "LLM Status",
+          value: "Ready",
+          sub: null,
+          icon: Bot,
+          badge: true,
+        },
+      ]
+    : [
+        {
+          label: "My Routers",
+          value: stats?.totalRouters ?? 0,
+          sub: "managed nodes",
+          icon: Router,
+        },
+        {
+          label: "My Logs",
+          value: stats?.totalLogs ?? 0,
+          sub: "total log entries",
+          icon: Wifi,
+        },
+        {
+          label: "Recent Activity",
+          value: stats?.recentActivity ?? 0,
+          sub: "events in last 24h",
+          icon: Wifi,
+        },
+        {
+          label: "AI Agent",
+          value: "Ready",
+          sub: null,
+          icon: Bot,
+          badge: true,
+        },
+      ]
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

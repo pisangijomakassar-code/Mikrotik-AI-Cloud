@@ -14,6 +14,8 @@ import {
   Brain,
   MessageSquare,
   BookOpen,
+  UserCircle,
+  CreditCard,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
@@ -31,6 +33,8 @@ const navItems: NavItem[] = [
   { label: "Users", href: "/users", icon: Users, adminOnly: true },
   { label: "AI Assistant", href: "/chat", icon: MessageSquare },
   { label: "Logs", href: "/logs", icon: Terminal },
+  { label: "Profile", href: "/profile", icon: UserCircle },
+  { label: "Plan", href: "/plan", icon: CreditCard },
   { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
   { label: "Docs", href: "/docs", icon: BookOpen },
 ]

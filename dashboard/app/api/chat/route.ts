@@ -1,6 +1,28 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
+interface TokenUsageInput {
+  userId: string
+  tokensIn: number
+  tokensOut: number
+  model: string
+  sessionId: string
+}
+
+function trackTokenUsage(input: TokenUsageInput) {
+  prisma.$executeRawUnsafe(
+    `INSERT INTO "TokenUsage" (id, "userId", "tokensIn", "tokensOut", model, "sessionId", timestamp)
+     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
+    input.userId,
+    input.tokensIn,
+    input.tokensOut,
+    input.model,
+    input.sessionId
+  ).catch((err: unknown) =>
+    console.error("Failed to track token usage:", err)
+  )
+}
+
 export async function POST(request: Request) {
   const session = await auth()
   if (!session?.user) {
@@ -18,16 +40,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // Lookup user's botToken and telegramId for per-user agent routing
+    // Lookup user's agent config for per-user agent routing
     const user = await prisma.user.findUnique({
       where: { id: session.user.id as string },
-      select: { botToken: true, telegramId: true, name: true },
+      select: { botToken: true, telegramId: true, name: true, agentUrl: true },
     })
 
-    if (!user?.botToken) {
+    if (!user?.botToken || !user?.agentUrl) {
       return Response.json({
         reply:
-          "Your AI agent is not configured yet. Please contact the administrator to set up your bot token.",
+          "Your AI agent is not configured yet. Please contact the administrator to set up your bot token and agent URL.",
       })
     }
 
@@ -46,15 +68,15 @@ export async function POST(request: Request) {
     }
 
     const sessionId = `dashboard-${session.user.id}`
-    const nanobotUrl =
-      process.env.NANOBOT_API_URL || "http://mikrotik-agent:8900"
 
-    // Call nanobot OpenAI-compatible API with per-user context
+    // Route to user's dedicated nanobot agent
+    const agentUrl = user.agentUrl
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30000)
 
     try {
-      const apiResponse = await fetch(`${nanobotUrl}/v1/chat/completions`, {
+      const apiResponse = await fetch(`${agentUrl}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,6 +108,21 @@ export async function POST(request: Request) {
           data.choices?.[0]?.message?.content ||
           data.response ||
           "No response received."
+
+        // Track token usage for billing (model available after migration)
+        const usage = data.usage as
+          | { prompt_tokens?: number; completion_tokens?: number }
+          | undefined
+        if (usage) {
+          trackTokenUsage({
+            userId: session.user.id as string,
+            tokensIn: usage.prompt_tokens ?? 0,
+            tokensOut: usage.completion_tokens ?? 0,
+            model: (data as { model?: string }).model ?? "",
+            sessionId,
+          })
+        }
+
         return Response.json({ reply })
       }
 

@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Router, MoreVertical, Users, ChevronLeft, ChevronRight, PlusCircle, Sparkles, Pencil, Trash2 } from "lucide-react"
+import { Router, Users, ChevronLeft, ChevronRight, Sparkles, Pencil, Trash2 } from "lucide-react"
 import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
-import { AddRouterDialog } from "@/components/add-router-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -29,27 +28,7 @@ export function RouterGrid() {
   const filteredRouters = routers?.filter((r) => !statusFilter || r.health?.status === statusFilter) ?? []
 
   return (
-    <div className="min-h-screen">
-      {/* Page Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <nav className="flex items-center gap-2 text-xs text-slate-500 mb-2 uppercase tracking-widest">
-            <span>Infrastructure</span>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-[#4cd7f6]">Routers</span>
-          </nav>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight">All Managed Routers</h2>
-          <p className="text-[#bcc9cd] mt-1">Real-time status monitoring for your global node network.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-[#131b2e] rounded-lg p-1 border border-white/5">
-            <button className="px-4 py-1.5 text-xs font-bold rounded-lg bg-[#2d3449] text-[#4cd7f6]">Table View</button>
-            <button className="px-4 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-[#dae2fd]">Map View</button>
-          </div>
-          <AddRouterDialog />
-        </div>
-      </div>
-
+    <div>
       {/* Filters - simple style matching log page */}
       <div className="flex items-center gap-3 mb-8">
         <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>

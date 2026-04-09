@@ -50,11 +50,16 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-12">
-      {/* Header */}
-      <header className="mb-10">
-        <h2 className="text-4xl font-bold tracking-tight text-[#dae2fd] font-headline">Settings</h2>
-        <p className="text-slate-400 mt-2 font-medium">Configure your AI Agent&apos;s cognitive core and operational parameters.</p>
-      </header>
+      {/* Header - consistent with user page */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Settings</h2>
+          <p className="text-[#bcc9cd] flex items-center gap-2">
+            <SlidersHorizontal className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            Configure your AI Agent&apos;s cognitive core and operational parameters.
+          </p>
+        </div>
+      </div>
 
       {/* Section: LLM Configuration */}
       <section className="space-y-6">

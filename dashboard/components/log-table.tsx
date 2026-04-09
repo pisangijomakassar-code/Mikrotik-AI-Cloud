@@ -36,14 +36,8 @@ export function LogTable() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold font-headline text-[#dae2fd]">Activity Logs</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            {data?.router ? `Real-time logs from ${data.router}` : "Router system logs"} · {data?.total ?? 0} total entries
-          </p>
-        </div>
+      {/* Actions + Filters */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => refetch()}
@@ -57,9 +51,10 @@ export function LogTable() {
             Export
           </button>
         </div>
+        <p className="text-xs text-slate-500">
+          {data?.router ? `${data.router}` : "All routers"} · {data?.total ?? 0} entries
+        </p>
       </div>
-
-      {/* Filters - simple, matching router page style */}
       <div className="flex items-center gap-3">
         <Select value={selectedRouter || "default"} onValueChange={(val) => setSelectedRouter(val === "default" ? "" : val)}>
           <SelectTrigger className="w-[180px] bg-[#131b2e] border-white/5 text-xs rounded-lg">

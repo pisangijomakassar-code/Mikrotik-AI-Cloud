@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { Bot, User, Send, Paperclip, Mic, Heart, Shield, FileText, Cpu, Wifi } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
 import { toast } from "sonner"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface ChatMessage {
   role: "user" | "assistant"
@@ -13,28 +15,6 @@ interface ChatMessage {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
-}
-
-function renderContent(text: string) {
-  const lines = text.split("\n")
-  return lines.map((line, i) => {
-    if (line.startsWith("• ") || line.startsWith("- ")) {
-      return <li key={i} className="ml-4 text-sm leading-relaxed">{inlineFormat(line.slice(2))}</li>
-    }
-    if (line.startsWith("```") || line.trim() === "```") return null
-    return <p key={i} className="text-sm leading-relaxed">{inlineFormat(line)}</p>
-  })
-}
-
-function inlineFormat(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*|`[^`]+`)/g)
-  return parts.map((p, i) => {
-    if (p.startsWith("**") && p.endsWith("**"))
-      return <strong key={i} className="font-bold text-white">{p.slice(2, -2)}</strong>
-    if (p.startsWith("`") && p.endsWith("`"))
-      return <code key={i} className="text-[#4cd7f6] bg-slate-950/50 px-1.5 py-0.5 rounded text-xs font-mono">{p.slice(1, -1)}</code>
-    return <span key={i}>{p}</span>
-  })
 }
 
 export default function ChatPage() {
@@ -69,15 +49,32 @@ export default function ChatPage() {
   return (
     <div className="flex h-[calc(100vh-64px)] -m-8">
       {/* Chat */}
-      <section className="flex-1 flex flex-col relative border-r border-white/5 bg-slate-900">
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 pb-32 custom-scrollbar">
+      <section className="flex-1 flex flex-col border-r border-white/5 bg-slate-900 overflow-hidden">
+        {/* Scrollable chat history only */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
           {messages.map((msg, i) => msg.role === "assistant" ? (
             <div key={i} className="flex gap-4 max-w-3xl">
               <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center shrink-0">
                 <Bot className="h-4 w-4 text-cyan-400" />
               </div>
               <div className="p-4 rounded-2xl rounded-tl-none border border-white/10" style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(12px)" }}>
-                <div className="space-y-1">{renderContent(msg.content)}</div>
+                <div className="prose prose-invert prose-sm max-w-none
+                  prose-p:text-slate-200 prose-p:leading-relaxed prose-p:my-1
+                  prose-headings:text-[#dae2fd] prose-headings:font-bold
+                  prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+                  prose-strong:text-white
+                  prose-code:text-[#4cd7f6] prose-code:bg-slate-950/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
+                  prose-pre:bg-[#0b1326] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-xl prose-pre:my-2
+                  prose-a:text-[#4cd7f6] prose-a:no-underline hover:prose-a:underline
+                  prose-li:text-slate-200 prose-li:my-0
+                  prose-ul:my-1 prose-ol:my-1
+                  prose-table:text-xs
+                  prose-th:text-[#dae2fd] prose-th:px-3 prose-th:py-1.5 prose-th:bg-slate-900/50 prose-th:text-left
+                  prose-td:px-3 prose-td:py-1.5 prose-td:border-t prose-td:border-white/5
+                  prose-blockquote:border-l-[#4cd7f6] prose-blockquote:text-slate-300
+                ">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                </div>
                 <span className="text-[10px] text-slate-500 mt-2 block font-mono">{msg.timestamp}</span>
               </div>
             </div>
@@ -109,8 +106,8 @@ export default function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        {/* Bottom input */}
-        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
+        {/* Fixed bottom input - not scrollable */}
+        <div className="shrink-0 p-6 border-t border-white/5 bg-slate-900">
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             {[
               { icon: Heart, label: "Diagnose connection", prompt: "Diagnose connection issues" },

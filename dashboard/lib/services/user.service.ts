@@ -56,6 +56,7 @@ export async function createUser(data: CreateUserInput) {
       name: data.name,
       telegramId: data.telegramId,
       botToken: data.botToken || null,
+      agentUrl: data.agentUrl || null,
       role: data.role || "USER",
       status: data.status || "ACTIVE",
     },
@@ -81,6 +82,7 @@ export async function updateUser(id: string, data: UpdateUserInput) {
   if (data.name !== undefined) updateData.name = data.name
   if (data.telegramId !== undefined) updateData.telegramId = data.telegramId
   if (data.botToken !== undefined) updateData.botToken = data.botToken || null
+  if (data.agentUrl !== undefined) updateData.agentUrl = data.agentUrl || null
   if (data.role !== undefined) updateData.role = data.role
   if (data.status !== undefined) updateData.status = data.status
   if (data.password) {
@@ -118,10 +120,30 @@ export async function deleteUser(id: string) {
   return user
 }
 
-export async function getUserStats(): Promise<DashboardStats> {
+export async function getUserStats(userId?: string): Promise<DashboardStats> {
   const now = new Date()
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
+  if (userId) {
+    // User-scoped stats for non-admin
+    const [totalRouters, totalLogs, recentActivity] = await Promise.all([
+      prisma.router.count({ where: { userId } }),
+      prisma.activityLog.count({ where: { userId } }),
+      prisma.activityLog.count({
+        where: { userId, timestamp: { gte: oneDayAgo } },
+      }),
+    ])
+
+    return {
+      totalUsers: 1,
+      activeUsers: 1,
+      totalRouters,
+      totalLogs,
+      recentActivity,
+    }
+  }
+
+  // Admin: global stats
   const [totalUsers, activeUsers, totalRouters, totalLogs, recentActivity] =
     await Promise.all([
       prisma.user.count(),
