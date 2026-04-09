@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Pencil, Trash2, SlidersHorizontal, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-users"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -41,8 +42,7 @@ export function UserTable() {
     )
   }
 
-  function handleDelete(userId: string, userName: string) {
-    if (!confirm(`Delete user "${userName}"? This action cannot be undone.`)) return
+  function handleDelete(userId: string) {
     deleteUser.mutate(userId, {
       onSuccess: () => toast.success("User deleted"),
       onError: (e) => toast.error(e.message),
@@ -176,15 +176,24 @@ export function UserTable() {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center">
+                        <button
+                          className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
+                          onClick={() => toast.info("Edit user coming soon")}
+                        >
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button
-                          className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center"
-                          onClick={() => handleDelete(user.id, user.name)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <ConfirmDialog
+                          trigger={
+                            <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          }
+                          title={`Delete "${user.name}"?`}
+                          description="This will permanently delete this user and all their registered routers. This action cannot be undone."
+                          confirmText="Delete User"
+                          variant="destructive"
+                          onConfirm={() => handleDelete(user.id)}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Router, MoreVertical, Users, ChevronLeft, ChevronRight, PlusCircle, Sparkles } from "lucide-react"
-import { useRouters } from "@/hooks/use-routers"
+import { Router, MoreVertical, Users, ChevronLeft, ChevronRight, PlusCircle, Sparkles, Pencil, Trash2 } from "lucide-react"
+import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
 import { AddRouterDialog } from "@/components/add-router-dialog"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 export function RouterGrid() {
+  const deleteRouter = useDeleteRouter()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [ownerFilter, setOwnerFilter] = useState("")
@@ -256,9 +259,31 @@ export function RouterGrid() {
 
                       {/* Action */}
                       <td className="px-6 py-5 text-right">
-                        <button className="p-2 hover:bg-[#2d3449] rounded-lg transition-colors text-slate-400 hover:text-[#4cd7f6]">
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
+                            onClick={() => toast.info("Edit router coming soon")}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <ConfirmDialog
+                            trigger={
+                              <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            }
+                            title={`Delete router "${router.name}"?`}
+                            description="This will permanently remove this router. The user will need to re-register it."
+                            confirmText="Delete Router"
+                            variant="destructive"
+                            onConfirm={() => {
+                              deleteRouter.mutate(router.id, {
+                                onSuccess: () => toast.success("Router deleted"),
+                                onError: (e) => toast.error(e.message),
+                              })
+                            }}
+                          />
+                        </div>
                       </td>
                     </tr>
                   )
