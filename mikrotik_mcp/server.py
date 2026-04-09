@@ -2589,6 +2589,442 @@ def remove_nat_rule(user_id: str, rule_id: str, router: str = "") -> dict:
 
 
 # ─────────────────────────────────────────────
+#  STATIC ROUTE MANAGEMENT
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def add_static_route(user_id: str, dst_address: str, gateway: str, distance: int = 1, comment: str = "", router: str = "") -> dict:
+    """Add a static route. Example: dst_address='0.0.0.0/0', gateway='192.168.1.1'.
+
+    Args:
+        user_id: Telegram user ID
+        dst_address: Destination network (e.g. '0.0.0.0/0', '10.0.0.0/8')
+        gateway: Gateway IP address (e.g. '192.168.1.1')
+        distance: Administrative distance (default: 1)
+        comment: Optional comment
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params: dict[str, str] = {
+                "dst-address": dst_address,
+                "gateway": gateway,
+                "distance": str(distance),
+            }
+            if comment:
+                params["comment"] = comment
+            api.path("/ip/route").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Static route added: {dst_address} via {gateway} (distance={distance})"}
+    except Exception as e:
+        return {"error": f"Failed to add static route: {e}. Check that dst_address is a valid CIDR (e.g. '10.0.0.0/8') and gateway is reachable."}
+
+
+@mcp.tool()
+def remove_static_route(user_id: str, route_id: str, router: str = "") -> dict:
+    """Remove a static route by its .id. Use list_ip_routes to find the .id first.
+
+    Args:
+        user_id: Telegram user ID
+        route_id: The .id of the route to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/route").remove(route_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Static route '{route_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove static route: {e}. Verify the route .id exists using list_ip_routes."}
+
+
+# ─────────────────────────────────────────────
+#  NAT ENABLE / DISABLE
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def enable_nat_rule(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Enable a disabled NAT rule.
+
+    Args:
+        user_id: Telegram user ID
+        rule_id: The .id of the NAT rule to enable
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/nat").update(**{".id": rule_id, "disabled": "false"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"NAT rule {rule_id} enabled"}
+    except Exception as e:
+        return {"error": f"Failed to enable NAT rule: {e}. Verify the rule .id using list_firewall_nat."}
+
+
+@mcp.tool()
+def disable_nat_rule(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Disable a NAT rule without removing it.
+
+    Args:
+        user_id: Telegram user ID
+        rule_id: The .id of the NAT rule to disable
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/nat").update(**{".id": rule_id, "disabled": "true"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"NAT rule {rule_id} disabled"}
+    except Exception as e:
+        return {"error": f"Failed to disable NAT rule: {e}. Verify the rule .id using list_firewall_nat."}
+
+
+# ─────────────────────────────────────────────
+#  SCHEDULER CRUD
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def add_scheduler(user_id: str, name: str, on_event: str, start_time: str = "startup", interval: str = "", router: str = "") -> dict:
+    """Add a scheduled task. on_event is the RouterOS script to run.
+
+    Args:
+        user_id: Telegram user ID
+        name: Scheduler entry name
+        on_event: Script body or script name to execute
+        start_time: When to start — 'startup' or time like '00:00:00' (default: 'startup')
+        interval: Repeat interval (e.g. '1h', '30m', '1d'). Empty = run once.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params: dict[str, str] = {
+                "name": name,
+                "on-event": on_event,
+                "start-time": start_time,
+            }
+            if interval:
+                params["interval"] = interval
+            api.path("/system/scheduler").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Scheduler '{name}' created (start={start_time}, interval={interval or 'once'})"}
+    except Exception as e:
+        err = str(e)
+        if "already" in err.lower():
+            return {"error": f"Scheduler '{name}' already exists. Remove it first or use a different name."}
+        return {"error": f"Failed to add scheduler: {e}"}
+
+
+@mcp.tool()
+def remove_scheduler(user_id: str, name: str, router: str = "") -> dict:
+    """Remove a scheduled task by name.
+
+    Args:
+        user_id: Telegram user ID
+        name: Name of the scheduler entry to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            entries = list(api.path("/system/scheduler").select(
+                librouteros.query.Key("name") == name
+            ))
+            if not entries:
+                return {"error": f"Scheduler '{name}' not found. Use list_system_scheduler to see available entries."}
+            api.path("/system/scheduler").remove(entries[0][".id"])
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Scheduler '{name}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove scheduler: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  BACKUP / EXPORT
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def create_backup(user_id: str, name: str = "backup", router: str = "") -> dict:
+    """Create a router backup file on the router. Returns the filename.
+    The backup is stored on the router's filesystem and can be downloaded via WinBox/FTP.
+
+    Args:
+        user_id: Telegram user ID
+        name: Backup filename without extension (default: 'backup')
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            list(api.rawCmd("/system/backup/save", name=name))
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Backup created: {name}.backup (stored on router filesystem)"}
+    except Exception as e:
+        return {"error": f"Failed to create backup: {e}. The backup command may not be available via API on some RouterOS versions."}
+
+
+@mcp.tool()
+def export_config(user_id: str, router: str = "") -> dict:
+    """Export router configuration as text. Note: full /export may not be available via API.
+    Falls back to returning key configuration sections if the export command fails.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            try:
+                result = list(api.rawCmd("/export"))
+                registry.update_last_seen(user_id, conn["name"])
+                return {"status": "ok", "config": result}
+            except Exception:
+                # /export is not available via API on most RouterOS versions
+                # Return a summary of key config sections instead
+                identity = list(api.path("/system/identity"))
+                resource = list(api.path("/system/resource"))
+                registry.update_last_seen(user_id, conn["name"])
+                return {
+                    "info": "Full /export is not available via API. Use WinBox or SSH for full config export.",
+                    "identity": identity[0].get("name", "") if identity else "",
+                    "version": resource[0].get("version", "") if resource else "",
+                    "suggestion": "Use run_routeros_query to query specific config sections instead.",
+                }
+    except Exception as e:
+        return {"error": f"Failed to export config: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  PPPoE CLIENT
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_pppoe_client(user_id: str, router: str = "") -> list[dict]:
+    """List PPPoE client interfaces (WAN connections via PPPoE).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/interface/pppoe-client", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception as e:
+        return [{"error": f"Failed to list PPPoE clients: {e}. This router may not have any PPPoE client interfaces configured."}]
+
+
+# ─────────────────────────────────────────────
+#  IP ACCOUNTING
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def get_ip_accounting(user_id: str, router: str = "") -> dict:
+    """Get IP accounting settings (traffic tracking per IP pair).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        rows = _query_path("/ip/accounting", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return rows[0] if rows else {"info": "IP accounting not configured on this router"}
+    except Exception as e:
+        return {"error": f"Failed to get IP accounting settings: {e}"}
+
+
+@mcp.tool()
+def list_ip_accounting_snapshot(user_id: str, router: str = "") -> list[dict]:
+    """Get IP accounting snapshot (traffic per IP pair). Limited to first 50 entries.
+    Take a snapshot first via the router if needed.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        rows = _query_path("/ip/accounting/snapshot", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return rows[:50]
+    except Exception as e:
+        return [{"error": f"Failed to get IP accounting snapshot: {e}. Ensure IP accounting is enabled and a snapshot has been taken."}]
+
+
+# ─────────────────────────────────────────────
+#  BRIDGE FILTER
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_bridge_filter(user_id: str, router: str = "") -> list[dict]:
+    """List bridge firewall filter rules (Layer 2 firewall).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/interface/bridge/filter", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception as e:
+        return [{"error": f"Failed to list bridge filter rules: {e}"}]
+
+
+# ─────────────────────────────────────────────
+#  IPv6
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_ipv6_addresses(user_id: str, router: str = "") -> list[dict]:
+    """List IPv6 addresses. Not all routers have IPv6 enabled.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/ipv6/address", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "IPv6 not available on this router. The IPv6 package may not be installed."}]
+
+
+@mcp.tool()
+def list_ipv6_routes(user_id: str, router: str = "") -> list[dict]:
+    """List IPv6 routing table. Not all routers have IPv6 enabled.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/ipv6/route", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "IPv6 not available on this router. The IPv6 package may not be installed."}]
+
+
+# ─────────────────────────────────────────────
+#  CAPsMAN
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_capsman_interfaces(user_id: str, router: str = "") -> list[dict]:
+    """List CAPsMAN managed wireless interfaces. Only available on routers acting as CAPsMAN controller.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/caps-man/interface", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "CAPsMAN not available on this router. It may not be configured as a CAPsMAN controller."}]
+
+
+@mcp.tool()
+def list_capsman_registrations(user_id: str, router: str = "") -> list[dict]:
+    """List CAPsMAN registered access points. Only available on CAPsMAN controllers.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        result = _query_path("/caps-man/registration-table", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return result
+    except Exception:
+        return [{"info": "CAPsMAN not available on this router. It may not be configured as a CAPsMAN controller."}]
+
+
+# ─────────────────────────────────────────────
+#  FIREWALL RAW
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_firewall_raw(user_id: str, router: str = "") -> list[dict]:
+    """List raw firewall rules (pre-connection tracking). These rules are processed before connection tracking.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        rows = _query_path("/ip/firewall/raw", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return [
+            {
+                "id": r.get(".id"),
+                "chain": r.get("chain"),
+                "action": r.get("action"),
+                "protocol": r.get("protocol", "any"),
+                "src_address": r.get("src-address", ""),
+                "dst_address": r.get("dst-address", ""),
+                "dst_port": r.get("dst-port", ""),
+                "comment": r.get("comment", ""),
+                "disabled": r.get("disabled"),
+                "bytes": r.get("bytes", "0"),
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        return [{"error": f"Failed to list raw firewall rules: {e}"}]
+
+
+# ─────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────
 
