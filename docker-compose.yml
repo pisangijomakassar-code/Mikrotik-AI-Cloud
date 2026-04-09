@@ -1,0 +1,30 @@
+services:
+  mikrotik-agent:
+    container_name: mikrotik-agent
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      # Persist nanobot config, memory, and conversation history
+      - nanobot-data:/root/.nanobot
+      # Mount skills (live reload during development)
+      - ./skills:/app/skills:ro
+      # Mount MCP server (live reload during development)
+      - ./mikrotik_mcp:/app/mikrotik_mcp:ro
+      # Per-user router registries
+      - ./data:/app/data
+    ports:
+      - "18790:18790"   # Nanobot web UI (Nano-UI)
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+volumes:
+  nanobot-data:

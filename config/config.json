@@ -1,0 +1,35 @@
+{
+  "providers": {
+    "openrouter": {
+      "apiKey": "${OPENROUTER_API_KEY}",
+      "extraHeaders": {
+        "X-Title": "MikroTik AI Agent"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "google/gemma-4-31b-it:free",
+      "provider": "openrouter"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "token": "${TELEGRAM_BOT_TOKEN}",
+      "allowFrom": ["${TELEGRAM_USER_ID}"]
+    }
+  },
+  "tools": {
+    "mcpServers": {
+      "mikrotik": {
+        "transport": "stdio",
+        "command": "python",
+        "args": ["/app/mikrotik_mcp/server.py"],
+        "env": {
+          "DATA_DIR": "/app/data"
+        }
+      }
+    }
+  }
+}
