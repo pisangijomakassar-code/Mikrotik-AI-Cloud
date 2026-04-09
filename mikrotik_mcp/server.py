@@ -641,6 +641,211 @@ def remove_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
         return {"error": f"Failed to remove hotspot user: {e}"}
 
 
+@mcp.tool()
+def enable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
+    """Enable a disabled hotspot user account (reactivate suspended user).
+
+    Args:
+        user_id: Telegram user ID (required)
+        username: The username to enable
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                return {"error": f"User '{username}' not found."}
+            resource.update(**{".id": users[0][".id"], "disabled": "false"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot user '{username}' enabled"}
+    except Exception as e:
+        return {"error": f"Failed to enable hotspot user: {e}"}
+
+
+@mcp.tool()
+def disable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
+    """Disable (suspend) a hotspot user account without deleting it.
+
+    Args:
+        user_id: Telegram user ID (required)
+        username: The username to disable/suspend
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                return {"error": f"User '{username}' not found."}
+            resource.update(**{".id": users[0][".id"], "disabled": "true"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot user '{username}' disabled/suspended"}
+    except Exception as e:
+        return {"error": f"Failed to disable hotspot user: {e}"}
+
+
+@mcp.tool()
+def update_hotspot_user(user_id: str, username: str, new_password: str = "", new_profile: str = "", new_name: str = "", router: str = "") -> dict:
+    """Update an existing hotspot user (change password, profile, or name).
+
+    Args:
+        user_id: Telegram user ID (required)
+        username: Current username to update
+        new_password: New password (leave empty to keep current)
+        new_profile: New profile name (leave empty to keep current)
+        new_name: New username (leave empty to keep current)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                return {"error": f"User '{username}' not found."}
+            update_params: dict = {".id": users[0][".id"]}
+            changes = []
+            if new_password:
+                update_params["password"] = new_password
+                changes.append("password")
+            if new_profile:
+                profiles = list(api.path("/ip/hotspot/user/profile"))
+                profile_names = [p.get("name", "") for p in profiles]
+                if new_profile not in profile_names:
+                    return {"error": f"Profile '{new_profile}' not found. Available: {', '.join(profile_names)}"}
+                update_params["profile"] = new_profile
+                changes.append(f"profile→{new_profile}")
+            if new_name:
+                update_params["name"] = new_name
+                changes.append(f"name→{new_name}")
+            if not changes:
+                return {"error": "No changes specified. Provide new_password, new_profile, or new_name."}
+            resource.update(**update_params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"User '{username}' updated: {', '.join(changes)}"}
+    except Exception as e:
+        return {"error": f"Failed to update hotspot user: {e}"}
+
+
+@mcp.tool()
+def search_hotspot_user(user_id: str, username: str, router: str = "") -> list[dict]:
+    """Search for a specific hotspot user by name (exact or partial match).
+
+    Args:
+        user_id: Telegram user ID (required)
+        username: Username to search for
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            # Try exact match first
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                # Fallback: scan all users for partial match
+                all_users = list(resource)
+                users = [u for u in all_users if username.lower() in u.get("name", "").lower()]
+            registry.update_last_seen(user_id, conn["name"])
+            return [
+                {
+                    "name": u.get("name"),
+                    "profile": u.get("profile"),
+                    "disabled": u.get("disabled"),
+                    "limit_uptime": u.get("limit-uptime", ""),
+                    "comment": u.get("comment", ""),
+                }
+                for u in users
+            ] if users else [{"info": f"No user found matching '{username}'"}]
+    except Exception as e:
+        return [{"error": f"Failed to search hotspot user: {e}"}]
+
+
+@mcp.tool()
+def add_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "", shared_users: int = 1, session_timeout: str = "", router: str = "") -> dict:
+    """Create a new hotspot user profile (rate limit template).
+
+    Args:
+        user_id: Telegram user ID (required)
+        name: Profile name (e.g., '5rb', 'Free', 'Premium')
+        rate_limit: Upload/download limit (e.g., '1M/2M' or '512k/1M')
+        shared_users: Max concurrent sessions per user (default: 1)
+        session_timeout: Session timeout (e.g., '1h', '8h', '1d')
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params: dict = {"name": name, "shared-users": str(shared_users)}
+            if rate_limit:
+                params["rate-limit"] = rate_limit
+            if session_timeout:
+                params["session-timeout"] = session_timeout
+            api.path("/ip/hotspot/user/profile").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Profile '{name}' created (rate: {rate_limit or 'unlimited'}, shared: {shared_users})"}
+    except Exception as e:
+        err = str(e)
+        if "already" in err.lower():
+            return {"error": f"Profile '{name}' already exists."}
+        return {"error": f"Failed to create profile: {e}"}
+
+
+@mcp.tool()
+def enable_firewall_rule(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Enable a disabled firewall filter rule.
+
+    Args:
+        user_id: Telegram user ID (required)
+        rule_id: The .id of the firewall rule to enable
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/filter").update(**{".id": rule_id, "disabled": "false"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Firewall rule {rule_id} enabled"}
+    except Exception as e:
+        return {"error": f"Failed to enable firewall rule: {e}"}
+
+
+@mcp.tool()
+def disable_firewall_rule(user_id: str, rule_id: str, router: str = "") -> dict:
+    """Disable a firewall filter rule without removing it.
+
+    Args:
+        user_id: Telegram user ID (required)
+        rule_id: The .id of the firewall rule to disable
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/filter").update(**{".id": rule_id, "disabled": "true"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Firewall rule {rule_id} disabled"}
+    except Exception as e:
+        return {"error": f"Failed to disable firewall rule: {e}"}
+
+
 # ─────────────────────────────────────────────
 #  WIRELESS TOOLS
 # ─────────────────────────────────────────────
