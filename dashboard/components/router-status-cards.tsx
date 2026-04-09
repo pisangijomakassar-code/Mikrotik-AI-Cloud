@@ -77,7 +77,7 @@ export function RouterStatusCards() {
             <div className="space-y-3">
               {routers.map((router) => {
                 const health = router.health
-                const status = health?.status || "offline"
+                const status: string = health?.status || "offline"
                 return (
                   <div
                     key={router.id}
