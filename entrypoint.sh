@@ -11,6 +11,7 @@ cp /app/config/config.json /root/.nanobot/config.json
 
 # Always overwrite SOUL.md to keep personality in sync with repo
 cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
+cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null || true
 
-echo "[entrypoint] Config + SOUL.md applied, starting nanobot..."
+echo "[entrypoint] Config + SOUL.md + HEARTBEAT.md applied, starting nanobot..."
 exec nanobot "$@"

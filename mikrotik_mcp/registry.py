@@ -14,6 +14,8 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
+from mikrotik_mcp.crypto import CredentialStore
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,7 @@ class RouterRegistry:
     def __init__(self, data_dir: str = "/app/data"):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.crypto = CredentialStore(key_path=str(Path(data_dir) / ".master_key"))
 
     # ── internal helpers ──────────────────────────────────────
 
@@ -50,10 +53,15 @@ class RouterRegistry:
             return _empty_user(user_id)
         try:
             with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
         except (json.JSONDecodeError, OSError) as exc:
             logger.error("Failed to load %s: %s", path, exc)
             return _empty_user(user_id)
+
+        # Auto-migrate plain text passwords to encrypted
+        if self._migrate_passwords(data):
+            self._save(user_id, data)
+        return data
 
     def _save(self, user_id: str, data: dict):
         """Atomic save — write to temp file then rename into place."""
@@ -72,6 +80,19 @@ class RouterRegistry:
             except OSError:
                 pass
             raise
+
+    def _migrate_passwords(self, data: dict) -> bool:
+        """Migrate plain text passwords to encrypted. Returns True if any were migrated."""
+        changed = False
+        for name, router in data.get("routers", {}).items():
+            pwd = router.get("password", "")
+            if isinstance(pwd, str) and pwd:  # Plain text — migrate
+                router["password"] = {
+                    "encrypted": True,
+                    "value": self.crypto.encrypt(pwd),
+                }
+                changed = True
+        return changed
 
     # ── public API ────────────────────────────────────────────
 
@@ -115,7 +136,10 @@ class RouterRegistry:
             "host": host,
             "port": port,
             "username": username,
-            "password": password,
+            "password": {
+                "encrypted": True,
+                "value": self.crypto.encrypt(password),
+            },
             "label": label,
             "routeros_version": routeros_version,
             "board": board,
@@ -150,13 +174,16 @@ class RouterRegistry:
         return {"status": "ok", "message": f"Router '{name}' removed."}
 
     def get_router(self, user_id: str, name: str) -> dict:
-        """Get full router details (WITH password) for connection."""
+        """Get full router details (WITH decrypted password) for connection."""
         data = self._load(user_id)
         router = data["routers"].get(name)
         if router is None:
             return {"error": f"Router '{name}' not found."}
         result = deepcopy(router)
         result["name"] = name
+        pwd = result.get("password", "")
+        if self.crypto.is_encrypted(pwd):
+            result["password"] = self.crypto.decrypt(pwd["value"])
         return result
 
     def set_default(self, user_id: str, name: str) -> dict:
@@ -197,6 +224,9 @@ class RouterRegistry:
             for name, info in data["routers"].items():
                 entry = deepcopy(info)
                 entry["name"] = name
+                pwd = entry.get("password", "")
+                if self.crypto.is_encrypted(pwd):
+                    entry["password"] = self.crypto.decrypt(pwd["value"])
                 result.append(entry)
             return result
 
@@ -213,6 +243,9 @@ class RouterRegistry:
 
         result = deepcopy(data["routers"][target])
         result["name"] = target
+        pwd = result.get("password", "")
+        if self.crypto.is_encrypted(pwd):
+            result["password"] = self.crypto.decrypt(pwd["value"])
         return result
 
     def update_last_seen(

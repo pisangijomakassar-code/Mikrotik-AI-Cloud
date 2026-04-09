@@ -1582,6 +1582,72 @@ def disable_simple_queue(user_id: str, queue_id: str, router: str = "") -> dict:
 
 
 # ─────────────────────────────────────────────
+#  MONITORING TOOLS
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def check_all_routers_health(user_id: str) -> list[dict]:
+    """Check connectivity and basic health of ALL registered routers for this user.
+    Returns status (online/offline), CPU, memory, uptime, and active clients for each router.
+    Useful for quick overview or scheduled health reports.
+
+    Args:
+        user_id: Telegram user ID
+    """
+    try:
+        all_routers = registry.resolve(user_id, "all")
+    except ValueError:
+        return [{"error": "No routers registered"}]
+
+    results = []
+    for router_conn in all_routers:
+        name = router_conn.get("name", "unknown")
+        status = {"name": name, "status": "offline"}
+        try:
+            with connect_router(router_conn["host"], router_conn["port"],
+                              router_conn["username"], router_conn["password"]) as api:
+                # System resource
+                resource = list(api.path("/system/resource"))
+                if resource:
+                    r = resource[0]
+                    total_mem = int(r.get("total-memory", 0))
+                    free_mem = int(r.get("free-memory", 0))
+                    used_pct = round((total_mem - free_mem) / total_mem * 100) if total_mem else 0
+                    status.update({
+                        "status": "online",
+                        "cpu_load": r.get("cpu-load"),
+                        "memory_percent": used_pct,
+                        "uptime": r.get("uptime"),
+                        "version": r.get("version"),
+                    })
+
+                # Active clients count
+                leases = list(api.path("/ip/dhcp-server/lease"))
+                active = len([l for l in leases if l.get("status") == "bound"])
+                status["active_clients"] = active
+
+                # Alerts
+                alerts = []
+                cpu = status.get("cpu_load", 0)
+                if isinstance(cpu, (int, float)) and cpu > 80:
+                    alerts.append(f"CPU tinggi: {cpu}%")
+                if used_pct > 90:
+                    alerts.append(f"Memory kritis: {used_pct}%")
+                if alerts:
+                    status["alerts"] = alerts
+
+                registry.update_last_seen(user_id, name,
+                    routeros_version=r.get("version", ""),
+                    board=r.get("board-name", ""))
+        except Exception as e:
+            status["error"] = str(e)
+
+        results.append(status)
+
+    return results
+
+
+# ─────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────
 
