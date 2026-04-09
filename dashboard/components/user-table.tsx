@@ -19,12 +19,15 @@ function getInitials(name: string): string {
 export function UserTable() {
   const [search, setSearch] = useState("")
   const [activeTab, setActiveTab] = useState<string>("all")
+  const [showFilters, setShowFilters] = useState(false)
+  const [roleFilter, setRoleFilter] = useState<string>("")
 
   const derivedStatus = activeTab === "active" ? "ACTIVE" : activeTab === "suspended" ? "SUSPENDED" : undefined
 
   const filter = {
     search: search || undefined,
     status: derivedStatus as "ACTIVE" | "INACTIVE" | "SUSPENDED" | undefined,
+    role: (roleFilter || undefined) as "ADMIN" | "USER" | undefined,
   }
 
   const { data: users, isLoading } = useUsers(filter)
@@ -89,15 +92,52 @@ export function UserTable() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 text-sm hover:bg-[#222a3d] transition-colors">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-sm transition-colors",
+              showFilters ? "text-[#4cd7f6] border-[#4cd7f6]/30" : "text-slate-400 hover:bg-[#222a3d]"
+            )}
+          >
             <SlidersHorizontal className="h-4 w-4" />
             More Filters
           </button>
-          <button className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 hover:text-[#4cd7f6] transition-colors">
+          <button
+            onClick={() => toast.info("Export coming soon")}
+            className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 hover:text-[#4cd7f6] transition-colors"
+          >
             <Download className="h-5 w-5" />
           </button>
         </div>
       </div>
+
+      {/* Expanded filters */}
+      {showFilters && (
+        <div className="flex items-center gap-3 bg-[#131b2e] p-3 rounded-lg border border-white/5">
+          <input
+            type="text"
+            placeholder="Search by name, email, or Telegram ID..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
+          />
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] outline-none"
+          >
+            <option value="">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="USER">User</option>
+          </select>
+          <button
+            onClick={() => { setSearch(""); setRoleFilter(""); setActiveTab("all"); setShowFilters(false) }}
+            className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-3"
+          >
+            Reset
+          </button>
+        </div>
+      )}
 
       {/* Glass-morphism Table */}
       <div className="glass-panel border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)]">
