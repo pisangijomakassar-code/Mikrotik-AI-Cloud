@@ -93,7 +93,7 @@ export function RouterGrid() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {routers.map((router) => {
             const health = router.health
-            const status = health?.status || "offline"
+            const status: string = health?.status || "offline"
             return (
               <Card
                 key={router.id}
