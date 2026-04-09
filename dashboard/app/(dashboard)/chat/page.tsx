@@ -47,7 +47,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] -m-8">
+    <div className="fixed top-16 left-64 right-0 bottom-0 flex">
       {/* Chat */}
       <section className="flex-1 flex flex-col border-r border-white/5 bg-slate-900 overflow-hidden">
         {/* Scrollable chat history only */}

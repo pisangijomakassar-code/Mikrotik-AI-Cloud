@@ -1,6 +1,5 @@
 import fs from "fs"
 import path from "path"
-import { execFileSync } from "child_process"
 import { prisma } from "./db"
 
 export async function syncAndRestart() {
@@ -21,12 +20,8 @@ export async function syncAndRestart() {
   )
   fs.writeFileSync(outPath, JSON.stringify(config, null, 2))
 
-  // Restart via docker CLI using execFileSync (no shell injection risk)
-  try {
-    execFileSync("docker", ["restart", "mikrotik-agent"], { timeout: 30000 })
-  } catch {
-    return { restarted: false, error: "Failed to restart container", usersProvisioned: users.length }
-  }
+  // No docker restart needed — the agent container's entrypoint watches
+  // config.generated.json via inotifywait and hot-reloads nanobot automatically
 
   await prisma.user.updateMany({
     where: { status: "ACTIVE" },

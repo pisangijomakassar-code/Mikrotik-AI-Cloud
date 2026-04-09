@@ -14,6 +14,7 @@ export async function GET() {
       name: true,
       email: true,
       telegramId: true,
+      botToken: true,
       role: true,
       status: true,
       agentUrl: true,

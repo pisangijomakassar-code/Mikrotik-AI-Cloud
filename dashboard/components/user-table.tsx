@@ -139,22 +139,22 @@ export function UserTable() {
         </div>
       )}
 
-      {/* Glass-morphism Table */}
-      <div className="glass-panel border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)]">
+      {/* Table */}
+      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white/[0.03] text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                <th className="px-8 py-5">User ID (Telegram)</th>
-                <th className="px-6 py-5">Name</th>
-                <th className="px-6 py-5">Telegram Bot Token</th>
-                <th className="px-6 py-5">Routers Count</th>
-                <th className="px-6 py-5">Status</th>
-                <th className="px-6 py-5">Created Date</th>
-                <th className="px-8 py-5 text-right">Actions</th>
+              <tr className="bg-slate-900/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">User ID (Telegram)</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Telegram Bot Token</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Routers Count</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Created Date</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.05]">
+            <tbody className="divide-y divide-white/5">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
@@ -173,25 +173,26 @@ export function UserTable() {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
-                    <td className="px-8 py-5 font-mono-tech text-cyan-400 text-sm">
+                  <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-5 font-mono-tech text-cyan-400 text-sm">
                       {user.telegramId}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#2d3449] flex items-center justify-center text-xs font-bold text-[#4cd7f6]">
+                        <div className="w-10 h-10 rounded-xl bg-[#2d3449] flex items-center justify-center text-xs font-bold text-[#4cd7f6] border border-white/5">
                           {getInitials(user.name)}
                         </div>
-                        <span className="text-[#dae2fd] font-medium">{user.name}</span>
+                        <span className="text-sm font-bold text-[#dae2fd]">{user.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 font-mono-tech text-xs text-slate-500">
-                      {maskToken(user.botToken)}
-                      <span className="text-[8px] opacity-30">{"••••••••••"}</span>
+                    <td className="px-6 py-5">
+                      <span className="font-mono-tech text-xs px-2 py-1 rounded-lg text-slate-500 bg-slate-900/50">
+                        {maskToken(user.botToken)}
+                      </span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="bg-[#222a3d] px-2 py-1 rounded text-xs text-[#dae2fd] border border-white/5">
-                        {user._count?.routers ?? 0} Units
+                      <span className="text-sm font-bold text-[#dae2fd]">
+                        {user._count?.routers ?? 0}
                       </span>
                     </td>
                     <td className="px-6 py-5">
@@ -214,7 +215,7 @@ export function UserTable() {
                     <td className="px-6 py-5 text-sm text-slate-400">
                       {formatDate(user.createdAt)}
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-6 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
@@ -244,17 +245,19 @@ export function UserTable() {
         </div>
 
         {/* Pagination */}
-        <div className="px-8 py-4 bg-white/[0.02] border-t border-white/[0.05] flex items-center justify-between">
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
+          <span className="text-xs text-slate-500">
             Showing {users?.length ?? 0} of {users?.length ?? 0} users
-          </p>
+          </span>
           <div className="flex items-center gap-2">
-            <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
-              <ChevronLeft className="h-5 w-5" />
+            <button className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30" disabled>
+              <ChevronLeft className="h-4 w-4 text-slate-400" />
             </button>
-            <span className="text-xs font-bold px-3 py-1 bg-[#06b6d4]/10 text-[#4cd7f6] rounded-lg border border-[#06b6d4]/20">1</span>
-            <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
-              <ChevronRight className="h-5 w-5" />
+            <div className="flex items-center gap-1">
+              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded-lg">1</button>
+            </div>
+            <button className="p-1 hover:bg-[#2d3449] rounded-lg">
+              <ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
           </div>
         </div>

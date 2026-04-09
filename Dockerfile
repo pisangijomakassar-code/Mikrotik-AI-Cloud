@@ -4,7 +4,7 @@ WORKDIR /app
 
 # System deps (gettext-base provides envsubst)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl gettext-base && \
+    git curl gettext-base inotify-tools && \
     rm -rf /var/lib/apt/lists/*
 
 # Install nanobot

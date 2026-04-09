@@ -10,6 +10,7 @@ interface ProfileData {
   name: string
   email: string | null
   telegramId: string
+  botToken: string | null
   role: "ADMIN" | "USER"
   status: string
   agentUrl: string | null
@@ -132,7 +133,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-3 text-sm">
                 <Shield className="h-4 w-4 text-slate-500" />
                 <span className="text-slate-400">
-                  Agent {profile.agentUrl ? "configured" : "not configured"}
+                  Agent {profile.botToken && profile.telegramId ? "configured" : "not configured"}
                 </span>
               </div>
             </div>
