@@ -19,7 +19,10 @@ import psycopg2
 import psycopg2.pool
 import psycopg2.extras
 
-from mikrotik_mcp.crypto import CredentialStore
+try:
+    from mikrotik_mcp.crypto import CredentialStore
+except ModuleNotFoundError:
+    from crypto import CredentialStore
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,10 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
-from mikrotik_mcp.crypto import CredentialStore
+try:
+    from mikrotik_mcp.crypto import CredentialStore
+except ModuleNotFoundError:
+    from crypto import CredentialStore
 
 logger = logging.getLogger(__name__)
 
