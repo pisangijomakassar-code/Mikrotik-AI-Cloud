@@ -50,53 +50,36 @@ export function RouterGrid() {
         </div>
       </div>
 
-      {/* Filters Section */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="col-span-3 bg-[#131b2e] p-2 rounded-2xl flex items-center gap-2 border border-white/5 overflow-x-auto whitespace-nowrap">
-          <div className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-tighter">Filters</div>
-          <div className="h-6 w-px bg-white/10 mx-2" />
-          <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
-            <span className="text-xs text-slate-400">Status:</span>
-            <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>
-              <SelectTrigger className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 h-auto w-auto gap-1 shadow-none focus:ring-0">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#131b2e] border-white/10">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="offline">Offline</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
-            <span className="text-xs text-slate-400">Owner:</span>
-            <Select value={ownerFilter || "all"} onValueChange={(val) => setOwnerFilter(val === "all" ? "" : val)}>
-              <SelectTrigger className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 h-auto w-auto gap-1 shadow-none focus:ring-0">
-                <SelectValue placeholder="All Owners" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#131b2e] border-white/10">
-                <SelectItem value="all">All Owners</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <button
-            onClick={resetFilters}
-            className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-4"
-          >
-            Reset Filters
-          </button>
-        </div>
-        <div className="bg-[#131b2e] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-2 h-2 bg-[#4ae176] rounded-full animate-pulse" />
-              <div className="absolute -inset-1 bg-[#4ae176]/20 rounded-full blur-sm" />
-            </div>
-            <span className="text-xs font-bold text-[#dae2fd]">{onlineCount} Nodes Online</span>
-          </div>
-          <span className="text-[10px] text-slate-500 uppercase tracking-widest">Global Health {healthPct}%</span>
-        </div>
-      </section>
+      {/* Filters - simple style matching log page */}
+      <div className="flex items-center gap-3 mb-8">
+        <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>
+          <SelectTrigger className="w-[160px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131b2e] border-white/10">
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="online">Online</SelectItem>
+            <SelectItem value="offline">Offline</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={ownerFilter || "all"} onValueChange={(val) => setOwnerFilter(val === "all" ? "" : val)}>
+          <SelectTrigger className="w-[160px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+            <SelectValue placeholder="All Owners" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131b2e] border-white/10">
+            <SelectItem value="all">All Owners</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <span className="text-[10px] text-slate-500 ml-auto flex items-center gap-2">
+          <span className="relative flex items-center gap-1.5">
+            <span className="w-2 h-2 bg-[#4ae176] rounded-full animate-pulse" />
+            {onlineCount} Online
+          </span>
+          · Global Health {healthPct}%
+        </span>
+      </div>
 
       {/* Router Table */}
       <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
@@ -207,7 +190,7 @@ export function RouterGrid() {
                         )}
                       </td>
 
-                      {/* Resources */}
+                      {/* Resources - same data format as dashboard */}
                       <td className="px-6 py-5 min-w-[200px]">
                         {health && !isOffline ? (
                           <div className="space-y-2">
@@ -217,20 +200,24 @@ export function RouterGrid() {
                             </div>
                             <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-[#4ae176] rounded-full"
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  health.cpuLoad > 80 ? "bg-[#ffb4ab]" : health.cpuLoad > 50 ? "bg-amber-400" : "bg-[#4cd7f6]"
+                                )}
                                 style={{ width: `${health.cpuLoad}%` }}
                               />
                             </div>
                             <div className="flex items-center justify-between text-[10px] text-slate-400">
                               <span>MEM</span>
-                              <span className="font-mono-tech">
-                                {health.memoryUsed}/{health.memoryTotal} MB
-                              </span>
+                              <span className="font-mono-tech">{health.memoryPercent}%</span>
                             </div>
                             <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-[#4cd7f6] rounded-full"
-                                style={{ width: `${health.memoryTotal > 0 ? Math.round((health.memoryUsed / health.memoryTotal) * 100) : 0}%` }}
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  health.memoryPercent > 80 ? "bg-[#ffb4ab]" : health.memoryPercent > 50 ? "bg-amber-400" : "bg-[#4ae176]"
+                                )}
+                                style={{ width: `${health.memoryPercent}%` }}
                               />
                             </div>
                           </div>

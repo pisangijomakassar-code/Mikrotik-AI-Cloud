@@ -1,10 +1,18 @@
 "use client"
 
-import { Search, ShieldCheck, Cpu, Bell } from "lucide-react"
+import { Search, ShieldCheck, Cpu, Bell, LogOut, User, Settings } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { signOut } from "next-auth/react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export function TopNavBar() {
   const router = useRouter()
@@ -67,13 +75,41 @@ export function TopNavBar() {
           <Bell className="h-5 w-5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-[#ffb4ab] rounded-full border-2 border-slate-950" />
         </button>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          title="Sign Out"
-          className="h-8 w-8 rounded-full overflow-hidden border border-[#4cd7f6]/20 hover:scale-105 transition-transform bg-[#222a3d] flex items-center justify-center"
-        >
-          <span className="text-xs font-bold text-[#4cd7f6]">A</span>
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="h-8 w-8 rounded-full overflow-hidden border border-[#4cd7f6]/20 hover:scale-105 transition-transform bg-[#222a3d] flex items-center justify-center"
+            >
+              <span className="text-xs font-bold text-[#4cd7f6]">A</span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 bg-[#131b2e] border-white/10 text-[#dae2fd]">
+            <DropdownMenuLabel className="text-xs text-slate-400">My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-white/5" />
+            <DropdownMenuItem
+              onClick={() => router.push("/settings")}
+              className="text-xs gap-2 cursor-pointer focus:bg-[#222a3d] focus:text-[#4cd7f6]"
+            >
+              <User className="h-3.5 w-3.5" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => router.push("/settings")}
+              className="text-xs gap-2 cursor-pointer focus:bg-[#222a3d] focus:text-[#4cd7f6]"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/5" />
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-xs gap-2 cursor-pointer focus:bg-[#ffb4ab]/10 focus:text-[#ffb4ab]"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

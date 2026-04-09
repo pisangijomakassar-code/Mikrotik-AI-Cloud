@@ -27,8 +27,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Users", href: "/users", icon: Users, adminOnly: true },
   { label: "Routers", href: "/routers", icon: Router },
+  { label: "Users", href: "/users", icon: Users, adminOnly: true },
+  { label: "AI Assistant", href: "/chat", icon: MessageSquare },
   { label: "Logs", href: "/logs", icon: Terminal },
   { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
   { label: "Docs", href: "/docs", icon: BookOpen },

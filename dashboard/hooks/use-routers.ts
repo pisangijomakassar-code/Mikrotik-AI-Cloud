@@ -19,6 +19,7 @@ export interface RouterData {
     board: string
     version: string
     cpuLoad: number
+    memoryPercent: number
     memoryUsed: number
     memoryTotal: number
     activeClients: number

@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/db"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -15,6 +16,19 @@ export async function POST(request: Request) {
         { error: "Message or image is required" },
         { status: 400 }
       )
+    }
+
+    // Lookup user's botToken and telegramId for per-user agent routing
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id as string },
+      select: { botToken: true, telegramId: true, name: true },
+    })
+
+    if (!user?.botToken) {
+      return Response.json({
+        reply:
+          "Your AI agent is not configured yet. Please contact the administrator to set up your bot token.",
+      })
     }
 
     // Build messages for the OpenAI-compatible API
@@ -35,14 +49,18 @@ export async function POST(request: Request) {
     const nanobotUrl =
       process.env.NANOBOT_API_URL || "http://mikrotik-agent:8900"
 
-    // Try calling nanobot OpenAI-compatible API
+    // Call nanobot OpenAI-compatible API with per-user context
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30000)
 
     try {
       const apiResponse = await fetch(`${nanobotUrl}/v1/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Bot-Token": user.botToken,
+          "X-Telegram-Id": user.telegramId,
+        },
         body: JSON.stringify({
           messages: [
             {
@@ -51,6 +69,11 @@ export async function POST(request: Request) {
             },
           ],
           session_id: sessionId,
+          user_context: {
+            telegram_id: user.telegramId,
+            bot_token: user.botToken,
+            name: user.name,
+          },
         }),
         signal: controller.signal,
       })

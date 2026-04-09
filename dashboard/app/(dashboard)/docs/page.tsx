@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { BookOpen, FileCode, ShieldCheck, Loader2, Search } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 
 const DOCS = [
   { slug: "user-guide", label: "User Guide", icon: BookOpen },
@@ -18,6 +18,7 @@ export default function DocsPage() {
   const [contents, setContents] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [search, setSearch] = useState("")
+  const [activeTab, setActiveTab] = useState<DocSlug>("user-guide")
 
   async function fetchDoc(slug: DocSlug) {
     if (contents[slug]) return
@@ -82,31 +83,38 @@ export default function DocsPage() {
         )}
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="user-guide" onValueChange={(v) => fetchDoc(v as DocSlug)}>
-        <TabsList className="bg-[#131b2e] border border-white/5 rounded-xl p-1 h-auto w-auto">
-          {DOCS.map((doc) => {
-            const count = contents[doc.slug] ? highlightCount(contents[doc.slug]) : 0
-            return (
-              <TabsTrigger
-                key={doc.slug}
-                value={doc.slug}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 data-[state=active]:bg-cyan-950/40 data-[state=active]:text-[#4cd7f6] transition-all"
-              >
-                <doc.icon className="h-4 w-4" />
-                {doc.label}
-                {search && count > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] rounded-full font-bold">
-                    {count}
-                  </span>
-                )}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
+      {/* Tabs - same style as user page */}
+      <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-lg border border-white/5 w-fit">
+        {DOCS.map((doc) => {
+          const count = contents[doc.slug] ? highlightCount(contents[doc.slug]) : 0
+          return (
+            <button
+              key={doc.slug}
+              type="button"
+              onClick={() => { setActiveTab(doc.slug); fetchDoc(doc.slug) }}
+              className={cn(
+                "flex items-center gap-2 px-5 py-1.5 font-bold text-xs rounded-lg transition-colors",
+                activeTab === doc.slug
+                  ? "bg-[#222a3d] text-[#4cd7f6]"
+                  : "text-slate-500 hover:text-slate-300"
+              )}
+            >
+              <doc.icon className="h-4 w-4" />
+              {doc.label}
+              {search && count > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] rounded-full font-bold">
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
 
-        {DOCS.map((doc) => (
-          <TabsContent key={doc.slug} value={doc.slug} className="mt-6">
+      {/* Tab Content */}
+      {DOCS.map((doc) => (
+        activeTab === doc.slug && (
+          <div key={doc.slug} className="mt-6">
             {loading[doc.slug] ? (
               <div className="flex items-center justify-center py-32">
                 <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
@@ -134,9 +142,9 @@ export default function DocsPage() {
                 </div>
               </article>
             ) : null}
-          </TabsContent>
-        ))}
-      </Tabs>
+          </div>
+        )
+      ))}
     </div>
   )
 }

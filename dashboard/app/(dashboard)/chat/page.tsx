@@ -60,7 +60,7 @@ export default function ChatPage() {
     try {
       const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMsg.content }) })
       const data = res.ok ? await res.json() : null
-      setMessages(prev => [...prev, { role: "assistant", content: data?.message || data?.response || "Agent is offline. Try again.", timestamp: formatTime(new Date()) }])
+      setMessages(prev => [...prev, { role: "assistant", content: data?.reply || data?.message || data?.response || "Agent is offline. Try again.", timestamp: formatTime(new Date()) }])
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Connection error. The AI agent may be offline.", timestamp: formatTime(new Date()) }])
     } finally { setIsLoading(false) }
@@ -180,7 +180,7 @@ export default function ChatPage() {
           <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Session</h4>
           <div className="space-y-2 text-xs text-slate-400">
             <div className="flex justify-between"><span>Messages</span><span className="text-slate-300">{messages.length}</span></div>
-            <div className="flex justify-between"><span>Model</span><span className="text-cyan-400 font-mono text-[10px]">GPT-5.4 Nano</span></div>
+            <div className="flex justify-between"><span>Model</span><span className="text-cyan-400 font-mono text-[10px]">Nanobot Agent</span></div>
             <div className="flex justify-between"><span>Status</span><span className="text-emerald-400">Connected</span></div>
           </div>
         </div>
