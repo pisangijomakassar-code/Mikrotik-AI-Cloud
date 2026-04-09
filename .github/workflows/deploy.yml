@@ -51,9 +51,9 @@ jobs:
             # Create data dir
             mkdir -p data
 
-            # Build and deploy
+            # Build and deploy (force recreate to pick up mounted file changes)
             docker compose down || true
-            docker compose up -d --build
+            docker compose up -d --build --force-recreate
 
             # Show status
             echo "---"
