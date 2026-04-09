@@ -9,7 +9,7 @@
   },
   "agents": {
     "defaults": {
-      "model": "google/gemma-4-31b-it:free",
+      "model": "google/gemini-2.5-flash",
       "provider": "openrouter"
     }
   },
