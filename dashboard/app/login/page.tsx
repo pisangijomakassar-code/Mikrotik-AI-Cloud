@@ -86,7 +86,7 @@ export default function LoginPage() {
                   <AtSign className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
                 </div>
                 <input
-                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-xl py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
+                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
                   id="email"
                   type="email"
                   placeholder="administrator@network.local"
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   <Lock className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
                 </div>
                 <input
-                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-xl py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
+                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
                   id="password"
                   type="password"
                   placeholder="••••••••••••"
@@ -127,7 +127,7 @@ export default function LoginPage() {
 
             {/* Action Button */}
             <button
-              className="w-full group relative overflow-hidden bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold py-4 rounded-xl shadow-lg shadow-[#4cd7f6]/20 hover:shadow-[#4cd7f6]/40 transition-all active:scale-[0.98] disabled:opacity-70"
+              className="w-full group relative overflow-hidden bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold py-4 rounded-lg shadow-lg shadow-[#4cd7f6]/20 hover:shadow-[#4cd7f6]/40 transition-all active:scale-[0.98] disabled:opacity-70"
               type="submit"
               disabled={isLoading}
             >

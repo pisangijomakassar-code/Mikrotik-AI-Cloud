@@ -1,6 +1,6 @@
 "use client"
 
-import { Users, Router, Wifi, Bot, TrendingUp } from "lucide-react"
+import { Users, Router, Wifi, Bot } from "lucide-react"
 import { useStats } from "@/hooks/use-stats"
 
 export function StatsCards() {
@@ -30,12 +30,8 @@ export function StatsCards() {
           <Users className="h-9 w-9" />
         </div>
         <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Active Users</p>
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.activeUsers ?? 0}</h2>
-          <span className="text-[#4ae176] text-xs font-bold flex items-center">
-            <TrendingUp className="h-3 w-3 mr-0.5" /> +12%
-          </span>
-        </div>
+        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.activeUsers ?? 0}</h2>
+        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">of {stats?.totalUsers ?? 0} total users</p>
       </div>
 
       {/* Card 2: Total Routers */}
@@ -45,7 +41,7 @@ export function StatsCards() {
         </div>
         <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Total Routers</p>
         <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.totalRouters ?? 0}</h2>
-        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">15% Cluster Usage</p>
+        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">{stats?.totalLogs ?? 0} total logs</p>
       </div>
 
       {/* Card 3: Active Clients */}
@@ -53,7 +49,7 @@ export function StatsCards() {
         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
           <Wifi className="h-9 w-9" />
         </div>
-        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Active Clients</p>
+        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Recent Activity</p>
         <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.recentActivity ?? 0}</h2>
         <div className="flex gap-1 mt-2">
           <div className="h-1 w-full bg-[#06b6d4] rounded-full" />
@@ -69,7 +65,7 @@ export function StatsCards() {
         <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">LLM Status</p>
         <div className="flex items-center gap-3">
           <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">Ready</h2>
-          <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded text-[10px] text-[#4ae176] font-bold animate-pulse">
+          <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded-lg text-[10px] text-[#4ae176] font-bold animate-pulse">
             OPTIMIZED
           </div>
         </div>

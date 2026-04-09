@@ -37,7 +37,7 @@ export function ActivityFeed() {
           <Clock className="h-4 w-4 text-[#4cd7f6]" />
           <h3 className="font-headline font-bold text-[#dae2fd]">Recent Activity</h3>
         </div>
-        <span className="px-2 py-0.5 bg-[#2d3449] text-[10px] rounded border border-white/5 text-[#dae2fd]">LIVE</span>
+        <span className="px-2 py-0.5 bg-[#2d3449] text-[10px] rounded-lg border border-white/5 text-[#dae2fd]">LIVE</span>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
@@ -75,7 +75,7 @@ export function ActivityFeed() {
                   {log.tool && (
                     <>
                       {" "}executed{" "}
-                      <span className="font-mono-tech text-xs px-1.5 py-0.5 bg-slate-900 rounded text-cyan-300">
+                      <span className="font-mono-tech text-xs px-1.5 py-0.5 bg-slate-900 rounded-lg text-cyan-300">
                         {log.tool}
                       </span>
                     </>

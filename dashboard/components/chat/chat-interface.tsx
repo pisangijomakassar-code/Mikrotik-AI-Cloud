@@ -1,10 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { MessageSquare, Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
+import { MessageSquare, Plus, Trash2, Bot } from "lucide-react"
 import { MessageBubble } from "@/components/chat/message-bubble"
 import { ChatInput } from "@/components/chat/chat-input"
 import { useSendMessage, useUploadImage } from "@/hooks/use-chat"
@@ -144,7 +141,7 @@ export function ChatInterface() {
           ...s,
           messages: [...s.messages, botMsg],
         }))
-      } catch (err) {
+      } catch {
         const errorMsg: ChatMessage = {
           id: generateId(),
           role: "assistant",
@@ -164,30 +161,27 @@ export function ChatInterface() {
   const isLoading = sendMessageMutation.isPending || uploadImageMutation.isPending
 
   return (
-    <div className="flex h-full overflow-hidden rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)', border: '1px solid rgba(61, 73, 76, 0.15)' }}>
+    <div className="flex h-full overflow-hidden rounded-lg border border-white/5 bg-slate-900">
       {/* Session sidebar */}
       <div
         className={cn(
-          "flex flex-col transition-all",
+          "flex flex-col transition-all bg-slate-950 border-r border-white/10",
           showSidebar ? "w-72" : "w-0 overflow-hidden",
           "max-lg:absolute max-lg:inset-y-0 max-lg:left-0 max-lg:z-20",
           !showSidebar && "max-lg:hidden"
         )}
-        style={showSidebar ? { borderRight: '1px solid rgba(61, 73, 76, 0.15)', background: 'rgba(35, 42, 60, 0.5)' } : undefined}
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-sm font-semibold text-foreground">Chats</h2>
-          <Button
-            variant="ghost"
-            size="icon-xs"
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+          <h2 className="text-sm font-bold text-[#dae2fd] font-headline uppercase tracking-wider">Chats</h2>
+          <button
             onClick={handleNewSession}
             title="New chat"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#4cd7f6] hover:bg-white/5 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
-        <Separator />
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="space-y-0.5 p-2">
             {sessions.map((session) => (
               <button
@@ -195,25 +189,24 @@ export function ChatInterface() {
                 type="button"
                 onClick={() => {
                   setActiveSessionId(session.id)
-                  // On mobile, close sidebar after selecting
                   if (window.innerWidth < 1024) setShowSidebar(false)
                 }}
                 className={cn(
-                  "group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                  "group flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                   session.id === activeSessionId
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    ? "bg-[#06b6d4]/10 text-[#4cd7f6]"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 )}
               >
                 <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                <span className="flex-1 truncate">{session.title}</span>
+                <span className="flex-1 truncate font-medium">{session.title}</span>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleDeleteSession(session.id)
                   }}
-                  className="hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+                  className="hidden shrink-0 rounded-lg p-0.5 text-slate-500 hover:text-[#ffb4ab] group-hover:block"
                   title="Delete chat"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -221,74 +214,77 @@ export function ChatInterface() {
               </button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Chat area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col relative bg-slate-900">
         {/* Chat header */}
-        <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(61, 73, 76, 0.15)' }}>
+        <div className="flex items-center gap-3 px-6 py-3 border-b border-white/10 bg-slate-900/80 backdrop-blur-md">
           <button
             type="button"
             onClick={() => setShowSidebar(!showSidebar)}
-            className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground lg:hidden"
-          >
-            <MessageSquare className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="hidden rounded p-1 text-muted-foreground transition-colors hover:text-foreground lg:block"
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-[#4cd7f6] hover:bg-white/5"
             title={showSidebar ? "Hide sidebar" : "Show sidebar"}
           >
             <MessageSquare className="h-4 w-4" />
           </button>
           <div className="flex-1">
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="text-sm font-bold text-[#dae2fd] font-headline">
               {activeSession.title}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider">
               MikroTik AI Agent
             </p>
           </div>
-          <div className="flex h-2 w-2 items-center">
+          <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ae176] opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#4ae176]" />
             </span>
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Online</span>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 pb-32">
           {activeSession.messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <MessageSquare className="h-6 w-6 text-primary" />
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#06b6d4]/20 border border-[#06b6d4]/50 flex items-center justify-center">
+                <Bot className="h-8 w-8 text-[#4cd7f6]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm font-bold text-[#dae2fd] font-headline">
                   Start a conversation
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-slate-500">
                   Ask the MikroTik AI Agent anything about your network.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {activeSession.messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
 
               {/* Loading indicator */}
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="rounded-2xl border-l-2 border-primary px-4 py-3" style={{ background: 'rgba(23, 31, 51, 0.8)', backdropFilter: 'blur(20px)' }}>
+                <div className="flex gap-4 max-w-3xl">
+                  <div className="w-8 h-8 rounded-full bg-[#06b6d4]/20 border border-[#06b6d4]/50 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-[#4cd7f6]" />
+                  </div>
+                  <div
+                    className="p-4 rounded-2xl rounded-tl-none border border-white/10"
+                    style={{
+                      background: "rgba(15, 23, 42, 0.6)",
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
                     <div className="flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#4cd7f6] [animation-delay:0ms]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#4cd7f6] [animation-delay:150ms]" />
+                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#4cd7f6] [animation-delay:300ms]" />
                     </div>
                   </div>
                 </div>
@@ -299,8 +295,10 @@ export function ChatInterface() {
           )}
         </div>
 
-        {/* Input */}
-        <ChatInput onSend={handleSend} disabled={isLoading} />
+        {/* Input - positioned at bottom */}
+        <div className="absolute bottom-0 left-0 w-full">
+          <ChatInput onSend={handleSend} disabled={isLoading} />
+        </div>
       </div>
     </div>
   )

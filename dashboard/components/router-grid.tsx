@@ -39,8 +39,8 @@ export function RouterGrid() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-[#131b2e] rounded-lg p-1 border border-white/5">
-            <button className="px-4 py-1.5 text-xs font-bold rounded bg-[#2d3449] text-[#4cd7f6]">Table View</button>
-            <button className="px-4 py-1.5 text-xs font-medium text-slate-400 hover:text-[#dae2fd]">Map View</button>
+            <button className="px-4 py-1.5 text-xs font-bold rounded-lg bg-[#2d3449] text-[#4cd7f6]">Table View</button>
+            <button className="px-4 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-[#dae2fd]">Map View</button>
           </div>
           <AddRouterDialog />
         </div>
@@ -113,7 +113,7 @@ export function RouterGrid() {
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-6 py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                        <div className="h-4 w-20 animate-pulse rounded-lg bg-[#222a3d]" />
                       </td>
                     ))}
                   </tr>
@@ -175,7 +175,7 @@ export function RouterGrid() {
                       {/* Endpoint */}
                       <td className="px-6 py-5">
                         <span className={cn(
-                          "font-mono-tech text-xs px-2 py-1 rounded",
+                          "font-mono-tech text-xs px-2 py-1 rounded-lg",
                           isOffline
                             ? "text-slate-500 bg-slate-900/50"
                             : "text-[#4cd7f6] bg-[#06b6d4]/10"
@@ -272,13 +272,13 @@ export function RouterGrid() {
         <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
           <span className="text-xs text-slate-500">Showing {filteredRouters.length} of {totalCount} managed nodes</span>
           <div className="flex items-center gap-2">
-            <button className="p-1 hover:bg-[#2d3449] rounded disabled:opacity-30" disabled>
+            <button className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30" disabled>
               <ChevronLeft className="h-4 w-4 text-slate-400" />
             </button>
             <div className="flex items-center gap-1">
-              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded">1</button>
+              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded-lg">1</button>
             </div>
-            <button className="p-1 hover:bg-[#2d3449] rounded">
+            <button className="p-1 hover:bg-[#2d3449] rounded-lg">
               <ChevronRight className="h-4 w-4 text-slate-400" />
             </button>
           </div>
@@ -300,10 +300,10 @@ export function RouterGrid() {
                 Anomaly detected: CPU spikes correlate with unusual DNS traffic from specific clients. Suggesting firewall rule update.
               </p>
               <div className="mt-3 flex gap-3">
-                <button className="text-[10px] uppercase font-bold tracking-widest text-[#003915] bg-[#4ae176] px-3 py-1.5 rounded-lg">
+                <button className="text-[10px] uppercase font-bold tracking-widest text-[#003915] bg-[#4ae176] px-3 py-1.5 rounded-lg hover:brightness-110 transition-all">
                   Apply Suggestion
                 </button>
-                <button className="text-[10px] uppercase font-bold tracking-widest text-[#4ae176] border border-[#4ae176]/30 px-3 py-1.5 rounded-lg">
+                <button className="text-[10px] uppercase font-bold tracking-widest text-[#4ae176] border border-[#4ae176]/30 px-3 py-1.5 rounded-lg hover:bg-[#4ae176]/10 transition-all">
                   Review Logs
                 </button>
               </div>

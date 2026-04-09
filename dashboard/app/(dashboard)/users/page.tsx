@@ -6,7 +6,7 @@ import { UserTable } from "@/components/user-table"
 import { useAuth } from "@/hooks/use-auth"
 import { useStats } from "@/hooks/use-stats"
 import { AddUserDialog } from "@/components/add-user-dialog"
-import { Users, Network, Coins, TrendingUp, CheckCircle, Clock, CloudCheck, UserPlus } from "lucide-react"
+import { Users, Network, Coins, CheckCircle, Clock, CloudCheck } from "lucide-react"
 
 export default function UsersPage() {
   const { isAdmin, isLoading } = useAuth()
@@ -22,7 +22,7 @@ export default function UsersPage() {
   if (isLoading || !isAdmin) return null
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
@@ -45,8 +45,8 @@ export default function UsersPage() {
             <span className="text-xs text-slate-500">Total Users</span>
           </div>
           <div className="text-3xl font-headline font-bold text-[#dae2fd]">{stats?.totalUsers ?? 0}</div>
-          <div className="mt-2 text-[10px] text-[#4ae176] flex items-center gap-1 font-bold">
-            <TrendingUp className="h-3.5 w-3.5" /> +12% from last month
+          <div className="mt-2 text-[10px] text-slate-500 flex items-center gap-1 font-bold">
+            {stats?.activeUsers ?? 0} active
           </div>
         </div>
         <div className="bg-[#131b2e] p-6 rounded-xl border border-white/5 group hover:bg-[#222a3d] transition-colors">

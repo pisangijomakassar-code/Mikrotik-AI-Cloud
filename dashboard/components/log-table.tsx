@@ -23,7 +23,7 @@ function formatDuration(ms: number | null): string {
 }
 
 function ActionBadge({ action }: { action: string }) {
-  const base = "text-[9px] font-bold px-2 py-0.5 rounded-full border"
+  const base = "text-[9px] font-bold px-2 py-0.5 rounded-lg border"
   if (action === "read") {
     return <span className={cn(base, "bg-slate-800 text-slate-400 border-white/5")}>READ</span>
   }
@@ -53,7 +53,7 @@ export function LogTable() {
   const { data, isLoading } = useLogs(filter)
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -67,11 +67,11 @@ export function LogTable() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#222a3d] rounded-xl border border-[#3d494c]/20 text-[#dae2fd] hover:bg-[#2d3449] transition-colors">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#222a3d] rounded-lg border border-[#3d494c]/20 text-[#dae2fd] hover:bg-[#2d3449] transition-colors">
             <Download className="h-4 w-4" />
             Export CSV
           </button>
-          <button className="flex items-center gap-2 px-5 py-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-bold rounded-xl shadow-lg shadow-cyan-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+          <button className="flex items-center gap-2 px-5 py-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-bold rounded-lg shadow-lg shadow-cyan-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
             <RefreshCw className="h-4 w-4" />
             Live Stream
           </button>
@@ -86,7 +86,7 @@ export function LogTable() {
             <select
               value={userFilter}
               onChange={(e) => { setUserFilter(e.target.value); setPage(1) }}
-              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
+              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-lg py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
             >
               <option value="">All Users</option>
             </select>
@@ -95,7 +95,7 @@ export function LogTable() {
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase px-1">Infrastructure</label>
           <div className="relative">
-            <select className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none">
+            <select className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-lg py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none">
               <option>All Routers</option>
             </select>
           </div>
@@ -106,7 +106,7 @@ export function LogTable() {
             <select
               value={actionFilter}
               onChange={(e) => { setActionFilter(e.target.value); setPage(1) }}
-              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
+              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-lg py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
             >
               <option value="">All Actions</option>
               <option value="read">Read</option>
@@ -121,7 +121,7 @@ export function LogTable() {
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
+              className="w-full bg-[#2d3449] text-[#dae2fd] text-sm border-none rounded-lg py-2.5 pl-3 pr-10 appearance-none focus:ring-1 focus:ring-cyan-400 cursor-pointer outline-none"
             >
               <option value="">All Status</option>
               <option value="success">Success</option>
@@ -336,11 +336,11 @@ export function LogTable() {
             <div className="w-10 h-10 rounded-xl bg-cyan-950 flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 text-cyan-400" />
             </div>
-            <span className="text-[10px] font-bold text-[#ffb4ab] bg-[#93000a]/20 px-2 py-0.5 rounded-full">High Alert</span>
+            <span className="text-[10px] font-bold text-[#ffb4ab] bg-[#93000a]/20 px-2 py-0.5 rounded-lg">High Alert</span>
           </div>
           <h3 className="text-md font-bold text-[#dae2fd] mb-2">Auth Failures</h3>
           <p className="text-xs text-[#bcc9cd] mb-4">Detected failed attempts from unknown subnet.</p>
-          <button className="w-full py-2 text-xs font-bold text-cyan-400 border border-cyan-400/20 rounded-xl hover:bg-cyan-400 hover:text-[#003640] transition-all">
+          <button className="w-full py-2 text-xs font-bold text-cyan-400 border border-cyan-400/20 rounded-lg hover:bg-cyan-400 hover:text-[#003640] transition-all">
             Review Security Log
           </button>
         </div>

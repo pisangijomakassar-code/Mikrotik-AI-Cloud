@@ -25,7 +25,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-500">Real-time aggregate data flow across all routers</p>
               </div>
               <div className="flex gap-2">
-                <span className="px-3 py-1 bg-[#2d3449] rounded text-[10px] text-[#4cd7f6] font-bold">1H</span>
+                <span className="px-3 py-1 bg-[#2d3449] rounded-lg text-[10px] text-[#4cd7f6] font-bold">1H</span>
                 <span className="px-3 py-1 text-[10px] text-slate-500 font-bold">24H</span>
               </div>
             </div>

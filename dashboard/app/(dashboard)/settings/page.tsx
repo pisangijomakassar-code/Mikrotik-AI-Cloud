@@ -46,7 +46,7 @@ export default function SettingsPage() {
   if (authLoading || !isAdmin) return null
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
+    <div className="space-y-12">
       {/* Header */}
       <header className="mb-10">
         <h2 className="text-4xl font-bold tracking-tight text-[#dae2fd] font-headline">Settings</h2>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-[#dae2fd] transition-colors">View Documentation</button>
+            <button className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-[#dae2fd] transition-colors rounded-lg">View Documentation</button>
             <button className="px-6 py-2 bg-[#4cd7f6]/10 border border-[#4cd7f6]/20 text-[#4cd7f6] text-xs font-bold rounded-lg hover:bg-[#4cd7f6] hover:text-[#003640] transition-all">
               Configure Bots
             </button>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex flex-wrap gap-4">
               <button
-                className="px-6 py-2 border border-[#ffb4ab]/50 text-[#ffb4ab] text-xs font-bold rounded-lg hover:bg-[#ffb4ab] hover:text-[#690005] transition-all"
+                className="px-6 py-2 bg-[#93000a]/20 border border-[#ffb4ab]/20 text-[#ffb4ab] text-xs font-bold rounded-lg hover:bg-[#ffb4ab] hover:text-[#690005] transition-all"
                 onClick={() => {
                   if (confirm("Are you sure you want to reset all data? This cannot be undone.")) {
                     toast.info("Reset not yet implemented")
@@ -229,7 +229,7 @@ export default function SettingsPage() {
                 Reset All Data
               </button>
               <button
-                className="px-6 py-2 bg-[#93000a] text-[#ffdad6] text-xs font-bold rounded-lg hover:brightness-125 transition-all"
+                className="px-6 py-2 bg-[#93000a]/20 border border-[#ffb4ab]/20 text-[#ffb4ab] text-xs font-bold rounded-lg hover:brightness-125 transition-all"
                 onClick={handleSync}
                 disabled={isSyncing}
               >
@@ -248,10 +248,10 @@ export default function SettingsPage() {
 
       {/* Footer Action */}
       <div className="pt-12 flex justify-end gap-4 border-t border-white/5">
-        <button className="px-8 py-3 text-sm font-bold text-slate-400 hover:text-[#dae2fd] transition-colors">
+        <button className="px-8 py-3 text-sm font-bold text-slate-400 hover:text-[#dae2fd] transition-colors rounded-lg">
           Discard Changes
         </button>
-        <button className="px-10 py-3 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] text-sm font-bold rounded-xl shadow-lg shadow-[#4cd7f6]/20 hover:scale-[1.02] active:scale-95 transition-all">
+        <button className="px-10 py-3 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] text-sm font-bold rounded-lg shadow-lg shadow-[#4cd7f6]/20 hover:scale-[1.02] active:scale-95 transition-all">
           Save Changes
         </button>
       </div>

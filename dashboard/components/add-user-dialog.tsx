@@ -58,7 +58,7 @@ export function AddUserDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
+        className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
       >
         <UserPlus className="h-5 w-5" />
         Add User
@@ -89,7 +89,7 @@ export function AddUserDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="e.g. Jean-Luc Picard"
                       type="text"
                       value={name}
@@ -100,7 +100,7 @@ export function AddUserDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="Numeric ID"
                       type="text"
                       value={telegramId}
@@ -113,7 +113,7 @@ export function AddUserDialog() {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram Bot Token</label>
                   <div className="relative">
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none pr-10"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none pr-10"
                       placeholder="BotFather generated token"
                       type={showToken ? "text" : "password"}
                       value={botToken}
@@ -138,7 +138,7 @@ export function AddUserDialog() {
                     <span className="text-xs font-bold text-[#4cd7f6] flex items-center gap-2">
                       <Shield className="h-4 w-4" /> AI Permissions Level
                     </span>
-                    <div className="px-3 py-1 bg-[#4cd7f6] text-[#003640] text-[10px] font-bold rounded-full">Standard Tier</div>
+                    <div className="px-3 py-1 bg-[#4cd7f6] text-[#003640] text-[10px] font-bold rounded-lg">Standard Tier</div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <label className="flex items-center gap-3 cursor-pointer group">
@@ -169,7 +169,7 @@ export function AddUserDialog() {
                 <button
                   type="submit"
                   disabled={createUser.isPending}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-full shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
                   {createUser.isPending ? "Creating..." : "Authorize User"}
                 </button>

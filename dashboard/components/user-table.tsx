@@ -67,7 +67,7 @@ export function UserTable() {
     <div className="space-y-6">
       {/* Filters Section */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-full border border-white/5">
+        <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-lg border border-white/5">
           {[
             { key: "all", label: "All Users" },
             { key: "active", label: "Active" },
@@ -78,7 +78,7 @@ export function UserTable() {
               type="button"
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "px-5 py-1.5 font-bold text-xs rounded-full transition-colors",
+                "px-5 py-1.5 font-bold text-xs rounded-lg transition-colors",
                 activeTab === tab.key
                   ? "bg-[#222a3d] text-[#4cd7f6]"
                   : "text-slate-500 hover:text-slate-300"
@@ -89,11 +89,11 @@ export function UserTable() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-xl text-slate-400 text-sm hover:bg-[#222a3d] transition-colors">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 text-sm hover:bg-[#222a3d] transition-colors">
             <SlidersHorizontal className="h-4 w-4" />
             More Filters
           </button>
-          <button className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-xl text-slate-400 hover:text-[#4cd7f6] transition-colors">
+          <button className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 hover:text-[#4cd7f6] transition-colors">
             <Download className="h-5 w-5" />
           </button>
         </div>
@@ -203,7 +203,7 @@ export function UserTable() {
             <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <span className="text-xs font-bold px-3 py-1 bg-[#4cd7f6]/20 text-[#4cd7f6] rounded-lg">1</span>
+            <span className="text-xs font-bold px-3 py-1 bg-[#06b6d4]/10 text-[#4cd7f6] rounded-lg border border-[#06b6d4]/20">1</span>
             <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
               <ChevronRight className="h-5 w-5" />
             </button>

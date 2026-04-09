@@ -62,7 +62,7 @@ export function AddRouterDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
+        className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
       >
         <PlusCircle className="h-4 w-4" />
         Provision Node
@@ -93,7 +93,7 @@ export function AddRouterDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="e.g. HQ-Core-CCR2004"
                       type="text"
                       value={name}
@@ -104,7 +104,7 @@ export function AddRouterDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Label (Optional)</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="e.g. Branch Office"
                       type="text"
                       value={label}
@@ -116,7 +116,7 @@ export function AddRouterDialog() {
                   <div className="col-span-2 space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Host / IP Address</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="192.168.88.1"
                       type="text"
                       value={host}
@@ -127,7 +127,7 @@ export function AddRouterDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Port</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="8728"
                       type="text"
                       value={port}
@@ -139,7 +139,7 @@ export function AddRouterDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="admin"
                       type="text"
                       value={username}
@@ -150,7 +150,7 @@ export function AddRouterDialog() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
                     <input
-                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="Router API password"
                       type="password"
                       value={password}
@@ -182,7 +182,7 @@ export function AddRouterDialog() {
                 <button
                   type="submit"
                   disabled={createRouter.isPending}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-full shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
                   {createRouter.isPending ? "Adding..." : "Add Router"}
                 </button>

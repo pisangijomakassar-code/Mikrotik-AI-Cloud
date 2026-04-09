@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Bot, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ChatMessage } from "@/hooks/use-chat"
 
@@ -19,7 +20,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
         elements.push(
           <pre
             key={`code-${codeKey++}`}
-            className="my-2 overflow-x-auto rounded-md bg-black/30 p-3 font-mono text-xs leading-relaxed text-emerald-300"
+            className="my-2 overflow-x-auto rounded-lg bg-slate-950/50 p-3 font-mono text-xs leading-relaxed text-emerald-300 border border-white/5"
           >
             <code>{codeLines.join("\n")}</code>
           </pre>
@@ -41,7 +42,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
       const content = line.replace(/^\s*[-*]\s/, "")
       elements.push(
         <div key={i} className="flex gap-2 pl-2">
-          <span className="text-primary">-</span>
+          <span className="text-[#4cd7f6]">-</span>
           <span>{formatInline(content)}</span>
         </div>
       )
@@ -64,7 +65,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
     elements.push(
       <pre
         key={`code-${codeKey}`}
-        className="my-2 overflow-x-auto rounded-md bg-black/30 p-3 font-mono text-xs leading-relaxed text-emerald-300"
+        className="my-2 overflow-x-auto rounded-lg bg-slate-950/50 p-3 font-mono text-xs leading-relaxed text-emerald-300 border border-white/5"
       >
         <code>{codeLines.join("\n")}</code>
       </pre>
@@ -88,7 +89,7 @@ function formatInline(text: string): React.ReactNode[] {
 
     if (match[2]) {
       parts.push(
-        <strong key={key++} className="font-semibold text-foreground">
+        <strong key={key++} className="font-semibold text-slate-100">
           {match[2]}
         </strong>
       )
@@ -96,7 +97,7 @@ function formatInline(text: string): React.ReactNode[] {
       parts.push(
         <code
           key={key++}
-          className="rounded bg-black/30 px-1.5 py-0.5 font-mono text-xs text-primary"
+          className="rounded-lg bg-slate-950/50 px-1.5 py-0.5 font-mono text-xs text-[#4cd7f6] border border-white/5"
         >
           {match[3]}
         </code>
@@ -129,18 +130,42 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <>
       <div
-        className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}
+        className={cn(
+          "flex gap-4 max-w-3xl",
+          isUser ? "ml-auto flex-row-reverse" : ""
+        )}
       >
+        {/* Avatar */}
         <div
           className={cn(
-            "relative max-w-[75%] rounded-2xl px-4 py-3 text-sm",
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border",
             isUser
-              ? "text-foreground"
-              : "border-l-2 border-[#4cd7f6] text-foreground"
+              ? "bg-slate-800 border-white/10"
+              : "bg-[#06b6d4]/20 border-[#06b6d4]/50"
           )}
-          style={isUser
-            ? { background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }
-            : { background: 'rgba(23, 31, 51, 0.8)', backdropFilter: 'blur(20px)' }
+        >
+          {isUser ? (
+            <User className="h-4 w-4 text-slate-400" />
+          ) : (
+            <Bot className="h-4 w-4 text-[#4cd7f6]" />
+          )}
+        </div>
+
+        {/* Bubble */}
+        <div
+          className={cn(
+            "p-4 rounded-2xl text-sm",
+            isUser
+              ? "rounded-tr-none bg-[#06b6d4]/20 border border-[#06b6d4]/30 text-slate-100"
+              : "rounded-tl-none border border-white/10 text-slate-200"
+          )}
+          style={
+            isUser
+              ? undefined
+              : {
+                  background: "rgba(15, 23, 42, 0.6)",
+                  backdropFilter: "blur(12px)",
+                }
           }
         >
           {message.imageUrl && (
@@ -160,21 +185,25 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {message.content && (
             <div className="space-y-0.5">
               {isUser ? (
-                <p className="leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                <p className="leading-relaxed whitespace-pre-wrap">
+                  {message.content}
+                </p>
               ) : (
                 formatMarkdown(message.content)
               )}
             </div>
           )}
 
-          <p
+          <span
             className={cn(
-              "mt-1.5 text-[10px]",
-              isUser ? "text-right text-slate-400" : "text-muted-foreground"
+              "text-[10px] mt-2 block font-mono",
+              isUser
+                ? "text-[#06b6d4]/60 text-right"
+                : "text-slate-500"
             )}
           >
             {time}
-          </p>
+          </span>
         </div>
       </div>
 
