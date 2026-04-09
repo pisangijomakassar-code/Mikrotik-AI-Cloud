@@ -27,7 +27,8 @@
         "command": "python",
         "args": ["/app/mikrotik_mcp/server.py"],
         "env": {
-          "DATA_DIR": "/app/data"
+          "DATA_DIR": "/app/data",
+          "DATABASE_URL": "${DATABASE_URL}"
         }
       }
     }
