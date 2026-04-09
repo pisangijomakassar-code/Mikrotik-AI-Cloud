@@ -5,6 +5,7 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NODE_OPTIONS="--max-old-space-size=512"
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate

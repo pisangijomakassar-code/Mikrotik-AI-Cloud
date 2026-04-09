@@ -19,10 +19,22 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: GH_TOKEN
+          command_timeout: 30m
           script: |
             set -e
 
             APP_DIR=/opt/mikrotik-ai-agent
+
+            # Ensure swap exists (prevents OOM during builds on low-RAM VPS)
+            if [ ! -f /swapfile ]; then
+              fallocate -l 2G /swapfile
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile none swap sw 0 0' >> /etc/fstab
+              echo "Swap 2GB created"
+            fi
+            swapon --show || true
 
             # Clone or pull
             if [ -d "$APP_DIR/.git" ]; then
@@ -30,7 +42,6 @@ jobs:
               git fetch origin
               git reset --hard origin/main
             elif [ -d "$APP_DIR" ]; then
-              # Directory exists but not a git repo (e.g. .env was pre-created)
               cd $APP_DIR
               git init
               git remote add origin "https://${GH_TOKEN}@github.com/codevjs/mikrotik-ai-agent.git"
@@ -45,17 +56,39 @@ jobs:
             if [ ! -f .env ]; then
               cp .env.example .env
               echo "WARNING: .env created from template - edit with real credentials"
-              echo "   nano $APP_DIR/.env"
             fi
 
-            # Create data dir
             mkdir -p data
 
-            # Build and deploy (force recreate to pick up mounted file changes)
+            # Stop ALL containers before building (free up RAM for build)
             docker compose down || true
-            docker compose up -d --build --force-recreate
 
-            # Show status
+            # Build images one at a time to limit RAM usage
+            echo "Building mikrotik-agent..."
+            docker compose build mikrotik-agent
+
+            echo "Building dashboard..."
+            DOCKER_BUILDKIT=1 docker compose build --build-arg NODE_OPTIONS="--max-old-space-size=512" dashboard
+
+            # Prune old images to free disk
+            docker image prune -f || true
+
+            # Start services in order
+            echo "Starting postgres..."
+            docker compose up -d postgres
+            sleep 10
+
+            echo "Starting dashboard..."
+            docker compose up -d dashboard
+            sleep 5
+
+            echo "Starting mikrotik-agent..."
+            docker compose up -d mikrotik-agent
+
+            # Run database migrations if dashboard is up
+            echo "Running migrations..."
+            docker compose exec -T dashboard npx prisma migrate deploy 2>/dev/null || echo "Migration skipped (first run needs manual setup)"
+
             echo "---"
             docker compose ps
             echo "---"
