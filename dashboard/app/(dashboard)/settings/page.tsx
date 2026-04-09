@@ -68,7 +68,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Model</span>
                 <Badge variant="secondary" className="font-mono text-xs">
-                  gemini-2.5-flash-lite
+                  gpt-5.4-nano
                 </Badge>
               </div>
               <Separator />
