@@ -3,7 +3,6 @@ set -e
 
 # Setup nanobot config dir and skills
 mkdir -p /root/.nanobot/skills
-# -n treats existing symlink as file (prevents mikrotik/mikrotik double path)
 ln -sfn /app/skills/mikrotik /root/.nanobot/skills/mikrotik
 
 # Use generated config (from dashboard) if available, else template
@@ -13,9 +12,12 @@ else
     cp /app/config/config.json /root/.nanobot/config.json
 fi
 
-# Always overwrite SOUL.md to keep personality in sync with repo
+# Always overwrite SOUL.md and HEARTBEAT.md
 cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
 cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null || true
 
-echo "[entrypoint] Config + SOUL.md + HEARTBEAT.md applied, starting nanobot..."
+# Start health API server in background (port 8080, for dashboard to query router data)
+python /app/mikrotik_mcp/health_server.py &
+
+echo "[entrypoint] Config + SOUL.md + HEARTBEAT.md applied, health server started, starting nanobot..."
 exec nanobot "$@"

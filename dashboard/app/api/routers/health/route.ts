@@ -1,10 +1,5 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
-import * as net from "net"
-import { execFile } from "child_process"
-import { promisify } from "util"
-
-const execFileAsync = promisify(execFile)
 
 interface RouterHealth {
   id: string
@@ -17,44 +12,6 @@ interface RouterHealth {
   version?: string
 }
 
-function checkTcp(host: string, port: number, timeoutMs = 5000): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = new net.Socket()
-    socket.setTimeout(timeoutMs)
-    socket.once("connect", () => { socket.destroy(); resolve(true) })
-    socket.once("timeout", () => { socket.destroy(); resolve(false) })
-    socket.once("error", () => { socket.destroy(); resolve(false) })
-    socket.connect(port, host)
-  })
-}
-
-async function getRouterDetails(host: string, port: number, username: string, password: string): Promise<Partial<RouterHealth>> {
-  try {
-    const script = `
-import json, librouteros
-try:
-    api = librouteros.connect(host='${host}', port=${port}, username='${username}', password='${password}', timeout=5)
-    res = list(api.path('/system/resource'))
-    leases = list(api.path('/ip/dhcp-server/lease'))
-    active = len([l for l in leases if l.get('status') == 'bound'])
-    api.close()
-    r = res[0] if res else {}
-    total = int(r.get('total-memory', 0))
-    free = int(r.get('free-memory', 0))
-    mem = round((total - free) / total * 100) if total else 0
-    print(json.dumps({"cpuLoad": r.get('cpu-load', 0), "memoryPercent": mem, "uptime": r.get('uptime', ''), "version": r.get('version', ''), "activeClients": active}))
-except Exception as e:
-    print(json.dumps({"error": str(e)}))
-`
-    const { stdout } = await execFileAsync("docker", [
-      "exec", "mikrotik-agent", "python3", "-c", script
-    ], { timeout: 15000 })
-    return JSON.parse(stdout.trim())
-  } catch {
-    return {}
-  }
-}
-
 export async function GET() {
   const session = await auth()
   if (!session?.user) {
@@ -62,42 +19,69 @@ export async function GET() {
   }
 
   try {
-    const where =
-      session.user.role === "ADMIN" ? {} : { userId: session.user.id }
-    const routers = await prisma.router.findMany({
-      where,
-      select: { id: true, name: true, host: true, port: true, username: true, passwordEnc: true },
+    // Get user's telegram ID to query agent health API
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { telegramId: true },
     })
 
-    const results: RouterHealth[] = await Promise.all(
-      routers.map(async (router) => {
-        const reachable = await checkTcp(router.host, router.port)
-        if (!reachable) {
-          return { id: router.id, name: router.name, status: "offline" as const }
-        }
+    if (!user?.telegramId) {
+      return Response.json([])
+    }
 
-        // Get detailed stats via agent container (has librouteros)
-        const details = await getRouterDetails(router.host, router.port, router.username, router.passwordEnc)
+    // Get routers from DB for ID mapping
+    const where =
+      session.user.role === "ADMIN" ? {} : { userId: session.user.id }
+    const dbRouters = await prisma.router.findMany({
+      where,
+      select: { id: true, name: true },
+    })
 
-        await prisma.router.update({
-          where: { id: router.id },
-          data: { lastSeen: new Date(), routerosVersion: details.version || undefined },
+    // Call agent's health API (runs on port 8080 inside mikrotik-agent container)
+    const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
+
+    try {
+      const res = await fetch(`${agentUrl}/router-health/${user.telegramId}`, {
+        signal: AbortSignal.timeout(15000),
+      })
+
+      if (res.ok) {
+        const agentHealth = await res.json()
+
+        // Map agent results to DB router IDs
+        const results: RouterHealth[] = dbRouters.map((dbRouter) => {
+          const health = agentHealth.find((h: { name: string }) => h.name === dbRouter.name)
+          if (health && health.status === "online") {
+            // Update lastSeen
+            prisma.router.update({
+              where: { id: dbRouter.id },
+              data: { lastSeen: new Date(), routerosVersion: health.version || undefined },
+            }).catch(() => {})
+
+            return {
+              id: dbRouter.id,
+              name: dbRouter.name,
+              status: "online",
+              cpuLoad: health.cpuLoad ?? 0,
+              memoryPercent: health.memoryPercent ?? 0,
+              uptime: health.uptime ?? "",
+              activeClients: health.activeClients ?? 0,
+              version: health.version ?? "",
+            }
+          }
+          return { id: dbRouter.id, name: dbRouter.name, status: "offline" }
         })
 
-        return {
-          id: router.id,
-          name: router.name,
-          status: "online" as const,
-          cpuLoad: details.cpuLoad ?? 0,
-          memoryPercent: details.memoryPercent ?? 0,
-          uptime: details.uptime ?? "",
-          activeClients: details.activeClients ?? 0,
-          version: details.version ?? "",
-        }
-      })
-    )
+        return Response.json(results)
+      }
+    } catch {
+      // Agent health API not reachable — fallback to TCP check
+    }
 
-    return Response.json(results)
+    // Fallback: return all as unknown
+    return Response.json(
+      dbRouters.map((r) => ({ id: r.id, name: r.name, status: "offline" as const }))
+    )
   } catch (error) {
     console.error("Health check failed:", error)
     return Response.json({ error: "Health check failed" }, { status: 500 })
