@@ -9,44 +9,55 @@ export default function DashboardPage() {
   const { user } = useAuth()
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>Dashboard</h1>
-            <span
-              className="rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#4cd7f6]"
-              style={{ background: 'rgba(76, 215, 246, 0.1)', border: '1px solid rgba(76, 215, 246, 0.2)' }}
-            >
-              AI Agent Pro
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
-            Welcome back, {user?.name || "User"}. Here is an overview of your system.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-md px-3 py-1.5" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }}>
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4ae176] shadow-[0_0_6px_rgba(74,225,118,0.4)]" />
-            <span className="text-xs text-muted-foreground">API:</span>
-            <span className="text-xs font-medium text-[#4ae176]">Online</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-md px-3 py-1.5" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }}>
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4cd7f6] shadow-[0_0_6px_rgba(76,215,246,0.4)]" />
-            <span className="text-xs text-muted-foreground">LLM:</span>
-            <span className="text-xs font-medium text-[#4cd7f6]">Ready</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
+    <div>
+      {/* Overview Cards */}
       <StatsCards />
 
-      {/* Bottom section */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ActivityFeed />
-        <RouterStatusCards />
+      {/* Main Bento Grid */}
+      <div className="grid grid-cols-12 gap-8 mt-8">
+        {/* Left: System Overview & Stats */}
+        <div className="col-span-12 lg:col-span-7 space-y-8">
+          {/* Network Throughput Chart */}
+          <div className="bg-[#131b2e] p-8 rounded-xl border border-white/[0.02]">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className="font-headline text-lg font-bold text-[#dae2fd]">Network Throughput</h3>
+                <p className="text-xs text-slate-500">Real-time aggregate data flow across all routers</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 bg-[#2d3449] rounded text-[10px] text-[#4cd7f6] font-bold">1H</span>
+                <span className="px-3 py-1 text-[10px] text-slate-500 font-bold">24H</span>
+              </div>
+            </div>
+            <div className="h-64 flex items-end gap-2 relative">
+              {/* Abstract Chart Bars */}
+              <div className="flex-1 bg-cyan-900/20 rounded-t h-1/3" />
+              <div className="flex-1 bg-cyan-900/30 rounded-t h-1/2" />
+              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-2/3 border-t border-[#4cd7f6]/50" />
+              <div className="flex-1 bg-[#4cd7f6]/20 rounded-t h-3/4" />
+              <div className="flex-1 bg-[#4cd7f6]/60 rounded-t h-1/2 border-t border-[#4cd7f6]/50" />
+              <div className="flex-1 bg-[#4cd7f6]/80 rounded-t h-full border-t border-[#4cd7f6]/50 shadow-[0_0_20px_rgba(76,215,246,0.2)]" />
+              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-3/4" />
+              <div className="flex-1 bg-cyan-900/20 rounded-t h-1/2" />
+              <div className="flex-1 bg-cyan-900/30 rounded-t h-2/3" />
+              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-1/2" />
+              <div className="flex-1 bg-[#4cd7f6]/10 rounded-t h-1/3" />
+              {/* Data Point Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 p-2 bg-[#2d3449] border border-[#4cd7f6]/30 rounded-lg text-center backdrop-blur-sm">
+                <p className="text-[10px] text-slate-400 font-headline uppercase">Peak Load</p>
+                <p className="text-xs font-bold text-[#4cd7f6] font-mono-tech">1.2 Gbps</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Router Status Grid */}
+          <RouterStatusCards />
+        </div>
+
+        {/* Right: Activity Feed (Glass Card) */}
+        <div className="col-span-12 lg:col-span-5">
+          <ActivityFeed />
+        </div>
       </div>
     </div>
   )

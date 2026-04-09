@@ -7,15 +7,13 @@ import {
   LayoutDashboard,
   Users,
   Router,
-  ScrollText,
+  Terminal,
   Settings,
   LogOut,
-  Radio,
+  Sparkles,
+  Brain,
   MessageSquare,
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
@@ -28,10 +26,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Users", href: "/users", icon: Users, adminOnly: true },
   { label: "Routers", href: "/routers", icon: Router },
-  { label: "Logs", href: "/logs", icon: ScrollText },
+  { label: "Logs", href: "/logs", icon: Terminal },
   { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
 ]
 
@@ -53,24 +50,26 @@ export function Sidebar() {
     : "?"
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-[#0b1326]" style={{ borderRight: '1px solid rgba(61,73,76,0.15)' }}>
+    <aside className="flex flex-col fixed left-0 top-0 h-full h-screen w-64 border-r border-cyan-900/20 bg-slate-950 shadow-[0_0_32px_rgba(76,215,246,0.08)] z-50">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-          <Radio className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
-            MikroTik AI
-          </span>
-          <span className="text-[10px] text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>AI-Driven Network</span>
+      <div className="p-6 flex flex-col gap-1">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#06b6d4] to-[#4cd7f6] flex items-center justify-center">
+            <Brain className="h-5 w-5 text-[#00424f]" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold bg-gradient-to-br from-cyan-400 to-cyan-600 bg-clip-text text-transparent font-headline">
+              MikroTik AI
+            </h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">
+              AI-Driven Network
+            </p>
+          </div>
         </div>
       </div>
 
-      <Separator />
-
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 mt-6 px-4 space-y-2 font-headline text-sm tracking-tight">
         {filteredItems.map((item) => {
           const isActive =
             pathname === item.href || pathname?.startsWith(item.href + "/")
@@ -79,47 +78,30 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors border-l-2",
+                "flex items-center gap-3 px-4 py-3 transition-all duration-300",
                 isActive
-                  ? "bg-[#131b2e] text-primary border-l-[#4cd7f6]"
-                  : "text-muted-foreground hover:bg-[#171f33] hover:text-foreground border-l-transparent"
+                  ? "text-cyan-400 border-r-2 border-cyan-400 bg-cyan-950/30"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
               )}
             >
-              <item.icon
-                className={cn("h-4 w-4", isActive ? "text-primary" : "")}
-              />
+              <item.icon className="h-5 w-5" />
               {item.label}
             </Link>
           )
         })}
       </nav>
 
-      <Separator />
-
-      {/* User section */}
-      <div className="p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary/10 text-xs text-primary">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 truncate">
-            <p className="truncate text-sm font-medium text-foreground">
-              {user?.name || "User"}
-            </p>
-            <p className="truncate text-[10px] text-muted-foreground">
-              {isAdmin ? "Administrator" : "User"}
-            </p>
+      {/* AI Agent Pro Card */}
+      <div className="p-6">
+        <div className="p-4 rounded-xl bg-[#131b2e] border border-white/5">
+          <div className="flex items-center gap-3 mb-3">
+            <Sparkles className="h-5 w-5 text-[#4ae176]" />
+            <span className="text-xs font-headline font-bold text-[#dae2fd]">AI AGENT PRO</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            title="Sign out"
-          >
-            <LogOut className="h-4 w-4 text-muted-foreground" />
-          </Button>
+          <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+            <div className="h-full bg-[#4cd7f6] w-2/3" />
+          </div>
+          <p className="text-[10px] mt-2 text-slate-400">Tokens: 14.2k / 20k</p>
         </div>
       </div>
     </aside>

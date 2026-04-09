@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MikroTik AI Admin - Router Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-body antialiased">
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-screen flex flex-col z-40 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 w-64 font-mono text-sm">
+<div class="p-6">
+<div class="flex items-center space-x-3 mb-8">
+<div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-cyan-400" data-icon="router">router</span>
+</div>
+<div>
+<h2 class="text-lg font-bold text-slate-100">Core Network</h2>
+<p class="text-[10px] text-cyan-500 tracking-widest uppercase">AI Agent Active</p>
+</div>
+</div>
+<nav class="space-y-1">
+<!-- Routers - ACTIVE -->
+<a class="bg-cyan-500/10 text-cyan-400 border-r-4 border-cyan-500 font-bold group flex items-center px-4 py-3 space-x-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="router">router</span>
+<span>Routers</span>
+</a>
+<!-- Analytics -->
+<a class="text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 group flex items-center px-4 py-3 space-x-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span>Analytics</span>
+</a>
+<!-- Logs -->
+<a class="text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 group flex items-center px-4 py-3 space-x-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
+<span>Logs</span>
+</a>
+<!-- Security -->
+<a class="text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 group flex items-center px-4 py-3 space-x-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="shield">shield</span>
+<span>Security</span>
+</a>
+<!-- Terminal -->
+<a class="text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 group flex items-center px-4 py-3 space-x-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Terminal</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-4 border-t border-slate-800">
+<button class="w-full py-2.5 px-4 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold transition-colors">
+                Upgrade Firmware
+            </button>
+<div class="space-y-1">
+<a class="text-slate-400 hover:text-slate-200 flex items-center space-x-3 px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help_outline">help_outline</span>
+<span>Support</span>
+</a>
+<a class="text-slate-400 hover:text-slate-200 flex items-center space-x-3 px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- Top Bar Shell -->
+<header class="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-md dark:bg-slate-950/80 border-b border-slate-800 px-6 py-3 flex justify-between items-center w-full shadow-sm">
+<div class="flex items-center flex-1 max-w-2xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg" data-icon="search">search</span>
+<input class="w-full bg-slate-900 border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 placeholder-slate-500" placeholder="Search routers or IP..." type="text"/>
+</div>
+<div class="flex space-x-2 ml-4">
+<select class="bg-slate-900 border-slate-800 text-xs rounded-lg py-2 px-3 text-slate-300 focus:ring-cyan-500">
+<option>Status: All</option>
+<option>Status: Online</option>
+<option>Status: Offline</option>
+</select>
+<select class="bg-slate-900 border-slate-800 text-xs rounded-lg py-2 px-3 text-slate-300 focus:ring-cyan-500">
+<option>Model: All</option>
+<option>CCR Series</option>
+<option>hAP ax</option>
+<option>RB5009</option>
+</select>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<div class="flex items-center space-x-2">
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="dns">dns</span>
+</button>
+</div>
+<div class="h-6 w-[1px] bg-slate-800"></div>
+<button class="bg-cyan-500 text-slate-950 px-4 py-2 rounded-lg text-sm font-bold flex items-center space-x-2 hover:bg-cyan-400 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+<span>Add Device</span>
+</button>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-8">
+<div class="mb-8">
+<h1 class="text-2xl font-bold font-headline text-slate-100">Router Overview</h1>
+<p class="text-slate-400 mt-1">Real-time status of your global network infrastructure.</p>
+</div>
+<!-- Bento-style Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1: Online -->
+<div class="glass-card rounded-xl p-6 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">UmmiNEW</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-cyan-400 mb-6 bg-cyan-950/30 p-2 rounded border border-cyan-800/20 inline-block">
+                        192.168.88.1:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">CPU Load</span>
+<span class="text-slate-100 font-mono">11%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full transition-all duration-1000" style="width: 11%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">Memory Usage</span>
+<span class="text-slate-100 font-mono">30%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full transition-all duration-1000" style="width: 30%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-slate-400 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="group">group</span>
+<span class="font-mono">34 active clients</span>
+</div>
+</div>
+<!-- Card 2: Online -->
+<div class="glass-card rounded-xl p-6 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">Kantor</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-cyan-400 mb-6 bg-cyan-950/30 p-2 rounded border border-cyan-800/20 inline-block">
+                        10.10.1.1:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">CPU Load</span>
+<span class="text-slate-100 font-mono">45%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-amber-500 h-full rounded-full transition-all duration-1000" style="width: 45%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">Memory Usage</span>
+<span class="text-slate-100 font-mono">60%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full transition-all duration-1000" style="width: 60%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-slate-400 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="group">group</span>
+<span class="font-mono">152 active clients</span>
+</div>
+</div>
+<!-- Card 3: Offline -->
+<div class="glass-card rounded-xl p-6 opacity-80 border-red-500/10 transition-all group relative overflow-hidden grayscale-[0.2]">
+<div class="absolute top-0 right-0 p-4">
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">Cabang</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-slate-500 mb-6 bg-slate-900 p-2 rounded border border-slate-800 inline-block">
+                        172.16.50.5:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-500">CPU Load</span>
+<span class="text-slate-500 font-mono">--</span>
+</div>
+<div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+<div class="bg-slate-700 h-full rounded-full" style="width: 0%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-500">Memory Usage</span>
+<span class="text-slate-500 font-mono">--</span>
+</div>
+<div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+<div class="bg-slate-700 h-full rounded-full" style="width: 0%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-red-500 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="error">error</span>
+<span class="font-mono">Device Unreachable</span>
+</div>
+</div>
+<!-- Card 4: Online (Low Load) -->
+<div class="glass-card rounded-xl p-6 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">Gudang_Logistik</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-cyan-400 mb-6 bg-cyan-950/30 p-2 rounded border border-cyan-800/20 inline-block">
+                        192.168.100.10:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">CPU Load</span>
+<span class="text-slate-100 font-mono">4%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full" style="width: 4%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">Memory Usage</span>
+<span class="text-slate-100 font-mono">12%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-slate-400 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="group">group</span>
+<span class="font-mono">5 active clients</span>
+</div>
+</div>
+<!-- Card 5: Warning (High Load) -->
+<div class="glass-card rounded-xl p-6 border-amber-500/20 hover:border-amber-500/50 transition-all group relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+</span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">Main_Edge_CCR</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-cyan-400 mb-6 bg-cyan-950/30 p-2 rounded border border-cyan-800/20 inline-block">
+                        1.2.3.4:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">CPU Load</span>
+<span class="text-amber-500 font-mono">88%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-amber-500 h-full rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">Memory Usage</span>
+<span class="text-slate-100 font-mono">75%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-slate-400 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="group">group</span>
+<span class="font-mono">1,402 active clients</span>
+</div>
+</div>
+<!-- Card 6: Online -->
+<div class="glass-card rounded-xl p-6 hover:border-cyan-500/30 transition-all group relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</div>
+<div class="flex items-start justify-between mb-4">
+<div>
+<h3 class="text-lg font-bold text-slate-100 font-label">Staff_WIFI</h3>
+<p class="text-sm text-slate-400">Owner: Pak Budi</p>
+</div>
+</div>
+<div class="font-mono text-xs text-cyan-400 mb-6 bg-cyan-950/30 p-2 rounded border border-cyan-800/20 inline-block">
+                        10.10.20.1:8291
+                    </div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">CPU Load</span>
+<span class="text-slate-100 font-mono">22%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full" style="width: 22%"></div>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-slate-400">Memory Usage</span>
+<span class="text-slate-100 font-mono">42%</span>
+</div>
+<div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+<div class="bg-cyan-500 h-full rounded-full" style="width: 42%"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 flex items-center text-xs text-slate-400 space-x-2">
+<span class="material-symbols-outlined text-sm" data-icon="group">group</span>
+<span class="font-mono">86 active clients</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Visual Identity Background Element -->
+<div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-cyan-500/5 blur-[120px] rounded-full"></div>
+<div class="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full"></div>
+</div>
+</body></html>

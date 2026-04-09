@@ -1,28 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { MoreHorizontal, Search, Eye, EyeOff, Download, SlidersHorizontal } from "lucide-react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Pencil, Trash2, SlidersHorizontal, Download, ChevronLeft, ChevronRight } from "lucide-react"
 import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-users"
-import { AddUserDialog } from "@/components/add-user-dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -37,34 +17,18 @@ function getInitials(name: string): string {
 
 export function UserTable() {
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string>("all")
-  const [revealedTokens, setRevealedTokens] = useState<Set<string>>(new Set())
 
-  const derivedStatus = activeTab === "active" ? "ACTIVE" : activeTab === "suspended" ? "SUSPENDED" : (statusFilter as "ACTIVE" | "INACTIVE" | "SUSPENDED") || undefined
+  const derivedStatus = activeTab === "active" ? "ACTIVE" : activeTab === "suspended" ? "SUSPENDED" : undefined
 
   const filter = {
     search: search || undefined,
-    status: derivedStatus,
+    status: derivedStatus as "ACTIVE" | "INACTIVE" | "SUSPENDED" | undefined,
   }
 
   const { data: users, isLoading } = useUsers(filter)
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
-
-  function toggleTokenVisibility(userId: string) {
-    setRevealedTokens((prev) => {
-      const next = new Set(prev)
-      if (next.has(userId)) next.delete(userId)
-      else next.add(userId)
-      return next
-    })
-  }
-
-  function maskToken(token: string | null): string {
-    if (!token) return "--"
-    return token.slice(0, 6) + "..." + token.slice(-4)
-  }
 
   function handleStatusToggle(userId: string, currentStatus: string) {
     const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE"
@@ -85,207 +49,166 @@ export function UserTable() {
     })
   }
 
+  function maskToken(token: string | null): string {
+    if (!token) return "--"
+    return token.slice(0, 10) + "..."
+  }
+
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return "Never"
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: "numeric",
     })
   }
 
   return (
-    <div className="space-y-4">
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 border-b" style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-        {[
-          { key: "all", label: "All Users" },
-          { key: "active", label: "Active" },
-          { key: "suspended", label: "Suspended" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
-              activeTab === tab.key
-                ? "border-[#4cd7f6] text-[#4cd7f6]"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 border-0"
-              style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }}
-            />
-          </div>
-          <Button variant="outline" size="sm" className="gap-1.5 border-0 text-muted-foreground" style={{ background: 'rgba(45, 52, 73, 0.6)' }}>
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            More Filters
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 border-0 text-muted-foreground" style={{ background: 'rgba(45, 52, 73, 0.6)' }}>
-            <Download className="h-3.5 w-3.5" />
-          </Button>
+    <div className="space-y-6">
+      {/* Filters Section */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-full border border-white/5">
+          {[
+            { key: "all", label: "All Users" },
+            { key: "active", label: "Active" },
+            { key: "suspended", label: "Suspended" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                "px-5 py-1.5 font-bold text-xs rounded-full transition-colors",
+                activeTab === tab.key
+                  ? "bg-[#222a3d] text-[#4cd7f6]"
+                  : "text-slate-500 hover:text-slate-300"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <AddUserDialog />
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-xl text-slate-400 text-sm hover:bg-[#222a3d] transition-colors">
+            <SlidersHorizontal className="h-4 w-4" />
+            More Filters
+          </button>
+          <button className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-xl text-slate-400 hover:text-[#4cd7f6] transition-colors">
+            <Download className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg overflow-hidden" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent" style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">User ID</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Bot Token</TableHead>
-              <TableHead className="text-center text-xs uppercase tracking-wider text-muted-foreground">Routers</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Status</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <TableCell key={j}>
-                      <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : !users?.length ? (
-              <TableRow style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-                <TableCell
-                  colSpan={6}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              users.map((user) => (
-                <TableRow
-                  key={user.id}
-                  className="hover:bg-white/[0.02] transition-colors"
-                  style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}
-                >
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {user.telegramId}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        {getInitials(user.name)}
+      {/* Glass-morphism Table */}
+      <div className="glass-panel border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.3)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-white/[0.03] text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                <th className="px-8 py-5">User ID (Telegram)</th>
+                <th className="px-6 py-5">Name</th>
+                <th className="px-6 py-5">Telegram Bot Token</th>
+                <th className="px-6 py-5">Routers Count</th>
+                <th className="px-6 py-5">Status</th>
+                <th className="px-6 py-5">Created Date</th>
+                <th className="px-8 py-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.05]">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-6 py-5">
+                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : !users?.length ? (
+                <tr>
+                  <td colSpan={7} className="px-8 py-12 text-center text-slate-400">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id} className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="px-8 py-5 font-mono-tech text-cyan-400 text-sm">
+                      {user.telegramId}
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[#2d3449] flex items-center justify-center text-xs font-bold text-[#4cd7f6]">
+                          {getInitials(user.name)}
+                        </div>
+                        <span className="text-[#dae2fd] font-medium">{user.name}</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{user.name}</p>
-                        {user.email && (
-                          <p className="text-xs text-muted-foreground">
-                            {user.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-technical)' }}>
-                        {revealedTokens.has(user.id)
-                          ? user.botToken || "--"
-                          : maskToken(user.botToken)}
+                    </td>
+                    <td className="px-6 py-5 font-mono-tech text-xs text-slate-500">
+                      {maskToken(user.botToken)}
+                      <span className="text-[8px] opacity-30">{"••••••••••"}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="bg-[#222a3d] px-2 py-1 rounded text-xs text-[#dae2fd] border border-white/5">
+                        {user._count?.routers ?? 0} Units
                       </span>
-                      {user.botToken && (
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => toggleTokenVisibility(user.id)}
-                          className="text-muted-foreground hover:text-foreground"
+                    </td>
+                    <td className="px-6 py-5">
+                      {user.status === "ACTIVE" ? (
+                        <div
+                          className="w-10 h-5 bg-[#4ae176]/20 rounded-full relative p-1 cursor-pointer"
+                          onClick={() => handleStatusToggle(user.id, user.status)}
                         >
-                          {revealedTokens.has(user.id) ? (
-                            <EyeOff className="h-3 w-3" />
-                          ) : (
-                            <Eye className="h-3 w-3" />
-                          )}
-                        </Button>
+                          <div className="absolute right-1 top-1 w-3 h-3 bg-[#4ae176] rounded-full shadow-[0_0_8px_rgba(74,225,118,0.5)]" />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-10 h-5 bg-slate-800 rounded-full relative p-1 cursor-pointer"
+                          onClick={() => handleStatusToggle(user.id, user.status)}
+                        >
+                          <div className="absolute left-1 top-1 w-3 h-3 bg-slate-600 rounded-full" />
+                        </div>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span className="text-sm text-foreground">
-                      {user._count?.routers ?? 0}{" "}
-                      <span className="text-xs text-muted-foreground">Units</span>
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(user.lastActive)}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "inline-block h-1.5 w-1.5 rounded-full",
-                            user.status === "ACTIVE" && "bg-[#4ae176]",
-                            user.status === "INACTIVE" && "bg-muted-foreground",
-                            user.status === "SUSPENDED" && "bg-[#ffb4ab]"
-                          )}
-                        />
-                        <span className={cn(
-                          "text-xs",
-                          user.status === "ACTIVE" && "text-[#4ae176]",
-                          user.status === "INACTIVE" && "text-muted-foreground",
-                          user.status === "SUSPENDED" && "text-[#ffb4ab]"
-                        )}>
-                          {user.status.charAt(0) + user.status.slice(1).toLowerCase()}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-xs" className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-36" style={{ background: 'rgba(45, 52, 73, 0.95)', backdropFilter: 'blur(20px)' }}>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleStatusToggle(user.id, user.status)
-                          }
-                        >
-                          {user.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
+                    </td>
+                    <td className="px-6 py-5 text-sm text-slate-400">
+                      {formatDate(user.createdAt)}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center">
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center"
                           onClick={() => handleDelete(user.id, user.name)}
                         >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="px-8 py-4 bg-white/[0.02] border-t border-white/[0.05] flex items-center justify-between">
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            Showing {users?.length ?? 0} of {users?.length ?? 0} users
+          </p>
+          <div className="flex items-center gap-2">
+            <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="text-xs font-bold px-3 py-1 bg-[#4cd7f6]/20 text-[#4cd7f6] rounded-lg">1</span>
+            <button className="p-2 text-slate-500 hover:text-[#dae2fd] transition-colors">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -1,113 +1,79 @@
 "use client"
 
-import { Users, Router, Wifi, Activity, TrendingUp, TrendingDown } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Users, Router, Wifi, Bot, TrendingUp } from "lucide-react"
 import { useStats } from "@/hooks/use-stats"
-import { cn } from "@/lib/utils"
-
-interface StatCardProps {
-  title: string
-  value: string | number
-  icon: React.ComponentType<{ className?: string }>
-  description?: string
-  trend?: { value: string; positive: boolean }
-  badge?: { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-}
-
-function StatCard({ title, value, icon: Icon, description, trend, badge }: StatCardProps) {
-  return (
-    <Card className="border-0 transition-colors rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
-      <CardContent className="pt-0">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>{title}</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>{value}</p>
-              {trend && (
-                <span className={cn(
-                  "flex items-center gap-0.5 text-xs font-medium",
-                  trend.positive ? "text-[#4ae176]" : "text-[#ffb4ab]"
-                )}>
-                  {trend.positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {trend.value}
-                </span>
-              )}
-              {badge && (
-                <Badge
-                  variant={badge.variant}
-                  className={cn(
-                    "text-[10px] uppercase tracking-wider font-semibold",
-                    badge.variant === "default" && "bg-[#4ae176]/10 text-[#4ae176] border-[#4ae176]/20",
-                    badge.variant === "destructive" && "bg-red-500/10 text-red-400 border-red-500/20"
-                  )}
-                >
-                  {badge.label}
-                </Badge>
-              )}
-            </div>
-            {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
-            )}
-          </div>
-          <div className="rounded-lg bg-primary/10 p-2.5">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 export function StatsCards() {
   const { data: stats, isLoading } = useStats()
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="border-0" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
-            <CardContent className="pt-0">
-              <div className="space-y-3 animate-pulse">
-                <div className="h-4 w-24 rounded bg-muted" />
-                <div className="h-8 w-16 rounded bg-muted" />
-                <div className="h-3 w-32 rounded bg-muted" />
-              </div>
-            </CardContent>
-          </Card>
+          <div key={i} className="bg-[#131b2e] p-6 rounded-xl">
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 w-24 rounded bg-[#222a3d]" />
+              <div className="h-8 w-16 rounded bg-[#222a3d]" />
+              <div className="h-3 w-32 rounded bg-[#222a3d]" />
+            </div>
+          </div>
         ))}
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard
-        title="Active Users"
-        value={stats?.activeUsers ?? 0}
-        icon={Users}
-        trend={{ value: "+12%", positive: true }}
-        description={`${stats?.totalUsers ?? 0} total registered`}
-      />
-      <StatCard
-        title="Total Routers"
-        value={stats?.totalRouters ?? 0}
-        icon={Router}
-        description="Cluster usage across all users"
-      />
-      <StatCard
-        title="Active Clients"
-        value={stats?.recentActivity ?? 0}
-        icon={Wifi}
-        description="Connected in last 24h"
-      />
-      <StatCard
-        title="LLM Status"
-        value="Ready"
-        icon={Activity}
-        badge={{ label: "OPTIMIZED", variant: "default" }}
-        description={`${stats?.totalLogs ?? 0} total logs`}
-      />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Card 1: Active Users */}
+      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Users className="h-9 w-9" />
+        </div>
+        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Active Users</p>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.activeUsers ?? 0}</h2>
+          <span className="text-[#4ae176] text-xs font-bold flex items-center">
+            <TrendingUp className="h-3 w-3 mr-0.5" /> +12%
+          </span>
+        </div>
+      </div>
+
+      {/* Card 2: Total Routers */}
+      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Router className="h-9 w-9" />
+        </div>
+        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Total Routers</p>
+        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.totalRouters ?? 0}</h2>
+        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">15% Cluster Usage</p>
+      </div>
+
+      {/* Card 3: Active Clients */}
+      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Wifi className="h-9 w-9" />
+        </div>
+        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Active Clients</p>
+        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.recentActivity ?? 0}</h2>
+        <div className="flex gap-1 mt-2">
+          <div className="h-1 w-full bg-[#06b6d4] rounded-full" />
+          <div className="h-1 w-12 bg-[#2d3449] rounded-full" />
+        </div>
+      </div>
+
+      {/* Card 4: LLM Status */}
+      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Bot className="h-9 w-9" />
+        </div>
+        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">LLM Status</p>
+        <div className="flex items-center gap-3">
+          <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">Ready</h2>
+          <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded text-[10px] text-[#4ae176] font-bold animate-pulse">
+            OPTIMIZED
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

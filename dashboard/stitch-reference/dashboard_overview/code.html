@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MikroTik AI Agent - Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            900: '#0f172a',
+                            950: '#020617',
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-body antialiased flex overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 border-r border-slate-800/50 bg-slate-900/80 backdrop-blur-md dark:bg-slate-950/80 flex flex-col py-6 px-4 shadow-2xl z-50">
+<div class="flex items-center gap-2 text-lg font-black text-cyan-500 dark:text-cyan-400 mb-8 px-2">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="tracking-tight">MikroTik AI Agent</span>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 font-mono tracking-tight text-sm uppercase font-semibold text-cyan-400 bg-cyan-500/10 border-r-2 border-cyan-500 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 font-mono tracking-tight text-sm uppercase font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+                Users
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 font-mono tracking-tight text-sm uppercase font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="router">router</span>
+                Routers
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 font-mono tracking-tight text-sm uppercase font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+                Activity Logs
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 font-mono tracking-tight text-sm uppercase font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/50 transition-all duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto border-t border-slate-800/50 pt-4">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional portrait of a network administrator in a modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWliUq2za95ImJ83IDsmbPNFkqMBR8SRkznQWnu69hxDehQfvrnkdQE6_FcGPI5fE6F15kv1aLuOLaZJIHSnBKuEGZg30jO1Sm4eV6lzAqQ_Hq4INTuEXGxsuJRYQAqpsXDtVvzdWnvP8GsDcujtUw86D55jK1Wyo-QnSLL01adfO1TOxpSYfV6OIDQuIes5SXSRoM9PPr8pzlAC3xUd-xWaiJiAvjfEdT1lDy0WDYl9LNIqfpIGi2TuLTrdx8YLuG2jThfpG3jEd0"/>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-100">Network Admin</p>
+<p class="text-[10px] text-cyan-500/70 font-mono">ID: MT-8829</p>
+</div>
+</div>
+<button class="w-full flex items-center gap-3 px-3 py-2 font-mono tracking-tight text-sm uppercase font-semibold text-slate-400 hover:text-slate-100 transition-all">
+<span class="material-symbols-outlined" data-icon="menu_open">menu_open</span>
+                Collapse
+            </button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-screen overflow-y-auto">
+<!-- TopNavBar (Shared Component) -->
+<header class="flex justify-between items-center px-8 py-3 w-full bg-slate-900/50 backdrop-blur-xl border-b border-slate-800/50 sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<h1 class="font-headline font-extrabold text-xl text-slate-100 tracking-tight">Network Overview</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" data-icon="search">search</span>
+<input class="bg-slate-800/50 border-slate-700/50 rounded-lg pl-9 pr-4 py-1.5 text-xs font-mono focus:ring-1 focus:ring-cyan-500 w-64 text-slate-300" placeholder="Search commands or IP..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative text-slate-400 hover:text-cyan-400 transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-900"></span>
+</button>
+<button class="text-slate-400 hover:text-cyan-400 transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+<!-- Top Stat Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="glass-card p-5 rounded-xl transition-all hover:border-cyan-500/30">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-400 font-label text-sm uppercase tracking-wider">Active Users</span>
+<span class="bg-emerald-500/10 text-emerald-500 p-1.5 rounded-lg">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-slate-100">5</span>
+<span class="text-xs text-emerald-500 font-mono font-medium">+2 this month</span>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl transition-all hover:border-cyan-500/30">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-400 font-label text-sm uppercase tracking-wider">Routers Managed</span>
+<span class="bg-cyan-500/10 text-cyan-400 p-1.5 rounded-lg">
+<span class="material-symbols-outlined text-sm" data-icon="router">router</span>
+</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-slate-100">12</span>
+<span class="text-xs text-slate-500 font-mono">Online nodes</span>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl transition-all hover:border-cyan-500/30">
+<div class="flex justify-between items-start mb-4">
+<span class="text-slate-400 font-label text-sm uppercase tracking-wider">Active Clients</span>
+<span class="bg-indigo-500/10 text-indigo-400 p-1.5 rounded-lg">
+<span class="material-symbols-outlined text-sm" data-icon="devices">devices</span>
+</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-headline font-bold text-slate-100">284</span>
+<span class="text-xs text-slate-500 font-mono">Current load</span>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl transition-all border-l-4 border-l-emerald-500">
+<div class="flex justify-between items-start mb-2">
+<span class="text-slate-400 font-label text-sm uppercase tracking-wider">System Status</span>
+<span class="flex items-center gap-1.5 text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase font-bold">
+<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            Online
+                        </span>
+</div>
+<p class="text-sm font-headline font-semibold text-slate-200 mb-2">All Systems Online</p>
+<div class="mt-4 pt-2 border-t border-slate-700/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-cyan-400 text-xs" data-icon="psychology">psychology</span>
+<span class="text-[10px] font-mono text-slate-400 uppercase tracking-tighter">LLM: Gemini 2.5 Flash Lite</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Recent Activity Feed -->
+<div class="lg:col-span-2 space-y-4">
+<div class="flex items-center justify-between px-2">
+<h2 class="font-headline font-bold text-lg text-slate-200 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-500" data-icon="timeline">timeline</span>
+                            Recent Activity
+                        </h2>
+<button class="text-xs font-mono text-cyan-400 hover:underline">View All Logs</button>
+</div>
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="divide-y divide-slate-800/50">
+<!-- Feed Item 1 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-emerald-500 text-lg" data-icon="person_search">person_search</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">
+<span class="font-bold text-slate-100">Pak Budi</span> checked <span class="font-mono text-cyan-400">34 active clients</span> on <span class="text-slate-400">UmmiNEW</span>
+</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">2 min ago</p>
+</div>
+</div>
+<!-- Feed Item 2 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-cyan-500 text-lg" data-icon="add_circle">add_circle</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">
+<span class="font-bold text-slate-100">Andi</span> added router <span class="font-mono text-cyan-400">Kantor</span>
+</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">15 min ago</p>
+</div>
+</div>
+<!-- Feed Item 3 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-red-500 text-lg" data-icon="person_remove">person_remove</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">
+<span class="font-bold text-slate-100">Siti</span> kicked hotspot user <span class="italic">tamu</span> on <span class="text-slate-400">Cabang</span>
+</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">1 hour ago</p>
+</div>
+</div>
+<!-- Feed Item 4 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-amber-500 text-lg" data-icon="system_update_alt">system_update_alt</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">
+<span class="font-bold text-slate-100">Budi</span> updated firmware on <span class="font-mono text-cyan-400">Warnet</span>
+</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">3 hours ago</p>
+</div>
+</div>
+<!-- Feed Item 5 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-slate-300 text-lg" data-icon="search_check">search_check</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">System scan completed. No anomalies found.</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">5 hours ago</p>
+</div>
+</div>
+<!-- Feed Item 6 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-indigo-500 text-lg" data-icon="person_add">person_add</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">New user registration: <span class="font-bold text-slate-100">Rizki</span></p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">6 hours ago</p>
+</div>
+</div>
+<!-- Feed Item 7 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-red-500 text-lg" data-icon="warning">warning</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300">Router <span class="font-mono text-red-400">Kantor</span> CPU spike detected (98%)</p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">8 hours ago</p>
+</div>
+</div>
+<!-- Feed Item 8 -->
+<div class="p-4 flex items-start gap-4 hover:bg-slate-800/30 transition-colors">
+<div class="w-8 h-8 rounded-lg bg-slate-700/50 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-slate-300 text-lg" data-icon="edit">edit</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-300"><span class="font-bold text-slate-100">Andi</span> renamed router <span class="italic text-slate-400">Cabang_Old</span> to <span class="font-mono text-cyan-400">Cabang</span></p>
+<p class="text-[10px] font-mono text-slate-500 mt-1 uppercase">10 hours ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Router Status Mini-Cards -->
+<div class="space-y-4">
+<h2 class="font-headline font-bold text-lg text-slate-200 px-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-500" data-icon="dns">dns</span>
+                        Router Status
+                    </h2>
+<div class="space-y-3">
+<!-- Router 1 -->
+<div class="glass-card p-4 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-symbols-outlined text-4xl" data-icon="router">router</span>
+</div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-headline font-bold text-slate-100">UmmiNEW</h3>
+<p class="text-[10px] font-mono text-slate-500">192.168.88.1</p>
+</div>
+<span class="bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/20">Online</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">CPU Load</p>
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[11%]"></div>
+</div>
+<span class="text-[10px] font-mono text-slate-300">11%</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">Clients</p>
+<p class="text-xs font-mono text-slate-300">34 active</p>
+</div>
+</div>
+</div>
+<!-- Router 2 -->
+<div class="glass-card p-4 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-symbols-outlined text-4xl" data-icon="router">router</span>
+</div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-headline font-bold text-slate-100">Kantor</h3>
+<p class="text-[10px] font-mono text-slate-500">10.0.0.1</p>
+</div>
+<span class="bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/20">Online</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">CPU Load</p>
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[5%]"></div>
+</div>
+<span class="text-[10px] font-mono text-slate-300">5%</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">Clients</p>
+<p class="text-xs font-mono text-slate-300">15 active</p>
+</div>
+</div>
+</div>
+<!-- Router 3 -->
+<div class="glass-card p-4 rounded-xl relative overflow-hidden group border-red-500/20 bg-red-500/5">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-headline font-bold text-slate-100">Cabang</h3>
+<p class="text-[10px] font-mono text-slate-500">172.16.10.1</p>
+</div>
+<span class="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-red-500/20">Offline</span>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span>
+<p class="text-[10px] font-mono italic">Last seen: 2 hours ago</p>
+</div>
+</div>
+<!-- Router 4 -->
+<div class="glass-card p-4 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity">
+<span class="material-symbols-outlined text-4xl" data-icon="router">router</span>
+</div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-headline font-bold text-slate-100">Warnet</h3>
+<p class="text-[10px] font-mono text-slate-500">192.168.10.1</p>
+</div>
+<span class="bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase border border-emerald-500/20">Online</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">CPU Load</p>
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[22%]"></div>
+</div>
+<span class="text-[10px] font-mono text-slate-300">22%</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] text-slate-500 uppercase font-label mb-1">Clients</p>
+<p class="text-xs font-mono text-slate-300">89 active</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB (Suppressed based on context: Home/Dashboard shown) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-cyan-500 text-slate-950 rounded-full shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
+<span class="material-symbols-outlined text-3xl" data-icon="chat_bubble">chat_bubble</span>
+</button>
+</body></html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                slate: {
+                    950: '#020617',
+                    900: '#0f172a',
+                    800: '#1e293b',
+                    400: '#94a3b8'
+                },
+                cyan: {
+                    400: '#22d3ee',
+                    500: '#06b6d4'
+                }
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter", "sans-serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Space Grotesk", "sans-serif"],
+                    "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-body antialiased">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col h-screen w-64 border-r bg-slate-900 dark:bg-slate-950 border-slate-800 dark:border-slate-800 shadow-xl z-50">
+<div class="p-6">
+<div class="text-xl font-bold text-cyan-500 dark:text-cyan-400 tracking-widest uppercase font-headline">
+                MikroTik AI
+            </div>
+<p class="font-mono tracking-tight text-sm text-slate-400 mt-1 uppercase">Network Operations</p>
+</div>
+<nav class="flex-1 mt-4">
+<!-- Dashboard Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 transition-transform font-mono tracking-tight text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<!-- Routers Tab (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-3 bg-cyan-500/10 text-cyan-400 border-r-2 border-cyan-400 font-bold font-mono tracking-tight text-sm active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="router">router</span>
+                Routers
+            </a>
+<!-- Users Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 transition-transform font-mono tracking-tight text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+                Users
+            </a>
+<!-- Traffic Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 transition-transform font-mono tracking-tight text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="timeline">timeline</span>
+                Traffic
+            </a>
+<!-- Logs Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 transition-transform font-mono tracking-tight text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="article">article</span>
+                Logs
+            </a>
+<!-- AI Assistant Tab -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 transition-transform font-mono tracking-tight text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                AI Assistant
+            </a>
+</nav>
+<div class="p-4 border-t border-slate-800">
+<button class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+                New Connection
+            </button>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 border-b border-slate-800 bg-slate-900/80 dark:bg-slate-950/80 backdrop-blur-md flex justify-between items-center px-6 z-40">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" data-icon="search">search</span>
+<input class="bg-slate-800/50 border-none rounded-lg py-1.5 pl-10 pr-4 text-xs font-mono focus:ring-1 focus:ring-cyan-500 w-full placeholder:text-slate-600" placeholder="SEARCH NETWORK..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer" data-icon="settings">settings</span>
+</div>
+<div class="h-6 w-px bg-slate-800"></div>
+<button class="text-cyan-500 font-mono text-xs uppercase tracking-wider hover:text-cyan-300 transition-colors cursor-pointer active:opacity-70">Support</button>
+<div class="flex items-center gap-3">
+<img alt="Admin Avatar" class="w-8 h-8 rounded-full border border-slate-700" data-alt="close-up of a professional network administrator avatar with a clean and modern digital aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxseCz3X1JZlORl4gn5_H5fwO0CDt4OvJWimYl9CzFQeMXGyKzZUKtMOys0FuwCvZAGCqu04rYh1S4MsBAyYMdQJD79euHLHfnhOJ9Iz7zdyoShdmpdLhiIBY8QmNT7Zld2LKIT41Oxs0fv0jwTUIv78QJjtMJ45FHeT_dUZLLQ-iNSNwiS50WMnp0NnnF15wn6uWVA0e-AVglArVduC2C9suZYM6N_KoJRvWC2JCP6X0SIIHfFaSlgeL8gPCSKDCJXQ3PGWBjLJ0A"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 px-8 pb-12 min-h-screen">
+<div class="max-w-7xl mx-auto">
+<div class="mb-8 flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-extrabold text-slate-100 font-headline tracking-tight">Router Overview</h1>
+<p class="text-slate-400 font-mono text-sm mt-1">Management and real-time monitoring of 4 nodes</p>
+</div>
+<div class="flex gap-3">
+<div class="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-xs font-mono">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        3 ONLINE
+                    </div>
+<div class="flex items-center gap-2 px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-xs font-mono">
+<span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        1 OFFLINE
+                    </div>
+</div>
+</div>
+<!-- 2x2 Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Card 1: UmmiNEW -->
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-xl font-bold font-headline">UmmiNEW</h3>
+<span class="material-symbols-outlined text-green-500 text-sm" data-icon="fiber_manual_record" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono">v7.12.1</span>
+</div>
+<p class="text-xs text-slate-500 font-mono mt-1">Owner: Pak Budi</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-cyan-400">192.168.88.1:8291</p>
+<p class="text-[10px] text-slate-500 font-mono mt-0.5">RB4011iGS+</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6 mb-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>CPU Load</span>
+<span>11%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[11%]"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>Memory Usage</span>
+<span>45%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[45%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-800/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-lg" data-icon="devices">devices</span>
+<span class="text-sm font-mono"><span class="text-cyan-400 font-bold">34</span> active clients</span>
+</div>
+<button class="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 font-mono transition-colors">
+                            VIEW DETAILS
+                            <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 2: Kantor -->
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-xl font-bold font-headline">Kantor</h3>
+<span class="material-symbols-outlined text-green-500 text-sm" data-icon="fiber_manual_record" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono">v6.49.10</span>
+</div>
+<p class="text-xs text-slate-500 font-mono mt-1">Owner: Pak Budi</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-cyan-400">10.0.0.1:8291</p>
+<p class="text-[10px] text-slate-500 font-mono mt-0.5">hAP ac2</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6 mb-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>CPU Load</span>
+<span>5%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[5%]"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>Memory Usage</span>
+<span>30%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-cyan-500 w-[30%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-800/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-lg" data-icon="devices">devices</span>
+<span class="text-sm font-mono"><span class="text-cyan-400 font-bold">15</span> active clients</span>
+</div>
+<button class="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 font-mono transition-colors">
+                            VIEW DETAILS
+                            <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Cabang (Offline) -->
+<div class="glass-card rounded-xl p-6 relative overflow-hidden bg-slate-900/30 opacity-80 border-red-500/20">
+<div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-xl font-bold font-headline text-slate-400">Cabang</h3>
+<span class="material-symbols-outlined text-red-500 text-sm" data-icon="fiber_manual_record" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span class="text-[10px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-mono">v7.1</span>
+</div>
+<p class="text-xs text-slate-500 font-mono mt-1">Owner: Siti</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-slate-500">172.16.10.1:8291</p>
+<p class="text-[10px] text-slate-600 font-mono mt-0.5">CCR2004</p>
+</div>
+</div>
+<div class="h-[74px] flex flex-col items-center justify-center bg-red-500/5 rounded-lg border border-red-500/10 mb-6">
+<span class="material-symbols-outlined text-red-500/50 mb-1" data-icon="error">error</span>
+<p class="text-xs font-mono text-red-400 uppercase tracking-widest">Last seen: 2 hours ago</p>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-800/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-600 text-lg" data-icon="wifi_off">wifi_off</span>
+<span class="text-sm font-mono text-slate-600">Metric link disconnected</span>
+</div>
+<button class="text-xs text-red-400/80 hover:text-red-400 flex items-center gap-1 font-mono transition-colors">
+                            DIAGNOSE
+                            <span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
+</button>
+</div>
+</div>
+<!-- Card 4: Warnet -->
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-xl font-bold font-headline">Warnet</h3>
+<span class="material-symbols-outlined text-green-500 text-sm" data-icon="fiber_manual_record" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span>
+<span class="text-[10px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded font-mono">v6.48.6</span>
+</div>
+<p class="text-xs text-slate-500 font-mono mt-1">Owner: Andi</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-cyan-400">192.168.10.1:8291</p>
+<p class="text-[10px] text-slate-500 font-mono mt-0.5">hEX lite</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6 mb-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>CPU Load</span>
+<span>22%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 w-[22%]"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400">
+<span>Memory Usage</span>
+<span>60%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 w-[60%]"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-800/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-lg" data-icon="devices">devices</span>
+<span class="text-sm font-mono"><span class="text-cyan-400 font-bold">89</span> active clients</span>
+</div>
+<button class="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 font-mono transition-colors">
+                            VIEW DETAILS
+                            <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Dashboard Stats Ticker (Extra Content for UI depth) -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="glass-card rounded-lg p-4 border-slate-800/50">
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Total Throughput</p>
+<p class="text-lg font-bold font-headline text-cyan-400">1.2 Gbps</p>
+</div>
+<div class="glass-card rounded-lg p-4 border-slate-800/50">
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Global Active Clients</p>
+<p class="text-lg font-bold font-headline text-cyan-400">152</p>
+</div>
+<div class="glass-card rounded-lg p-4 border-slate-800/50">
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">Uptime Avg</p>
+<p class="text-lg font-bold font-headline text-cyan-400">99.98%</p>
+</div>
+<div class="glass-card rounded-lg p-4 border-slate-800/50">
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1">AI Insights</p>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-amber-500 text-sm" data-icon="bolt">bolt</span>
+<p class="text-xs font-mono text-slate-300">2 Alerts pending</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

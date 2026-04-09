@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=Space+Grotesk:wght@500;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            900: '#0f172a',
+                            950: '#020617'
+                        },
+                        cyan: {
+                            400: '#22d3ee',
+                            500: '#06b6d4'
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-body antialiased">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 shadow-xl flex flex-col z-50">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 bg-cyan-500/20 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-cyan-400" data-icon="psychology">psychology</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-cyan-400 tracking-wider font-label">MikroTik AI</h1>
+<p class="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Network Intelligence</p>
+</div>
+</div>
+<nav class="space-y-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 font-mono text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+<!-- Routers -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 font-mono text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="router">router</span>
+                    Routers
+                </a>
+<!-- Users (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-3 text-cyan-400 bg-cyan-500/10 border-r-2 border-cyan-500 active:scale-95 font-mono text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+                    Users
+                </a>
+<!-- AI Insights -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 font-mono text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+                    AI Insights
+                </a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors duration-200 active:scale-95 font-mono text-sm tracking-tight" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</nav>
+</div>
+<div class="mt-auto p-4 border-t border-slate-800">
+<button class="w-full py-2 bg-cyan-500 text-slate-900 font-bold rounded hover:bg-cyan-400 transition-colors active:scale-95 text-xs mb-4">
+                New Agent
+            </button>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-slate-200 font-mono text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+                    Support
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-red-400 font-mono text-xs" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+                    Logout
+                </a>
+</nav>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="sticky top-0 z-40 flex justify-between items-center px-6 ml-64 h-16 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-black text-slate-100 font-mono uppercase">User Management</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" data-icon="search">search</span>
+<input class="bg-slate-900 border border-slate-800 rounded px-10 py-1.5 text-[10px] font-mono focus:ring-1 focus:ring-cyan-500 outline-none text-slate-300 w-64" placeholder="SEARCH AGENTS..." type="text"/>
+</div>
+<div class="flex items-center gap-4 border-l border-slate-800 pl-6">
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-400 cursor-pointer text-xl" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-400 cursor-pointer text-xl" data-icon="history">history</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-700">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a male professional software architect in a dark studio setting with soft cyan ambient light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0U4EuxlavoeDWScCbwSLqmqtVp5jgUZodKnyU_Bq6YaMwFr_4V_Tkexn_CCaqKIJl7JdVeo3XODFWacmMyy7d_80pTUeGgwJX2sDAnu68w463SyaUZuN4_h17KHeXm0njoSE2G5Lcy-cycxbbMCrtH6dGFgyRTOou2ewYeiuKjdhcvCdCVijT5qwlxbuoOd7yafSno3nEvHXvhO3FdiE2PPO6UEa4w0IHCIfuCFEd0MjS2j1HH9GlN3Mz47knHWKn18DuBFeYl9hb"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 p-8 relative min-h-[calc(100vh-64px)]">
+<!-- Header Actions -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 class="text-3xl font-bold text-white mb-2 font-headline">Agent Network</h3>
+<p class="text-slate-400 font-mono text-sm">Managing 5 Administrative Instances across Jakarta Cluster</p>
+</div>
+<div class="flex gap-3">
+<select class="bg-slate-900 border border-slate-800 text-slate-400 font-mono text-xs rounded px-4 py-2 focus:ring-cyan-500 outline-none">
+<option>STATUS: ALL</option>
+<option>STATUS: ACTIVE</option>
+<option>STATUS: INACTIVE</option>
+</select>
+<button class="flex items-center gap-2 bg-cyan-500 text-slate-900 px-6 py-2 rounded font-bold hover:bg-cyan-400 transition-all active:scale-95 font-label">
+<span class="material-symbols-outlined font-bold" data-icon="person_add">person_add</span>
+                    ADD USER
+                </button>
+</div>
+</div>
+<!-- Table Container (Glassmorphism) -->
+<div class="glass rounded-xl overflow-hidden shadow-2xl">
+<table class="w-full text-left font-mono text-xs border-collapse">
+<thead>
+<tr class="bg-slate-800/50 text-slate-400 uppercase tracking-widest border-b border-slate-700">
+<th class="px-6 py-4 font-bold">Name</th>
+<th class="px-6 py-4 font-bold">Telegram ID</th>
+<th class="px-6 py-4 font-bold">Bot Token</th>
+<th class="px-6 py-4 font-bold text-center">Routers</th>
+<th class="px-6 py-4 font-bold">Status</th>
+<th class="px-6 py-4 font-bold">Last Active</th>
+<th class="px-6 py-4 font-bold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-800/50">
+<!-- User 1: Pak Budi -->
+<tr class="hover:bg-cyan-500/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-cyan-400 font-bold">PB</div>
+<span class="text-slate-100 font-semibold">Pak Budi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-400">@budi_admin</td>
+<td class="px-6 py-4 text-slate-500">••••••••••••••••</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 border border-cyan-500/20">12</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-green-400">
+<div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                ACTIVE
+                            </div>
+</td>
+<td class="px-6 py-4 text-slate-500">2 mins ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="edit">edit</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="visibility">visibility</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-red-400" data-icon="delete">delete</span>
+</div>
+</td>
+</tr>
+<!-- User 2: Andi -->
+<tr class="hover:bg-cyan-500/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-cyan-400 font-bold">AN</div>
+<span class="text-slate-100 font-semibold">Andi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-400">@andi_tech</td>
+<td class="px-6 py-4 text-slate-500">••••••••••••••••</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 border border-cyan-500/20">5</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-green-400">
+<div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                ACTIVE
+                            </div>
+</td>
+<td class="px-6 py-4 text-slate-500">14 mins ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="edit">edit</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="visibility">visibility</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-red-400" data-icon="delete">delete</span>
+</div>
+</td>
+</tr>
+<!-- User 3: Siti -->
+<tr class="hover:bg-cyan-500/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-slate-600 font-bold">ST</div>
+<span class="text-slate-100 font-semibold">Siti</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-400">@siti_ops</td>
+<td class="px-6 py-4 text-slate-500">••••••••••••••••</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-slate-800 px-2 py-1 rounded text-slate-500 border border-slate-700">2</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-slate-500">
+<div class="w-2 h-2 rounded-full bg-slate-600"></div>
+                                INACTIVE
+                            </div>
+</td>
+<td class="px-6 py-4 text-slate-500">2 days ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="edit">edit</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="visibility">visibility</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-red-400" data-icon="delete">delete</span>
+</div>
+</td>
+</tr>
+<!-- User 4: Rizki -->
+<tr class="hover:bg-cyan-500/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-cyan-400 font-bold">RZ</div>
+<span class="text-slate-100 font-semibold">Rizki</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-400">@rizki_net</td>
+<td class="px-6 py-4 text-slate-500">••••••••••••••••</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 border border-cyan-500/20">8</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-green-400">
+<div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                ACTIVE
+                            </div>
+</td>
+<td class="px-6 py-4 text-slate-500">Just now</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="edit">edit</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="visibility">visibility</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-red-400" data-icon="delete">delete</span>
+</div>
+</td>
+</tr>
+<!-- User 5: Dewi -->
+<tr class="hover:bg-cyan-500/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-cyan-400 font-bold">DW</div>
+<span class="text-slate-100 font-semibold">Dewi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-slate-400">@dewi_master</td>
+<td class="px-6 py-4 text-slate-500">••••••••••••••••</td>
+<td class="px-6 py-4 text-center">
+<span class="bg-slate-800 px-2 py-1 rounded text-cyan-400 border border-cyan-500/20">15</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-green-400">
+<div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                ACTIVE
+                            </div>
+</td>
+<td class="px-6 py-4 text-slate-500">1 hour ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="edit">edit</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-cyan-400" data-icon="visibility">visibility</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-red-400" data-icon="delete">delete</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Overlay: Add User Modal -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm">
+<div class="glass w-full max-w-md rounded-2xl p-8 shadow-2xl border border-cyan-500/20 relative overflow-hidden">
+<!-- Decorative background elements -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+<div class="flex justify-between items-center mb-6">
+<h4 class="text-xl font-bold font-headline text-white">Create New Agent</h4>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:text-white" data-icon="close">close</span>
+</div>
+<form class="space-y-4">
+<div>
+<label class="block text-[10px] font-mono text-cyan-500 uppercase tracking-widest mb-1.5">Full Name</label>
+<input class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5 text-sm font-mono text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" placeholder="e.g. Pak Budi" type="text"/>
+</div>
+<div>
+<label class="block text-[10px] font-mono text-cyan-500 uppercase tracking-widest mb-1.5">Telegram User ID</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">@</span>
+<input class="w-full bg-slate-900 border border-slate-700 rounded pl-10 pr-4 py-2.5 text-sm font-mono text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" placeholder="username" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-mono text-cyan-500 uppercase tracking-widest mb-1.5">Telegram Bot Token</label>
+<input class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5 text-sm font-mono text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" placeholder="••••••••••••••••••••••••" type="password"/>
+</div>
+<div>
+<label class="block text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">OpenRouter API Key <span class="text-[8px] italic">(Optional)</span></label>
+<input class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5 text-sm font-mono text-slate-200 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" placeholder="sk-or-v1-..." type="password"/>
+</div>
+<div class="pt-6 flex gap-3">
+<button class="flex-1 bg-slate-800 text-slate-300 py-3 rounded font-bold hover:bg-slate-700 transition-colors text-xs font-label" type="button">CANCEL</button>
+<button class="flex-1 bg-cyan-500 text-slate-900 py-3 rounded font-bold hover:bg-cyan-400 transition-colors shadow-[0_0_15px_rgba(6,182,212,0.3)] text-xs font-label" type="submit">AUTHORIZE AGENT</button>
+</div>
+</form>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed top-0 right-0 -z-10 w-[800px] h-[800px] bg-cyan-500/5 rounded-full blur-[120px] -mr-96 -mt-96"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[100px] -ml-64 -mb-64"></div>
+</body></html>

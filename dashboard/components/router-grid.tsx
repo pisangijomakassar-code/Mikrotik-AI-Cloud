@@ -1,40 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Router, MoreHorizontal, RotateCcw } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Router, MoreVertical, Users, ChevronLeft, ChevronRight, PlusCircle, Sparkles } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
 import { AddRouterDialog } from "@/components/add-router-dialog"
 import { cn } from "@/lib/utils"
-
-function ResourceBar({ value, max, label }: { value: number; max: number; label: string }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] text-muted-foreground w-8">{label}</span>
-      <div className="h-1.5 w-16 rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            pct < 60 ? "bg-[#4ae176]" : pct < 85 ? "bg-amber-400" : "bg-[#ffb4ab]"
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-[10px] text-foreground w-7 text-right">{pct}%</span>
-    </div>
-  )
-}
 
 export function RouterGrid() {
   const [search, setSearch] = useState("")
@@ -52,192 +22,321 @@ export function RouterGrid() {
     setOwnerFilter("")
   }
 
+  const filteredRouters = routers?.filter((r) => !statusFilter || r.health?.status === statusFilter) ?? []
+
   return (
-    <div className="space-y-4">
-      {/* Header Stats */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-2 rounded-full bg-[#4ae176] shadow-[0_0_8px_rgba(74,225,118,0.4)]" />
-          <span className="text-sm text-foreground font-medium">{onlineCount} Nodes Online</span>
+    <div className="min-h-screen">
+      {/* Page Header */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <nav className="flex items-center gap-2 text-xs text-slate-500 mb-2 uppercase tracking-widest">
+            <span>Infrastructure</span>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-[#4cd7f6]">Routers</span>
+          </nav>
+          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight">All Managed Routers</h2>
+          <p className="text-[#bcc9cd] mt-1">Real-time status monitoring for your global node network.</p>
         </div>
-        <div className="text-sm text-muted-foreground">
-          Global Health <span className="text-[#4ae176] font-semibold">{healthPct}%</span>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search routers..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 border-0"
-              style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }}
-            />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-[#131b2e] rounded-lg p-1 border border-white/5">
+            <button className="px-4 py-1.5 text-xs font-bold rounded bg-[#2d3449] text-[#4cd7f6]">Table View</button>
+            <button className="px-4 py-1.5 text-xs font-medium text-slate-400 hover:text-[#dae2fd]">Map View</button>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 rounded-md border-0 px-3 text-sm text-foreground outline-none"
-            style={{ background: 'rgba(45, 52, 73, 0.6)' }}
-          >
-            <option value="">Status</option>
-            <option value="online">Online</option>
-            <option value="offline">Offline</option>
-          </select>
-          <select
-            value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
-            className="h-9 rounded-md border-0 px-3 text-sm text-foreground outline-none"
-            style={{ background: 'rgba(45, 52, 73, 0.6)' }}
-          >
-            <option value="">Owner</option>
-          </select>
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-muted-foreground hover:text-foreground">
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset
-          </Button>
+          <AddRouterDialog />
         </div>
-        <AddRouterDialog />
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg overflow-hidden" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent" style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Node Name</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Owner</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Endpoint</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">System</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Resources</TableHead>
-              <TableHead className="text-center text-xs uppercase tracking-wider text-muted-foreground">Connections</TableHead>
-              <TableHead className="w-10 text-xs uppercase tracking-wider text-muted-foreground">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i} style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <TableCell key={j}>
-                      <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : !routers?.length ? (
-              <TableRow style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}>
-                <TableCell colSpan={7} className="py-12 text-center">
-                  <Router className="mx-auto h-10 w-10 text-muted-foreground/50" />
-                  <p className="mt-3 text-sm text-muted-foreground">No routers found</p>
-                  <p className="text-xs text-muted-foreground/70">Add a router to get started</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              routers
-                .filter((r) => !statusFilter || r.health?.status === statusFilter)
-                .map((router) => {
+      {/* Filters Section */}
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="col-span-3 bg-[#131b2e] p-2 rounded-2xl flex items-center gap-2 border border-white/5 overflow-x-auto whitespace-nowrap">
+          <div className="px-4 py-2 text-xs font-bold text-slate-500 uppercase tracking-tighter">Filters</div>
+          <div className="h-6 w-px bg-white/10 mx-2" />
+          <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
+            <span className="text-xs text-slate-400">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 focus:ring-0 cursor-pointer outline-none"
+            >
+              <option value="">All Status</option>
+              <option value="online">Online</option>
+              <option value="offline">Offline</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
+            <span className="text-xs text-slate-400">Owner:</span>
+            <select
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+              className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 focus:ring-0 cursor-pointer outline-none"
+            >
+              <option value="">All Owners</option>
+            </select>
+          </div>
+          <button
+            onClick={resetFilters}
+            className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-4"
+          >
+            Reset Filters
+          </button>
+        </div>
+        <div className="bg-[#131b2e] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-2 h-2 bg-[#4ae176] rounded-full animate-pulse" />
+              <div className="absolute -inset-1 bg-[#4ae176]/20 rounded-full blur-sm" />
+            </div>
+            <span className="text-xs font-bold text-[#dae2fd]">{onlineCount} Nodes Online</span>
+          </div>
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest">Global Health {healthPct}%</span>
+        </div>
+      </section>
+
+      {/* Router Table */}
+      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-900/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Node Name</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Owner</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Endpoint</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">System</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-center">Resources</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Active</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-6 py-5">
+                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : !filteredRouters.length ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <Router className="mx-auto h-10 w-10 text-slate-500/50" />
+                    <p className="mt-3 text-sm text-slate-400">No routers found</p>
+                    <p className="text-xs text-slate-500">Add a router to get started</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredRouters.map((router) => {
                   const health = router.health
                   const status: string = health?.status || "offline"
-                  const memPct = health ? Math.round((health.memoryUsed / health.memoryTotal) * 100) : 0
+                  const isOffline = status === "offline"
 
                   return (
-                    <TableRow
+                    <tr
                       key={router.id}
-                      className="hover:bg-white/[0.02] transition-colors"
-                      style={{ borderColor: 'rgba(61, 73, 76, 0.15)' }}
+                      className={cn(
+                        "hover:bg-white/5 transition-colors group",
+                        isOffline && "opacity-60"
+                      )}
                     >
                       {/* Node Name */}
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={cn(
-                              "inline-block h-2 w-2 rounded-full shrink-0",
-                              status === "online" && "bg-[#4ae176] shadow-[0_0_6px_rgba(74,225,118,0.4)]",
-                              status === "offline" && "bg-[#ffb4ab]",
-                              status === "warning" && "bg-amber-400"
-                            )}
-                          />
-                          <span className="text-sm font-medium text-foreground">{router.name}</span>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl bg-[#2d3449] flex items-center justify-center border border-white/5",
+                            isOffline ? "text-slate-500" : "text-[#4cd7f6]"
+                          )}>
+                            <Router className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-[#dae2fd]">{router.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "w-1.5 h-1.5 rounded-full",
+                                status === "online" ? "bg-[#4ae176]" : "bg-[#ffb4ab]"
+                              )} />
+                              <span className={cn(
+                                "text-[10px] uppercase font-bold tracking-tighter",
+                                status === "online" ? "text-[#4ae176]" : "text-[#ffb4ab]"
+                              )}>
+                                {status === "online" ? "Online" : "Offline"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </TableCell>
+                      </td>
 
                       {/* Owner */}
-                      <TableCell className="text-sm text-muted-foreground">
-                        {router.user?.name || "--"}
-                      </TableCell>
+                      <td className="px-6 py-5">
+                        <span className="text-xs font-medium text-slate-400">{router.user?.name || "Internal Ops"}</span>
+                      </td>
 
                       {/* Endpoint */}
-                      <TableCell>
-                        <span className="text-xs text-muted-foreground" style={{ fontFamily: 'var(--font-technical)' }}>
+                      <td className="px-6 py-5">
+                        <span className={cn(
+                          "font-mono-tech text-xs px-2 py-1 rounded",
+                          isOffline
+                            ? "text-slate-500 bg-slate-900/50"
+                            : "text-[#4cd7f6] bg-[#06b6d4]/10"
+                        )}>
                           {router.host}:{router.port}
                         </span>
-                      </TableCell>
+                      </td>
 
                       {/* System */}
-                      <TableCell>
-                        {health && status !== "offline" ? (
-                          <div className="space-y-0.5">
-                            {health.board && (
-                              <span className="text-xs text-foreground">{health.board}</span>
-                            )}
-                            {health.version && (
-                              <div>
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-muted/50">
-                                  v{health.version}
-                                </Badge>
-                              </div>
-                            )}
+                      <td className="px-6 py-5">
+                        {health && !isOffline ? (
+                          <div>
+                            <p className="text-xs text-[#dae2fd]">{health.board || "--"}</p>
+                            <p className="text-[10px] text-slate-500 font-mono-tech">
+                              {health.version ? `v${health.version} stable` : "--"}
+                            </p>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">--</span>
+                          <div>
+                            <p className="text-xs text-[#dae2fd]">--</p>
+                            <p className="text-[10px] text-slate-500 font-mono-tech">--</p>
+                          </div>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Resources */}
-                      <TableCell>
-                        {health && status !== "offline" ? (
-                          <div className="space-y-1">
-                            <ResourceBar value={health.cpuLoad} max={100} label="CPU" />
-                            <ResourceBar value={health.memoryUsed} max={health.memoryTotal} label="MEM" />
+                      <td className="px-6 py-5 min-w-[200px]">
+                        {health && !isOffline ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span>CPU</span>
+                              <span className="font-mono-tech">{health.cpuLoad}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#4ae176] rounded-full"
+                                style={{ width: `${health.cpuLoad}%` }}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span>MEM</span>
+                              <span className="font-mono-tech">
+                                {Math.round(health.memoryUsed / 1024 / 1024)}/{Math.round(health.memoryTotal / 1024 / 1024)} MB
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#4cd7f6] rounded-full"
+                                style={{ width: `${Math.round((health.memoryUsed / health.memoryTotal) * 100)}%` }}
+                              />
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">--</span>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span>CPU</span>
+                              <span className="font-mono-tech">--</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden" />
+                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                              <span>MEM</span>
+                              <span className="font-mono-tech">--</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden" />
+                          </div>
                         )}
-                      </TableCell>
+                      </td>
 
-                      {/* Active Connections */}
-                      <TableCell className="text-center">
-                        {health && status !== "offline" ? (
-                          <span className="text-sm text-foreground">{health.activeClients}</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">--</span>
-                        )}
-                      </TableCell>
+                      {/* Active */}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm font-bold text-[#dae2fd]">
+                            {health?.activeClients ?? 0}
+                          </span>
+                        </div>
+                      </td>
 
-                      {/* Actions */}
-                      <TableCell>
-                        <Button variant="ghost" size="icon-xs" className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      {/* Action */}
+                      <td className="px-6 py-5 text-right">
+                        <button className="p-2 hover:bg-[#2d3449] rounded-lg transition-colors text-slate-400 hover:text-[#4cd7f6]">
+                          <MoreVertical className="h-5 w-5" />
+                        </button>
+                      </td>
+                    </tr>
                   )
                 })
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Pagination footer */}
-        {routers && routers.length > 0 && (
-          <div className="px-4 py-3 text-xs text-muted-foreground" style={{ borderTop: '1px solid rgba(61, 73, 76, 0.15)' }}>
-            Showing {routers.filter((r) => !statusFilter || r.health?.status === statusFilter).length} of {totalCount} managed nodes
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
+          <span className="text-xs text-slate-500">Showing {filteredRouters.length} of {totalCount} managed nodes</span>
+          <div className="flex items-center gap-2">
+            <button className="p-1 hover:bg-[#2d3449] rounded disabled:opacity-30" disabled>
+              <ChevronLeft className="h-4 w-4 text-slate-400" />
+            </button>
+            <div className="flex items-center gap-1">
+              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded">1</button>
+            </div>
+            <button className="p-1 hover:bg-[#2d3449] rounded">
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </button>
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* AI Insight Overlay */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 glass-panel p-6 rounded-3xl border border-[#4ae176]/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4">
+            <Sparkles className="h-5 w-5 text-[#4ae176] animate-pulse" />
+          </div>
+          <h3 className="font-headline font-bold text-[#dae2fd] mb-4 flex items-center gap-2">
+            AI Agent Insights
+          </h3>
+          <div className="space-y-4">
+            <div className="bg-[#4ae176]/10 p-4 rounded-2xl border border-[#4ae176]/10">
+              <p className="text-sm text-[#6bff8f] font-medium">
+                Anomaly detected: CPU spikes correlate with unusual DNS traffic from specific clients. Suggesting firewall rule update.
+              </p>
+              <div className="mt-3 flex gap-3">
+                <button className="text-[10px] uppercase font-bold tracking-widest text-[#003915] bg-[#4ae176] px-3 py-1.5 rounded-lg">
+                  Apply Suggestion
+                </button>
+                <button className="text-[10px] uppercase font-bold tracking-widest text-[#4ae176] border border-[#4ae176]/30 px-3 py-1.5 rounded-lg">
+                  Review Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#222a3d] p-6 rounded-3xl border border-white/5 flex flex-col justify-between">
+          <div>
+            <h3 className="font-headline font-bold text-[#dae2fd] text-lg">System Health</h3>
+            <p className="text-xs text-slate-500 mt-1">Average response time: 24ms</p>
+          </div>
+          <div className="mt-6 flex justify-center">
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90">
+                <circle cx="64" cy="64" fill="none" r="56" stroke="#222a3d" strokeWidth="8" />
+                <circle
+                  cx="64"
+                  cy="64"
+                  fill="none"
+                  r="56"
+                  stroke="#4cd7f6"
+                  strokeWidth="8"
+                  strokeDasharray="351.8"
+                  strokeDashoffset={351.8 * (1 - healthPct / 100)}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-headline font-bold text-[#dae2fd]">{healthPct}%</span>
+                <span className="text-[8px] uppercase tracking-widest text-slate-500">Uptime</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

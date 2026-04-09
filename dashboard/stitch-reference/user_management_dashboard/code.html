@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MikroTik AI - User Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                950: '#020617',
+                900: '#0f172a',
+                800: '#1e293b',
+                400: '#94a3b8',
+              },
+              cyan: {
+                400: '#22d3ee',
+                500: '#06b6d4',
+              }
+            },
+            borderRadius: {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "0.75rem",
+              "full": "9999px"
+            },
+            fontFamily: {
+              headline: ["Inter", "sans-serif"],
+              body: ["Inter", "sans-serif"],
+              label: ["Space Grotesk", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .glass-card {
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-body antialiased min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full z-40 flex flex-col bg-slate-950 dark:bg-slate-950 h-full w-64 border-r border-slate-800 dark:border-slate-800 font-mono text-sm">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 bg-cyan-500/20 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-cyan-500" data-icon="router">router</span>
+</div>
+<div>
+<h1 class="text-cyan-500 font-black tracking-tighter">Admin Panel</h1>
+<p class="text-[10px] text-slate-400 uppercase tracking-widest">v7.12.1 stable</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+<a class="text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="router">router</span>
+                    Network
+                </a>
+<!-- Active Tab: Users -->
+<a class="bg-cyan-500/10 text-cyan-400 border-r-4 border-cyan-500 flex items-center px-4 py-3 translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="group">group</span>
+                    Users
+                </a>
+<a class="text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="list_alt">list_alt</span>
+                    Logs
+                </a>
+<a class="text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="psychology">psychology</span>
+                    AI Config
+                </a>
+<a class="text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="terminal">terminal</span>
+                    Terminal
+                </a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-4">
+<div class="px-4 py-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Network Status: Online
+            </div>
+<button class="w-full text-slate-400 flex items-center px-4 py-3 hover:bg-slate-900 hover:text-slate-100 transition-all">
+<span class="material-symbols-outlined mr-3" data-icon="logout">logout</span>
+                Logout
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="pl-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 h-16 bg-slate-900/80 backdrop-blur-md dark:bg-slate-900/80 border-b border-slate-800 dark:border-slate-800 shadow-lg shadow-black/20 sticky top-0 z-30 font-mono tracking-tight">
+<div class="flex items-center gap-6 flex-1">
+<span class="text-xl font-bold text-cyan-500 dark:text-cyan-400">MikroTik AI</span>
+<div class="relative w-96 max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm" data-icon="search">search</span>
+<input class="w-full bg-slate-950/50 border-slate-800 rounded-lg pl-10 text-sm focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-slate-300" placeholder="Search system logs or users..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 mr-4">
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 hover:text-cyan-300 transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 hover:text-cyan-300 transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 hover:text-cyan-300 transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-slate-800 mr-2"></div>
+<button class="text-slate-400 hover:text-cyan-300 transition-colors text-sm px-3 py-2">Support</button>
+<button class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold px-4 py-2 rounded text-sm transition-all active:opacity-80">Deploy Agent</button>
+<img alt="Admin Avatar" class="w-8 h-8 rounded-full border border-slate-700 ml-2" data-alt="Close-up portrait of a professional system administrator in a modern office with soft blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9yReltITD2q-wDsc5BRONc29Lh6yNMEqk1QB6PcIiTzA6egYMmJjDAZV-FA4vqkXl1ksdprUV9Cc4Bx3Q9nljZSg3jNtosGu_Hz7DbrCY7ak5Cp_mAunbXhqGNK4jEh_qYzbbg6-6VSyjVQUUHw-CX27pHj7pz4-C0ErE_bAuEtUYJvEaSSn_WkTW7ZKa7NX2NiuAoeNj2DgUYXRIVjhaF3qbEIqO1NSsuZJGFxPRz4HbVYcwUQsvYuWS0wR7q3JY92IiL6KXF4dB"/>
+</div>
+</header>
+<!-- Canvas -->
+<main class="p-8 space-y-8 flex-1">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="text-3xl font-bold font-headline tracking-tight text-white">User Management</h2>
+<p class="text-slate-400 font-mono text-sm mt-1">Configure and monitor access levels for network nodes.</p>
+</div>
+<button class="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-cyan-500/20 active:scale-95">
+<span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+                    + Add User
+                </button>
+</div>
+<!-- Dashboard Stats (Brief Row) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="glass-card p-5 rounded-xl">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-cyan-500/10 rounded-lg text-cyan-400">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</div>
+<div>
+<p class="text-xs text-slate-400 font-label uppercase tracking-widest">Total Users</p>
+<p class="text-2xl font-bold">124</p>
+</div>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+</div>
+<div>
+<p class="text-xs text-slate-400 font-label uppercase tracking-widest">Active Now</p>
+<p class="text-2xl font-bold">89</p>
+</div>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-amber-500/10 rounded-lg text-amber-400">
+<span class="material-symbols-outlined" data-icon="router">router</span>
+</div>
+<div>
+<p class="text-xs text-slate-400 font-label uppercase tracking-widest">Total Routers</p>
+<p class="text-2xl font-bold">412</p>
+</div>
+</div>
+</div>
+<div class="glass-card p-5 rounded-xl border-l-4 border-cyan-500">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-slate-800 rounded-lg text-slate-400">
+<span class="material-symbols-outlined" data-icon="vpn_key">vpn_key</span>
+</div>
+<div>
+<p class="text-xs text-slate-400 font-label uppercase tracking-widest">Auth Requests</p>
+<p class="text-2xl font-bold">2.4k</p>
+</div>
+</div>
+</div>
+</div>
+<!-- User Data Table -->
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-800 bg-slate-900/40">
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400">Name</th>
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400">Telegram ID</th>
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400 text-center">Status</th>
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400">Routers Count</th>
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400">Last Active</th>
+<th class="px-6 py-4 font-label text-xs uppercase tracking-wider text-slate-400 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-800/50 font-mono text-sm">
+<!-- User 1: Pak Budi -->
+<tr class="hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Pak Budi" class="w-9 h-9 rounded-full border border-slate-700" data-alt="Professional mature man portrait with a warm smile, corporate setting, soft high-key lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4lFbP9fAmCXweBvZoPgX6eNrrFAbptg1g19ruKcztKbaMX2IJ_e6pnFnKqt1fnK1NkCFC3CmGXzj3UOI8UzG_FWTsNER1y4TqI4T3lGUW8sjoSqhpQkcEynNbxnGCc9YnG9etvfPQWoFHpU8izq17WCjwb3htMloSV0y2BDcyJhUCQD1QB4OMdlBV2bI36du9q9sR8GyKJbHsLNJ7wFuv0hOpsJgkeNaXEnDk6-cn5_vOcfzL0v5HfKT68IyVsnWYv2or4qT0l4bc"/>
+<span class="font-headline font-semibold text-slate-100">Pak Budi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-cyan-400">@budi_admin</td>
+<td class="px-6 py-4">
+<div class="flex justify-center">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">3 Routers</span>
+</td>
+<td class="px-6 py-4 text-slate-400">2 mins ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-cyan-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- User 2: Andi -->
+<tr class="hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Andi" class="w-9 h-9 rounded-full border border-slate-700" data-alt="Young professional man with glasses, looking thoughtful, studio lighting, dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSl3a6NfS4TuYBvavE7YvONnZu_d4FJwFHuaK7iTYFDkyV_TiN7Ln-jo0sTpQawGoFVljDKprcZoqNJJqNv_PpL2KR_THnVYFsHeB-iwzhbzmBhYIWHg01_TPLoK3MrBa6iTF6q3VK82ij1vHnLXtmrPFcxc6_I21qUHKkv-0BrAousKJsv83Efl8Ifkz-lvAHIIOVoGg6OqqaUY5hQrCe1k3lAQtH5JtjGlbQjfoDei26iP-czS60fnkrV2ZDXRP7UmMBqz_odRoq"/>
+<span class="font-headline font-semibold text-slate-100">Andi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-cyan-400">@andiwijaya</td>
+<td class="px-6 py-4">
+<div class="flex justify-center">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">1 Router</span>
+</td>
+<td class="px-6 py-4 text-slate-400">15 mins ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-cyan-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- User 3: Siti -->
+<tr class="hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Siti" class="w-9 h-9 rounded-full border border-slate-700" data-alt="Young professional woman in creative workspace, bright and airy lighting, soft focus background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3nVRyIztySj4u6ypu1w4q_Al94d7Hl3Zbx3TSR2YeP8776Eo25vj77QjHV80eJf7pGejLqah1wtuMC_5RUP_JzWTjJ-BNqMAcGSV_JUhnlQGWY0hcufY2Z4VZlMv8k9d9DVvYO_kLz72IP2P8YaDq5tezIojp9CSfpXwzmaNuWaDgmFfZ8wtgk7yFaJRP4JZI6BjFONQGAgnN6RZ3J1rmnjb_EGnacIBBOmh3oh-JFa5jCMEUC2AaSHJpKv1-aLdjt1UBZvxTgqh1"/>
+<span class="font-headline font-semibold text-slate-100">Siti</span>
+</div>
+</td>
+<td class="px-6 py-4 text-cyan-400">@rahayu_siti</td>
+<td class="px-6 py-4">
+<div class="flex justify-center">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">2 Routers</span>
+</td>
+<td class="px-6 py-4 text-slate-400">1 hour ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-cyan-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- User 4: Rizki (Inactive) -->
+<tr class="hover:bg-slate-800/30 transition-colors opacity-80">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Rizki" class="w-9 h-9 rounded-full border border-slate-700 grayscale" data-alt="Casual portrait of a young man with a friendly expression, outdoor natural lighting, park background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtE2jTlaAeIQOTuQZjNx-ON0tcT7naWvve3RbuNT1NvvLmbypP1hTo9j3DC67YPXFh5XsL7MKjgAljpJMT0G2KWE5KZGiUw4UdfFzajtP0mU6oVjkT-Gime4mzxqApBeUciAPM_jMDsmpKAdAj41wcUN5mncj2kssOlggcXvLcQ2j7ClN3F3miqFBr-jcMyiAYmoKKQYCS-9K2ofdGjiInFMWbjOd3vsVVGerGUVKyUWkzRyv83J4ZkErOroTs2m4RfuJRHzY2GRFO"/>
+<span class="font-headline font-semibold text-slate-100">Rizki</span>
+</div>
+</td>
+<td class="px-6 py-4 text-cyan-400">@rizki_p</td>
+<td class="px-6 py-4">
+<div class="flex justify-center">
+<div class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">1 Router</span>
+</td>
+<td class="px-6 py-4 text-slate-400">6 hours ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-cyan-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- User 5: Dewi -->
+<tr class="hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Dewi" class="w-9 h-9 rounded-full border border-slate-700" data-alt="Sophisticated woman with a professional look, indoor minimalist setting, soft natural window light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGsfHwjr3k_ouRTCHJifz5ZfLW4X7NWp8KGz2XyB498xdZON2tzHzMPviOnRq9ctWbWwJ1ljRsLD0e_SRQtYOfsRacjvxZk_OlvjLCS2q7kmrPwlklpcBTQwrcA4NfW7eyTekffWToNZoKnIVSVwDMVrRTprO43fv7hFM6y3PrmhG4H-rsr-rbi36DCcfVSUdhAw51e3UmuUrxssgUBm_5Qv9ltDCYEJ_3WEJM4AHhdb_LqsoELe6jDANqhx-N5Jd_fr9LgUAgPPNa"/>
+<span class="font-headline font-semibold text-slate-100">Dewi</span>
+</div>
+</td>
+<td class="px-6 py-4 text-cyan-400">@dewi_lestari</td>
+<td class="px-6 py-4">
+<div class="flex justify-center">
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-300">2 Routers</span>
+</td>
+<td class="px-6 py-4 text-slate-400">10 hours ago</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-cyan-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-slate-800 flex items-center justify-between font-label">
+<p class="text-xs text-slate-500">Showing 5 of 124 users</p>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors">Previous</button>
+<button class="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs transition-colors">1</button>
+<button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors">2</button>
+<button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors">3</button>
+<button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs text-slate-300 transition-colors">Next</button>
+</div>
+</div>
+</div>
+<!-- Contextual Insights Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="glass-card p-6 rounded-xl lg:col-span-2">
+<h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-cyan-500" data-icon="insights">insights</span>
+                        Network Activity Pulse
+                    </h3>
+<div class="h-48 w-full bg-slate-900/50 rounded-lg relative overflow-hidden flex items-end px-2 gap-1">
+<!-- Simplified Bar Chart Visual -->
+<div class="bg-cyan-500/20 h-[30%] w-full rounded-t"></div>
+<div class="bg-cyan-500/30 h-[45%] w-full rounded-t"></div>
+<div class="bg-cyan-500/40 h-[60%] w-full rounded-t"></div>
+<div class="bg-cyan-500/50 h-[80%] w-full rounded-t"></div>
+<div class="bg-cyan-500/60 h-[75%] w-full rounded-t"></div>
+<div class="bg-cyan-400 h-[90%] w-full rounded-t shadow-[0_0_15px_rgba(34,211,238,0.3)]"></div>
+<div class="bg-cyan-500/50 h-[65%] w-full rounded-t"></div>
+<div class="bg-cyan-500/40 h-[50%] w-full rounded-t"></div>
+<div class="bg-cyan-500/30 h-[40%] w-full rounded-t"></div>
+<div class="bg-cyan-500/20 h-[25%] w-full rounded-t"></div>
+<!-- Grid lines -->
+<div class="absolute inset-0 border-b border-slate-800/50 h-1/4 w-full"></div>
+<div class="absolute inset-0 border-b border-slate-800/50 h-2/4 w-full"></div>
+<div class="absolute inset-0 border-b border-slate-800/50 h-3/4 w-full"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] text-slate-500 font-mono">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl">
+<h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500" data-icon="warning">warning</span>
+                        System Alerts
+                    </h3>
+<div class="space-y-3">
+<div class="p-3 bg-slate-900 rounded-lg border-l-2 border-amber-500 flex gap-3">
+<span class="material-symbols-outlined text-amber-500 text-sm" data-icon="security">security</span>
+<div>
+<p class="text-xs font-bold text-white">Login Attempt Failed</p>
+<p class="text-[10px] text-slate-400 font-mono">IP: 192.168.1.45 (Andi)</p>
+</div>
+</div>
+<div class="p-3 bg-slate-900 rounded-lg border-l-2 border-red-500 flex gap-3">
+<span class="material-symbols-outlined text-red-500 text-sm" data-icon="cloud_off">cloud_off</span>
+<div>
+<p class="text-xs font-bold text-white">Router Offline</p>
+<p class="text-[10px] text-slate-400 font-mono">Node: JKT-CENTRAL-01</p>
+</div>
+</div>
+<div class="p-3 bg-slate-900 rounded-lg border-l-2 border-cyan-500 flex gap-3">
+<span class="material-symbols-outlined text-cyan-500 text-sm" data-icon="info">info</span>
+<div>
+<p class="text-xs font-bold text-white">Backup Completed</p>
+<p class="text-[10px] text-slate-400 font-mono">Storage: AI Cloud Node 2</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border border-slate-800 rounded-lg text-xs font-label text-slate-400 hover:bg-slate-800 transition-colors">View All Logs</button>
+</div>
+</div>
+</main>
+</div>
+</body></html>

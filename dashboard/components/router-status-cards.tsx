@@ -1,152 +1,60 @@
 "use client"
 
-import { Router, Cpu, HardDrive, Users, Clock } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Cpu, HardDrive } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
-import { cn } from "@/lib/utils"
-
-function ProgressBar({
-  value,
-  max,
-  className,
-}: {
-  value: number
-  max: number
-  className?: string
-}) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
-  return (
-    <div className={cn("h-1.5 w-full rounded-full bg-muted", className)}>
-      <div
-        className={cn(
-          "h-full rounded-full transition-all",
-          pct < 60 ? "bg-emerald-500" : pct < 85 ? "bg-amber-500" : "bg-red-500"
-        )}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  )
-}
-
-function StatusDot({ status }: { status: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-block h-2 w-2 rounded-full",
-        status === "online" && "bg-[#4ae176] shadow-[0_0_8px_rgba(74,225,118,0.4)]",
-        status === "offline" && "bg-[#ffb4ab]",
-        status === "warning" && "bg-amber-400"
-      )}
-    />
-  )
-}
 
 export function RouterStatusCards() {
   const { data: routers, isLoading } = useRouters()
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="p-5 bg-[#131b2e] rounded-xl border border-white/[0.02] animate-pulse">
+            <div className="h-4 w-20 rounded bg-[#222a3d] mb-2" />
+            <div className="h-6 w-12 rounded bg-[#222a3d]" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Calculate aggregate stats from routers
+  const onlineRouters = routers?.filter((r) => r.health?.status === "online") ?? []
+  const avgCpu = onlineRouters.length > 0
+    ? Math.round(onlineRouters.reduce((acc, r) => acc + (r.health?.cpuLoad ?? 0), 0) / onlineRouters.length)
+    : 0
+  const totalMemFree = onlineRouters.reduce((acc, r) => {
+    if (r.health) {
+      return acc + (r.health.memoryTotal - r.health.memoryUsed)
+    }
+    return acc
+  }, 0)
+  const memFreeGB = (totalMemFree / 1024 / 1024 / 1024).toFixed(1)
+
   return (
-    <Card className="border-0 rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Router className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">Router Health</CardTitle>
+    <div className="grid grid-cols-2 gap-4">
+      {/* CPU Load */}
+      <div className="p-5 bg-[#131b2e] rounded-xl border border-white/[0.02] flex items-center justify-between">
+        <div>
+          <p className="text-[10px] text-slate-500 font-headline uppercase mb-1">CPU Load</p>
+          <p className="text-xl font-bold font-mono-tech text-[#dae2fd]">{avgCpu}%</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[380px] pr-3">
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="animate-pulse rounded-lg bg-[#131b2e] p-4 space-y-3"
-                >
-                  <div className="h-4 w-32 rounded bg-muted" />
-                  <div className="h-3 w-24 rounded bg-muted" />
-                  <div className="h-1.5 w-full rounded bg-muted" />
-                </div>
-              ))}
-            </div>
-          ) : !routers?.length ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No routers configured
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {routers.map((router) => {
-                const health = router.health
-                const status: string = health?.status || "offline"
-                return (
-                  <div
-                    key={router.id}
-                    className="rounded-lg p-4 transition-colors border-0"
-                    style={{ background: 'rgba(19, 27, 46, 0.6)', boxShadow: '0 0 16px rgba(76,215,246,0.04)' }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <StatusDot status={status} />
-                        <span className="text-sm font-medium text-foreground">
-                          {router.name}
-                        </span>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px]",
-                          status === "online" && "border-emerald-500/30 text-emerald-400",
-                          status === "offline" && "border-red-500/30 text-red-400",
-                          status === "warning" && "border-amber-500/30 text-amber-400"
-                        )}
-                      >
-                        {status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 font-mono text-xs text-muted-foreground">
-                      {router.host}:{router.port}
-                    </p>
-                    {health && status !== "offline" && (
-                      <div className="mt-3 space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Cpu className="h-3 w-3" />
-                            <span>CPU</span>
-                          </div>
-                          <span className="text-foreground">{health.cpuLoad}%</span>
-                        </div>
-                        <ProgressBar value={health.cpuLoad} max={100} />
+        <div className="w-12 h-12 rounded-full border-2 border-[#4cd7f6]/20 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#4cd7f6] animate-pulse shadow-[0_0_10px_#4cd7f6]" />
+        </div>
+      </div>
 
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <HardDrive className="h-3 w-3" />
-                            <span>Memory</span>
-                          </div>
-                          <span className="text-foreground">
-                            {Math.round(health.memoryUsed / 1024 / 1024)}MB / {Math.round(health.memoryTotal / 1024 / 1024)}MB
-                          </span>
-                        </div>
-                        <ProgressBar value={health.memoryUsed} max={health.memoryTotal} />
-
-                        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            <span>{health.activeClients} clients</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span>{health.uptime}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
-    </Card>
+      {/* Memory Free */}
+      <div className="p-5 bg-[#131b2e] rounded-xl border border-white/[0.02] flex items-center justify-between">
+        <div>
+          <p className="text-[10px] text-slate-500 font-headline uppercase mb-1">Memory Free</p>
+          <p className="text-xl font-bold font-mono-tech text-[#dae2fd]">{memFreeGB} GB</p>
+        </div>
+        <div className="w-12 h-12 rounded-full border-2 border-[#4ae176]/20 flex items-center justify-center">
+          <HardDrive className="h-5 w-5 text-[#4ae176]" />
+        </div>
+      </div>
+    </div>
   )
 }

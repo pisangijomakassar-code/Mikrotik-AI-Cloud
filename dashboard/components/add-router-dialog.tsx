@@ -1,20 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { PlusCircle, X } from "lucide-react"
 import { useCreateRouter } from "@/hooks/use-routers"
 import { toast } from "sonner"
 
@@ -71,122 +58,139 @@ export function AddRouterDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="h-4 w-4" />
-          Add Router
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="border-border bg-card sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add New Router</DialogTitle>
-          <DialogDescription>
-            Connect a MikroTik router to the management system.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="router-name">Router Name</Label>
-            <Input
-              id="router-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Office Main Router"
-              className="bg-background border-border"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="router-host">Host / IP</Label>
-              <Input
-                id="router-host"
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                placeholder="192.168.1.1"
-                className="bg-background border-border font-mono"
-                required
-              />
+    <>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
+      >
+        <PlusCircle className="h-4 w-4" />
+        Provision Node
+      </button>
+
+      {/* Modal */}
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
+          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            {/* Header */}
+            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Provision Node</h3>
+                <p className="text-sm text-slate-500">Add a new MikroTik router to the management system.</p>
+              </div>
+              <button
+                onClick={() => { setOpen(false); resetForm() }}
+                className="text-slate-500 hover:text-[#dae2fd] transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="router-port">Port</Label>
-              <Input
-                id="router-port"
-                value={port}
-                onChange={(e) => setPort(e.target.value)}
-                placeholder="8728"
-                className="bg-background border-border font-mono"
-              />
-            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSubmit}>
+              <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="e.g. HQ-Core-CCR2004"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Label (Optional)</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="e.g. Branch Office"
+                      type="text"
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Host / IP Address</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="192.168.88.1"
+                      type="text"
+                      value={host}
+                      onChange={(e) => setHost(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Port</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="8728"
+                      type="text"
+                      value={port}
+                      onChange={(e) => setPort(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="admin"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
+                    <input
+                      className="w-full bg-[#2d3449] border-none rounded-xl py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      placeholder="Router API password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-[#222a3d]/50 rounded-xl border border-white/5">
+                  <span className="text-xs text-slate-300">Set as default router</span>
+                  <div
+                    className={`w-10 h-5 rounded-full relative p-1 cursor-pointer transition-colors ${isDefault ? 'bg-[#4ae176]/20' : 'bg-slate-800'}`}
+                    onClick={() => setIsDefault(!isDefault)}
+                  >
+                    <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${isDefault ? 'right-1 bg-[#4ae176] shadow-[0_0_8px_rgba(74,225,118,0.5)]' : 'left-1 bg-slate-600'}`} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); resetForm() }}
+                  className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createRouter.isPending}
+                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-full shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                >
+                  {createRouter.isPending ? "Adding..." : "Add Router"}
+                </button>
+              </div>
+            </form>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="router-username">Username</Label>
-            <Input
-              id="router-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
-              className="bg-background border-border"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="router-password">Password</Label>
-            <Input
-              id="router-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Router API password"
-              className="bg-background border-border"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="router-label">
-              Label{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
-            </Label>
-            <Input
-              id="router-label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. Branch Office"
-              className="bg-background border-border"
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-            <Label htmlFor="router-default" className="cursor-pointer">
-              Set as default router
-            </Label>
-            <Switch
-              id="router-default"
-              checked={isDefault}
-              onCheckedChange={setIsDefault}
-              size="sm"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createRouter.isPending}
-              className="bg-primary text-primary-foreground"
-            >
-              {createRouter.isPending ? "Adding..." : "Add Router"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </>
   )
 }

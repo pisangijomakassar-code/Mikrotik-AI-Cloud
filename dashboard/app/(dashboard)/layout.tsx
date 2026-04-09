@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
+import { TopNavBar } from "@/components/top-navbar"
 import { useAuth } from "@/hooks/use-auth"
 
 export default function DashboardLayout({
@@ -21,10 +22,10 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1326]">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#4cd7f6] border-t-transparent" />
+          <p className="text-sm text-slate-400">Loading...</p>
         </div>
       </div>
     )
@@ -35,10 +36,11 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#0b1326] text-[#dae2fd]">
       <Sidebar />
-      <main className="pl-64">
-        <div className="p-6 lg:p-8">{children}</div>
+      <TopNavBar />
+      <main className="ml-64 p-8 min-h-screen">
+        {children}
       </main>
     </div>
   )

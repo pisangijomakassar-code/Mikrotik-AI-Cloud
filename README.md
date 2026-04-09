@@ -1,24 +1,28 @@
 # MikroTik AI Agent
 
-AI-powered MikroTik router management via Telegram. Chat with your router using natural language.
+AI-powered MikroTik router management platform. Manage your routers through natural language via Telegram, WhatsApp, or a web dashboard.
 
 ## Features
 
-- **Natural Language Control** — Ask "berapa client yang online?" instead of memorizing CLI commands
-- **Multi-User** — Each Telegram user registers their own routers
-- **Multi-Router** — One user can manage multiple MikroTik routers
-- **Self-Service Onboarding** — Users add routers via chat conversation
-- **23 MCP Tools** — System info, interfaces, DHCP, firewall, hotspot, ARP, logs, and more
-- **Write Confirmation** — Destructive actions require user approval
-- **Docker Deployment** — Single container, auto-deploy via GitHub Actions
+- **127 MCP Tools** — Full Winbox-equivalent coverage: system, interfaces, DHCP, firewall, hotspot, PPP/VPN, queues, routing, wireless, and more
+- **Natural Language Control** — "berapa client online?" instead of CLI commands
+- **Multi-User SaaS** — Paid access, admin provisions users via dashboard
+- **Multi-Router** — Each user can manage multiple MikroTik routers
+- **Admin Dashboard** — Next.js web UI with user management, router monitoring, activity logs, and chat interface
+- **Real-time Health Check** — CPU, memory, client count, online/offline status
+- **Encrypted Credentials** — Router passwords encrypted at rest (Fernet)
+- **Write Confirmation** — Destructive actions require explicit user approval
+- **Anti-Hallucination** — All data comes from MCP tool calls, never guessed
+- **Auto-Provisioning** — Dashboard auto-updates nanobot config on user changes
+- **CI/CD** — GitHub Actions auto-deploy to VPS on push
 
 ## Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- Telegram bot token (from [@BotFather](https://t.me/BotFather))
-- OpenRouter API key (free at [openrouter.ai](https://openrouter.ai/keys))
+- Telegram bot token ([@BotFather](https://t.me/BotFather))
+- OpenRouter API key ([openrouter.ai](https://openrouter.ai/keys))
 - MikroTik router with API access enabled (port 8728)
 
 ### Deploy
@@ -29,13 +33,13 @@ cd mikrotik-ai-agent
 
 # Configure
 cp .env.example .env
-nano .env  # fill in your credentials
+nano .env  # fill in credentials
 
-# Run
+# Deploy (3 services: PostgreSQL + Dashboard + Agent)
 docker compose up -d --build
 
-# Check logs
-docker compose logs -f
+# Access dashboard
+open http://your-server:3000
 ```
 
 ### Environment Variables
@@ -44,86 +48,75 @@ docker compose logs -f
 |----------|-------------|
 | `OPENROUTER_API_KEY` | LLM API key from OpenRouter |
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `TELEGRAM_USER_ID` | Your Telegram numeric user ID (or `*` for all users) |
-
-## Usage
-
-Once running, chat with your Telegram bot:
-
-```
-You: /start
-Bot: Halo! Saya belum punya router untuk akun Anda.
-     Silakan kirim detail router MikroTik Anda...
-
-You: Nama: Kantor, Host: router.example.com, Port: 8728,
-     User: admin, Pass: rahasia123
-Bot: Mengecek koneksi... Router "Kantor" berhasil ditambahkan!
-     Board: hEX | RouterOS: 6.49.8
-
-You: Berapa client yang online?
-Bot: Router Kantor: 36 client aktif
-
-You: Tampilkan firewall rules
-Bot: [firewall rules table]
-
-You: Buat user hotspot: tamu, password guest123
-Bot: Anda yakin ingin membuat user hotspot 'tamu'
-     di router Kantor? (ya/tidak)
-You: ya
-Bot: User hotspot 'tamu' berhasil dibuat
-```
-
-## Available Tools
-
-### Router Management
-| Command | Description |
-|---------|-------------|
-| Add router | Register a new MikroTik router |
-| Remove router | Unregister a router |
-| List routers | Show all your routers |
-| Set default | Change default router |
-
-### Monitoring
-| Command | Description |
-|---------|-------------|
-| System info | CPU, memory, uptime, board, version |
-| Interfaces | All interfaces with traffic stats |
-| DHCP leases | Connected clients (IP, MAC, hostname) |
-| Active clients | Quick client count |
-| ARP table | All devices seen by router |
-| Firewall rules | Filter and NAT rules |
-| Recent logs | System log entries |
-
-### Hotspot Management
-| Command | Description |
-|---------|-------------|
-| Hotspot users | List all user accounts |
-| Active sessions | Currently connected users |
-| Add user | Create new hotspot account |
-| Remove user | Delete hotspot account |
-
-### Advanced
-| Command | Description |
-|---------|-------------|
-| Raw API query | Query any RouterOS API path |
-| Compare routers | Cross-router comparisons |
+| `TELEGRAM_USER_ID` | Admin Telegram numeric user ID |
+| `DB_PASSWORD` | PostgreSQL password |
+| `NEXTAUTH_SECRET` | Dashboard auth secret |
+| `ADMIN_EMAIL` | Dashboard admin email |
+| `ADMIN_PASSWORD` | Dashboard admin password |
 
 ## Architecture
 
 ```
-Telegram User
-     |
-     v
-Nanobot Gateway (AI Agent + LLM)
-     |
-     v
-MikroTik MCP Server (23 tools)
-     |
-     v
-Per-User Router Registry (data/{user_id}.json)
-     |
-     v
-MikroTik Routers (via RouterOS API)
+┌──────────────────────────────────────────────────┐
+│              Admin Dashboard (Next.js)            │
+│         http://your-server:3000                   │
+│  Users | Routers | Logs | Chat | Settings         │
+└─────────────────────┬────────────────────────────┘
+                      │ PostgreSQL
+┌─────────────────────┼────────────────────────────┐
+│              Nanobot AI Agent                     │
+│         Telegram / WhatsApp Bot                   │
+│                                                   │
+│    ┌──────────────────────────────────────┐       │
+│    │    MikroTik MCP Server (127 tools)   │       │
+│    │    librouteros → RouterOS API        │       │
+│    └──────────────────┬───────────────────┘       │
+└─────────────────────┬────────────────────────────┘
+                      │
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+   MikroTik A    MikroTik B    MikroTik C
+```
+
+## MCP Tools (127 total)
+
+| Category | Tools | Examples |
+|----------|-------|---------|
+| **System** | 15 | info, health, clock, packages, license, reboot |
+| **Interfaces** | 10 | list, enable/disable, bridge, VLAN, bonding, tunnels |
+| **Wireless** | 4 | interfaces, clients, security profiles, access list |
+| **IP** | 7 | addresses, routes, pools, services, cloud DDNS |
+| **DNS** | 4 | settings, static entries CRUD |
+| **DHCP** | 7 | servers, leases, clients, count, make static |
+| **Firewall** | 13 | filter, NAT, mangle, address lists, raw — full CRUD |
+| **Hotspot** | 18 | users, profiles, active, servers, kick, search, count, enable/disable |
+| **PPP/VPN** | 9 | secrets, profiles, active, L2TP/PPTP/SSTP, kick |
+| **Queue** | 7 | simple, tree, types — full CRUD |
+| **Routing** | 6 | static routes, OSPF, BGP, filters |
+| **Monitoring** | 8 | netwatch, SNMP, UPnP, logs, health check, IP accounting |
+| **Tunnels** | 4 | EoIP, GRE, IPIP, bonding |
+| **Advanced** | 5 | backup, export, CAPsMAN, IPv6, raw API query |
+| **Router Mgmt** | 5 | register, remove, list, set default, test connection |
+
+## Admin Dashboard
+
+Web-based admin panel at `http://your-server:3000`:
+
+- **Dashboard** — Overview stats, activity feed, router health
+- **Users** — Add/remove users, manage Telegram access
+- **Routers** — Monitor all routers with real-time status
+- **Chat** — Chat with AI agent directly from browser (with image upload)
+- **Logs** — Filterable activity logs
+- **Settings** — LLM config, provisioning, system management
+
+### User Management
+
+```bash
+# Add user via script
+./scripts/add-user.sh 12345678 "Pak Budi"
+
+# Or add via dashboard UI
+# Dashboard → Users → Add User
 ```
 
 ## Tech Stack
@@ -131,60 +124,66 @@ MikroTik Routers (via RouterOS API)
 | Component | Technology |
 |-----------|-----------|
 | AI Agent | [Nanobot](https://github.com/HKUDS/nanobot) v0.1.5 |
-| LLM | Google Gemma 4 31B IT via [OpenRouter](https://openrouter.ai) |
+| LLM | OpenAI GPT-5.4 Nano via [OpenRouter](https://openrouter.ai) |
 | MCP Server | Python + [FastMCP](https://github.com/jlowin/fastmcp) |
 | RouterOS Client | [librouteros](https://github.com/luqasz/librouteros) |
-| Messaging | Telegram (WhatsApp planned) |
-| Deployment | Docker + GitHub Actions CI/CD |
+| Dashboard | Next.js 16 + React 19 + Tailwind + shadcn/ui |
+| Database | PostgreSQL 16 + Prisma 7 |
+| Auth | NextAuth v5 |
+| Data Fetching | TanStack Query |
+| Messaging | Telegram (WhatsApp supported via Nanobot) |
+| Deployment | Docker Compose + GitHub Actions CI/CD |
 
 ## Project Structure
 
 ```
 mikrotik-ai-agent/
-├── .github/workflows/deploy.yml  # CI/CD pipeline
-├── mikrotik_mcp/
-│   ├── server.py                  # MCP server (23 tools)
-│   ├── registry.py                # Per-user router storage
-│   └── requirements.txt
+├── .github/workflows/deploy.yml    # CI/CD pipeline
+├── dashboard/                       # Next.js admin dashboard
+│   ├── app/                        # Pages (login, dashboard, users, routers, chat, logs, settings)
+│   ├── components/                 # React components + shadcn/ui
+│   ├── hooks/                      # TanStack Query hooks
+│   ├── lib/                        # Auth, DB, services, provisioner
+│   ├── prisma/                     # Database schema
+│   └── Dockerfile
+├── mikrotik_mcp/                    # MCP server (Python)
+│   ├── server.py                   # 127 tools
+│   ├── registry.py                 # JSON-based router registry
+│   ├── registry_pg.py              # PostgreSQL-based router registry
+│   └── crypto.py                   # Fernet password encryption
 ├── config/
-│   └── config.json                # Nanobot config template
+│   ├── config.json                 # Nanobot configuration
+│   ├── SOUL.md                     # Agent personality & rules
+│   └── HEARTBEAT.md                # Periodic health check tasks
 ├── skills/mikrotik/
-│   └── SKILL.md                   # LLM context and rules
-├── data/                          # Per-user router registries (gitignored)
-├── docs/
-│   ├── ARCHITECTURE.md            # System architecture
-│   └── PHASES.md                  # Implementation roadmap
-├── Dockerfile
-├── docker-compose.yml
-├── entrypoint.sh
+│   └── SKILL.md                    # LLM tool reference (127 tools)
+├── scripts/                         # Admin scripts (add/remove/list users)
+├── docker-compose.yml               # 3 services: postgres + dashboard + agent
+├── Dockerfile                       # Nanobot agent container
 └── .env.example
 ```
 
-## Supported RouterOS Versions
+## Supported RouterOS
 
 | Version | Protocol | Status |
 |---------|----------|--------|
 | v6.x | Binary API (port 8728) | Supported |
 | v7.x | Binary API (port 8728) | Supported |
 
-## CI/CD
-
-Push to `main` branch triggers automatic deployment to VPS via GitHub Actions.
-
-```
-git push origin main  →  GitHub Actions  →  SSH deploy  →  docker compose up
-```
-
 ## Roadmap
-
-See [docs/PHASES.md](docs/PHASES.md) for the full implementation roadmap.
 
 - [x] Phase 1: Single router agent
 - [x] Phase 2: Multi-user, multi-router
-- [ ] Phase 3: Encrypted credentials
-- [ ] Phase 4: Write confirmation enforcement
-- [ ] Phase 5: WhatsApp channel
-- [ ] Phase 6: Monitoring & alerts
+- [x] Phase 3: Comprehensive tools (127 tools)
+- [x] Phase 4: Communication style + safety rules
+- [x] Phase 5: CI/CD + VPS deployment
+- [x] Phase 6: Encrypted credentials
+- [x] Phase 7: Admin user management scripts
+- [x] Phase 8: Monitoring & alerts
+- [x] Phase 9: Admin dashboard (Next.js + PostgreSQL)
+- [x] Phase 10: Chat interface with image upload
+- [ ] Phase 11: Per-user billing integration
+- [ ] Phase 12: Mobile app
 
 ## License
 
