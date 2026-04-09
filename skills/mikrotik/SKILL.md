@@ -126,6 +126,8 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_firewall_filter` | `user_id, router?` | Firewall filter rules |
 | `add_firewall_filter` | `user_id, chain, action, src_address?, dst_address?, protocol?, dst_port?, comment?, router?` | Add filter rule. **CONFIRM.** |
 | `remove_firewall_filter` | `user_id, rule_id, router?` | Remove filter rule. **CONFIRM.** |
+| `enable_firewall_rule` | `user_id, rule_id, router?` | Enable disabled firewall rule. **CONFIRM.** |
+| `disable_firewall_rule` | `user_id, rule_id, router?` | Disable firewall rule without deleting. **CONFIRM.** |
 | `list_firewall_nat` | `user_id, router?` | NAT rules |
 | `add_nat_rule` | `user_id, chain, action, src_address?, dst_address?, to_addresses?, to_ports?, protocol?, dst_port?, comment?, router?` | Add NAT rule. **CONFIRM.** |
 | `remove_nat_rule` | `user_id, rule_id, router?` | Remove NAT rule. **CONFIRM.** |
@@ -140,11 +142,18 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_hotspot_active` | `user_id, router?` | Currently connected hotspot users |
+| `count_hotspot_active` | `user_id, router?` | Count active hotspot sessions (just the number) |
 | `kick_hotspot_user` | `user_id, session_id, router?` | Disconnect active hotspot session. **CONFIRM.** |
-| `list_hotspot_users` | `user_id, router?` | All hotspot user accounts |
+| `list_hotspot_users` | `user_id, router?` | All hotspot user accounts (warning: can be 1000+) |
+| `count_hotspot_users` | `user_id, router?` | Count total/enabled/disabled hotspot users (use this instead of listing all) |
+| `search_hotspot_user` | `user_id, username, router?` | Search for specific user by name (exact + partial match) |
 | `add_hotspot_user` | `user_id, username, password, profile?, router?` | Create hotspot user. **CONFIRM.** |
 | `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM.** |
+| `enable_hotspot_user` | `user_id, username, router?` | Enable/reactivate suspended user. **CONFIRM.** |
+| `disable_hotspot_user` | `user_id, username, router?` | Suspend user without deleting. **CONFIRM.** |
+| `update_hotspot_user` | `user_id, username, new_password?, new_profile?, new_name?, router?` | Update user password/profile/name. **CONFIRM.** |
 | `list_hotspot_user_profiles` | `user_id, router?` | Hotspot user profiles with rate limits (e.g. 5rb, Free) |
+| `add_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, router?` | Create new rate limit profile. **CONFIRM.** |
 | `list_hotspot_server_profiles` | `user_id, router?` | Hotspot server profiles (login page, DNS, etc) |
 | `list_hotspot_servers` | `user_id, router?` | Hotspot server instances |
 | `list_hotspot_ip_bindings` | `user_id, router?` | IP bindings (bypass/block) |
@@ -270,12 +279,18 @@ Before ANY write/destructive operation:
 - `remove_dhcp_lease`
 - `add_firewall_filter`
 - `remove_firewall_filter`
+- `enable_firewall_rule`
+- `disable_firewall_rule`
 - `add_nat_rule`
 - `remove_nat_rule`
 - `add_to_address_list`
 - `remove_from_address_list`
 - `add_hotspot_user`
 - `remove_hotspot_user`
+- `enable_hotspot_user`
+- `disable_hotspot_user`
+- `update_hotspot_user`
+- `add_hotspot_user_profile`
 - `kick_hotspot_user`
 - `add_ppp_secret`
 - `remove_ppp_secret`
