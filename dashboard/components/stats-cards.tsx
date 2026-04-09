@@ -16,13 +16,13 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon: Icon, description, badge }: StatCardProps) {
   return (
-    <Card className="border-border bg-card hover:border-primary/30 transition-colors">
+    <Card className="border-0 bg-[#171f33] transition-colors rounded-lg" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
       <CardContent className="pt-0">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>{title}</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-foreground">{value}</p>
+              <p className="text-3xl font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>{value}</p>
               {badge && (
                 <Badge
                   variant={badge.variant}
@@ -55,7 +55,7 @@ export function StatsCards() {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="border-border bg-card">
+          <Card key={i} className="border-0 bg-[#171f33]" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
             <CardContent className="pt-0">
               <div className="space-y-3 animate-pulse">
                 <div className="h-4 w-24 rounded bg-muted" />

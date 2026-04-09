@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Radio,
+  MessageSquare,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Users", href: "/users", icon: Users, adminOnly: true },
   { label: "Routers", href: "/routers", icon: Router },
   { label: "Logs", href: "/logs", icon: ScrollText },
@@ -51,17 +53,17 @@ export function Sidebar() {
     : "?"
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-card">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-[#0b1326]" style={{ borderRight: '1px solid rgba(61,73,76,0.15)' }}>
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
           <Radio className="h-5 w-5 text-primary" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
             MikroTik AI
           </span>
-          <span className="text-xs text-muted-foreground">Agent Dashboard</span>
+          <span className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Agent Dashboard</span>
         </div>
       </div>
 
@@ -77,10 +79,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors border-l-2",
                 isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-[#131b2e] text-primary border-l-[#4cd7f6]"
+                  : "text-muted-foreground hover:bg-[#171f33] hover:text-foreground border-l-transparent"
               )}
             >
               <item.icon

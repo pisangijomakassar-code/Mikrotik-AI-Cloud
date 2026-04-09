@@ -30,7 +30,7 @@ export function ActivityFeed() {
   const { data, isLoading } = useLogs({ pageSize: 10, page: 1 })
 
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-0 bg-[#171f33] rounded-lg" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <ScrollText className="h-4 w-4 text-primary" />

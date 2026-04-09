@@ -35,8 +35,8 @@ function StatusDot({ status }: { status: string }) {
     <span
       className={cn(
         "inline-block h-2 w-2 rounded-full",
-        status === "online" && "bg-emerald-400 shadow-[0_0_6px_rgba(34,197,94,0.4)]",
-        status === "offline" && "bg-red-400",
+        status === "online" && "bg-[#4ae176] shadow-[0_0_8px_rgba(74,225,118,0.4)]",
+        status === "offline" && "bg-[#ffb4ab]",
         status === "warning" && "bg-amber-400"
       )}
     />
@@ -47,7 +47,7 @@ export function RouterStatusCards() {
   const { data: routers, isLoading } = useRouters()
 
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-0 bg-[#171f33] rounded-lg" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Router className="h-4 w-4 text-primary" />
@@ -61,7 +61,7 @@ export function RouterStatusCards() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="animate-pulse rounded-lg border border-border p-4 space-y-3"
+                  className="animate-pulse rounded-lg bg-[#131b2e] p-4 space-y-3"
                 >
                   <div className="h-4 w-32 rounded bg-muted" />
                   <div className="h-3 w-24 rounded bg-muted" />
@@ -81,7 +81,8 @@ export function RouterStatusCards() {
                 return (
                   <div
                     key={router.id}
-                    className="rounded-lg border border-border p-4 transition-colors hover:border-primary/30"
+                    className="rounded-lg bg-[#131b2e] p-4 transition-colors border-0"
+                    style={{ boxShadow: '0 0 16px rgba(76,215,246,0.04)' }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

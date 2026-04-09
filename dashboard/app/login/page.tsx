@@ -57,20 +57,20 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Radio className="h-6 w-6 text-primary" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#4cd7f6]/10">
+            <Radio className="h-6 w-6 text-[#4cd7f6]" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold text-foreground">
+            <h1 className="text-xl font-bold text-[#4cd7f6]" style={{ fontFamily: "var(--font-display)" }}>
               MikroTik AI Agent
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
               Sign in to your account
             </p>
           </div>
         </div>
 
-        <Card className="border-border bg-card">
+        <Card className="border-0 bg-[#171f33]/80 backdrop-blur-xl" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Sign In</CardTitle>
             <CardDescription>
@@ -87,7 +87,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@example.com"
-                  className="bg-background border-border"
+                  className="bg-[#222a3d] border-0 focus:ring-[#4cd7f6] focus:ring-1"
                   autoComplete="email"
                   required
                 />
@@ -100,7 +100,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="bg-background border-border"
+                  className="bg-[#222a3d] border-0 focus:ring-[#4cd7f6] focus:ring-1"
                   autoComplete="current-password"
                   required
                 />
@@ -108,7 +108,8 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full text-[#003640] font-semibold hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #4cd7f6, #06b6d4)' }}
               >
                 {isLoading ? (
                   <>

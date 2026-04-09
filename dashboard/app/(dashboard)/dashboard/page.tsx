@@ -12,8 +12,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>Dashboard</h1>
+        <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>
           Welcome back, {user?.name || "User"}. Here is an overview of your system.
         </p>
       </div>
