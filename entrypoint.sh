@@ -17,7 +17,7 @@ cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
 cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null || true
 
 # Start health API server in background (port 8080, for dashboard to query router data)
-python /app/mikrotik_mcp/health_server.py &
+python3 /app/mikrotik_mcp/health_server.py &
 
 echo "[entrypoint] Config + SOUL.md + HEARTBEAT.md applied, health server started, starting nanobot..."
 exec nanobot "$@"
