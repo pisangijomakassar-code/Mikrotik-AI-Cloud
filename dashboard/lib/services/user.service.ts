@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs"
 import { prisma } from "../db"
+import { syncAndRestart } from "../provisioner"
 import type {
   CreateUserInput,
   UpdateUserInput,
@@ -48,7 +49,7 @@ export async function createUser(data: CreateUserInput) {
     ? await bcrypt.hash(data.password, 12)
     : null
 
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email: data.email || null,
       passwordHash,
@@ -62,6 +63,15 @@ export async function createUser(data: CreateUserInput) {
       _count: { select: { routers: true } },
     },
   })
+
+  // Auto-sync: update nanobot allowFrom and restart agent
+  if (data.status !== "INACTIVE") {
+    syncAndRestart().catch((err) =>
+      console.error("Auto-sync failed after user creation:", err)
+    )
+  }
+
+  return user
 }
 
 export async function updateUser(id: string, data: UpdateUserInput) {
@@ -77,19 +87,35 @@ export async function updateUser(id: string, data: UpdateUserInput) {
     updateData.passwordHash = await bcrypt.hash(data.password, 12)
   }
 
-  return prisma.user.update({
+  const user = await prisma.user.update({
     where: { id },
     data: updateData,
     include: {
       _count: { select: { routers: true } },
     },
   })
+
+  // Auto-sync on status change (ACTIVE/INACTIVE affects allowFrom)
+  if (data.status !== undefined) {
+    syncAndRestart().catch((err) =>
+      console.error("Auto-sync failed after user update:", err)
+    )
+  }
+
+  return user
 }
 
 export async function deleteUser(id: string) {
-  return prisma.user.delete({
+  const user = await prisma.user.delete({
     where: { id },
   })
+
+  // Auto-sync: remove user from nanobot allowFrom
+  syncAndRestart().catch((err) =>
+    console.error("Auto-sync failed after user deletion:", err)
+  )
+
+  return user
 }
 
 export async function getUserStats(): Promise<DashboardStats> {
