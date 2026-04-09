@@ -27,7 +27,15 @@ jobs:
             # Clone or pull
             if [ -d "$APP_DIR/.git" ]; then
               cd $APP_DIR
-              git pull origin main
+              git fetch origin
+              git reset --hard origin/main
+            elif [ -d "$APP_DIR" ]; then
+              # Directory exists but not a git repo (e.g. .env was pre-created)
+              cd $APP_DIR
+              git init
+              git remote add origin "https://${GH_TOKEN}@github.com/codevjs/mikrotik-ai-agent.git"
+              git fetch origin
+              git checkout -f origin/main -B main
             else
               git clone "https://${GH_TOKEN}@github.com/codevjs/mikrotik-ai-agent.git" $APP_DIR
               cd $APP_DIR
