@@ -545,6 +545,47 @@ def list_hotspot_users(user_id: str, router: str = "") -> list[dict]:
 
 
 @mcp.tool()
+def count_hotspot_users(user_id: str, router: str = "") -> dict:
+    """Count total hotspot users (without listing all of them). Much faster for large user lists.
+
+    Args:
+        user_id: Telegram user ID (required)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        rows = _query_path("/ip/hotspot/user", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        total = len(rows)
+        enabled = len([r for r in rows if r.get("disabled", "false") != "true"])
+        disabled = total - enabled
+        return {"total_users": total, "enabled": enabled, "disabled": disabled}
+    except Exception as e:
+        return {"error": f"Failed to count hotspot users: {e}"}
+
+
+@mcp.tool()
+def count_hotspot_active(user_id: str, router: str = "") -> dict:
+    """Count currently active/online hotspot sessions.
+
+    Args:
+        user_id: Telegram user ID (required)
+        router: Router name. Empty = default router.
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        rows = _query_path("/ip/hotspot/active", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return {"active_sessions": len(rows)}
+    except Exception as e:
+        return {"error": f"Failed to count active hotspot sessions: {e}"}
+
+
+@mcp.tool()
 def add_hotspot_user(user_id: str, username: str, password: str, profile: str = "default", router: str = "") -> dict:
     """Add a new hotspot user account.
 
