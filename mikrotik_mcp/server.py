@@ -1177,8 +1177,8 @@ def remove_dns_static(user_id: str, entry_id: str, router: str = "") -> dict:
 # ─────────────────────────────────────────────
 
 @mcp.tool()
-def list_hotspot_profiles(user_id: str, router: str = "") -> list[dict]:
-    """List hotspot user profiles with rate limits.
+def list_hotspot_server_profiles(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot SERVER profiles (login page, RADIUS, etc — NOT rate limits).
 
     Args:
         user_id: Telegram user ID
@@ -1188,6 +1188,39 @@ def list_hotspot_profiles(user_id: str, router: str = "") -> list[dict]:
     if "error" in conn:
         return [conn]
     result = _query_path("/ip/hotspot/profile", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_hotspot_user_profiles(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot USER profiles (rate limits, bandwidth limits like 5rb, Free, Trial, etc).
+    This is /ip/hotspot/user/profile — different from server profiles.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot/user/profile", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_hotspot_servers(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot server instances.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot", conn["host"], conn["port"], conn["username"], conn["password"])
     registry.update_last_seen(user_id, conn["name"])
     return result
 
@@ -1204,6 +1237,38 @@ def list_hotspot_ip_bindings(user_id: str, router: str = "") -> list[dict]:
     if "error" in conn:
         return [conn]
     result = _query_path("/ip/hotspot/ip-binding", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_hotspot_cookies(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot cookies (saved login sessions).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot/cookie", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_hotspot_walled_garden(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot walled garden rules (allowed sites before login).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot/walled-garden", conn["host"], conn["port"], conn["username"], conn["password"])
     registry.update_last_seen(user_id, conn["name"])
     return result
 
