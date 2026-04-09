@@ -526,19 +526,22 @@ def list_hotspot_users(user_id: str, router: str = "") -> list[dict]:
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return [conn]
-    rows = _query_path("/ip/hotspot/user", conn["host"], conn["port"], conn["username"], conn["password"])
-    registry.update_last_seen(user_id, conn["name"])
-    return [
-        {
-            "name": r.get("name"),
-            "profile": r.get("profile"),
-            "limit_uptime": r.get("limit-uptime", ""),
-            "limit_bytes_total": r.get("limit-bytes-total", ""),
-            "disabled": r.get("disabled"),
-            "comment": r.get("comment", ""),
-        }
-        for r in rows
-    ]
+    try:
+        rows = _query_path("/ip/hotspot/user", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return [
+            {
+                "name": r.get("name"),
+                "profile": r.get("profile"),
+                "limit_uptime": r.get("limit-uptime", ""),
+                "limit_bytes_total": r.get("limit-bytes-total", ""),
+                "disabled": r.get("disabled"),
+                "comment": r.get("comment", ""),
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        return [{"error": f"Failed to list hotspot users: {e}"}]
 
 
 @mcp.tool()
@@ -555,11 +558,21 @@ def add_hotspot_user(user_id: str, username: str, password: str, profile: str = 
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return conn
-    with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-        resource = api.path("/ip/hotspot/user")
-        resource.add(name=username, password=password, profile=profile)
-        registry.update_last_seen(user_id, conn["name"])
-        return {"status": "ok", "message": f"Hotspot user '{username}' created with profile '{profile}'"}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            profiles = list(api.path("/ip/hotspot/user/profile"))
+            profile_names = [p.get("name", "") for p in profiles]
+            if profile and profile not in profile_names:
+                return {"error": f"Profile '{profile}' not found. Available profiles: {', '.join(profile_names)}. Try one of these instead."}
+            resource = api.path("/ip/hotspot/user")
+            resource.add(name=username, password=password, profile=profile)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot user '{username}' created with profile '{profile}'"}
+    except Exception as e:
+        err = str(e)
+        if "already" in err.lower() or "exists" in err.lower():
+            return {"error": f"User '{username}' already exists. Use a different name or remove the existing one first."}
+        return {"error": f"Failed to add hotspot user: {err}"}
 
 
 @mcp.tool()
@@ -574,14 +587,17 @@ def remove_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return conn
-    with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-        resource = api.path("/ip/hotspot/user")
-        users = list(resource.select(librouteros.query.Key("name") == username))
-        if not users:
-            return {"error": f"User '{username}' not found"}
-        resource.remove(users[0][".id"])
-        registry.update_last_seen(user_id, conn["name"])
-        return {"status": "ok", "message": f"Hotspot user '{username}' removed"}
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("/ip/hotspot/user")
+            users = list(resource.select(librouteros.query.Key("name") == username))
+            if not users:
+                return {"error": f"User '{username}' not found. Check the exact username spelling."}
+            resource.remove(users[0][".id"])
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot user '{username}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove hotspot user: {e}"}
 
 
 # ─────────────────────────────────────────────
