@@ -9,5 +9,8 @@ ln -sfn /app/skills/mikrotik /root/.nanobot/skills/mikrotik
 # Copy config template (nanobot resolves ${VAR} natively)
 cp /app/config/config.json /root/.nanobot/config.json
 
-echo "[entrypoint] Config copied, starting nanobot..."
+# Always overwrite SOUL.md to keep personality in sync with repo
+cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
+
+echo "[entrypoint] Config + SOUL.md applied, starting nanobot..."
 exec nanobot "$@"
