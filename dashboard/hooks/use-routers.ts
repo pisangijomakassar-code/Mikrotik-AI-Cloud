@@ -33,11 +33,60 @@ async function fetchRouters(search?: string): Promise<RouterData[]> {
   return res.json()
 }
 
+interface RouterHealth {
+  id: string
+  name: string
+  status: "online" | "offline"
+  cpuLoad?: number
+  memoryPercent?: number
+  uptime?: string
+  activeClients?: number
+  version?: string
+}
+
+async function fetchHealth(): Promise<RouterHealth[]> {
+  const res = await fetch("/api/routers/health")
+  if (!res.ok) return []
+  return res.json()
+}
+
 export function useRouters(search?: string) {
-  return useQuery({
+  const routersQuery = useQuery({
     queryKey: ["routers", search],
     queryFn: () => fetchRouters(search),
   })
+
+  const healthQuery = useQuery({
+    queryKey: ["routers-health"],
+    queryFn: fetchHealth,
+    refetchInterval: 60000, // refresh every 60s
+  })
+
+  // Merge health data into routers
+  const routers = routersQuery.data?.map((router) => {
+    const health = healthQuery.data?.find((h) => h.id === router.id)
+    return {
+      ...router,
+      health: health
+        ? {
+            status: health.status,
+            cpuLoad: health.cpuLoad ?? 0,
+            memoryPercent: health.memoryPercent ?? 0,
+            memoryUsed: 0,
+            memoryTotal: 0,
+            activeClients: health.activeClients ?? 0,
+            uptime: health.uptime ?? "",
+            version: health.version ?? "",
+            board: "",
+          }
+        : undefined,
+    }
+  })
+
+  return {
+    ...routersQuery,
+    data: routers,
+  }
 }
 
 export function useCreateRouter() {
