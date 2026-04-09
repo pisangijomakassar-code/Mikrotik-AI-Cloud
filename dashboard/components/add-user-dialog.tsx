@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -67,7 +67,7 @@ export function AddUserDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="h-4 w-4" />
+          <UserPlus className="h-4 w-4" />
           Add User
         </Button>
       </DialogTrigger>

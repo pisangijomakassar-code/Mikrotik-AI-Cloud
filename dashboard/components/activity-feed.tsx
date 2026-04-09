@@ -30,7 +30,7 @@ export function ActivityFeed() {
   const { data, isLoading } = useLogs({ pageSize: 10, page: 1 })
 
   return (
-    <Card className="border-0 bg-[#171f33] rounded-lg" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
+    <Card className="border-0 rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <ScrollText className="h-4 w-4 text-primary" />
@@ -60,7 +60,8 @@ export function ActivityFeed() {
               {data.data.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-accent/50"
+                  className="flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-white/[0.02]"
+                  style={{ borderBottom: '1px solid rgba(61, 73, 76, 0.08)' }}
                 >
                   <StatusIcon status={log.status} />
                   <div className="min-w-0 flex-1">
@@ -71,10 +72,10 @@ export function ActivityFeed() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          "shrink-0 text-[10px] px-1.5 py-0",
-                          log.action === "read" && "border-blue-500/30 text-blue-400",
-                          log.action === "write" && "border-amber-500/30 text-amber-400",
-                          log.action === "admin" && "border-purple-500/30 text-purple-400"
+                          "shrink-0 text-[10px] px-1.5 py-0 border-0",
+                          log.action === "read" && "bg-blue-500/10 text-blue-400",
+                          log.action === "write" && "bg-amber-500/10 text-amber-400",
+                          log.action === "admin" && "bg-purple-500/10 text-purple-400"
                         )}
                       >
                         {log.action}
@@ -82,17 +83,17 @@ export function ActivityFeed() {
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                       {log.router?.name && (
-                        <span className="font-mono">{log.router.name}</span>
+                        <span style={{ fontFamily: 'var(--font-technical)' }}>{log.router.name}</span>
                       )}
                       {log.tool && (
                         <>
-                          <span>-</span>
+                          <span className="text-muted-foreground/50">|</span>
                           <span>{log.tool}</span>
                         </>
                       )}
                     </div>
                   </div>
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span className="shrink-0 text-[10px] text-muted-foreground" style={{ fontFamily: 'var(--font-technical)' }}>
                     {formatTimeAgo(log.createdAt)}
                   </span>
                 </div>

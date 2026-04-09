@@ -75,9 +75,10 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <div
       className={cn(
-        "border-t border-border bg-card/50 p-4 backdrop-blur-sm transition-colors",
-        isDragOver && "border-primary bg-primary/5"
+        "p-4 transition-colors",
+        isDragOver && "bg-primary/5"
       )}
+      style={{ borderTop: '1px solid rgba(61, 73, 76, 0.15)', background: isDragOver ? undefined : 'rgba(35, 42, 60, 0.5)', backdropFilter: 'blur(20px)' }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -145,7 +146,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           placeholder="Type a message..."
           disabled={disabled}
           rows={1}
-          className="min-h-[36px] flex-1 resize-none rounded-lg border border-input bg-background/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50 disabled:opacity-50"
+          className="min-h-[36px] flex-1 resize-none rounded-lg border-0 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]/30 disabled:opacity-50"
+          style={{ background: 'rgba(45, 52, 73, 0.6)' }}
         />
 
         {/* Send */}

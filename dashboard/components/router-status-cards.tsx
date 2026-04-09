@@ -47,7 +47,7 @@ export function RouterStatusCards() {
   const { data: routers, isLoading } = useRouters()
 
   return (
-    <Card className="border-0 bg-[#171f33] rounded-lg" style={{ boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
+    <Card className="border-0 rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)' }}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Router className="h-4 w-4 text-primary" />
@@ -81,8 +81,8 @@ export function RouterStatusCards() {
                 return (
                   <div
                     key={router.id}
-                    className="rounded-lg bg-[#131b2e] p-4 transition-colors border-0"
-                    style={{ boxShadow: '0 0 16px rgba(76,215,246,0.04)' }}
+                    className="rounded-lg p-4 transition-colors border-0"
+                    style={{ background: 'rgba(19, 27, 46, 0.6)', boxShadow: '0 0 16px rgba(76,215,246,0.04)' }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

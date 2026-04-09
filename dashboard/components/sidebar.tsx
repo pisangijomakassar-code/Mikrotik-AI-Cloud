@@ -63,7 +63,7 @@ export function Sidebar() {
           <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
             MikroTik AI
           </span>
-          <span className="text-xs text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>Agent Dashboard</span>
+          <span className="text-[10px] text-muted-foreground" style={{ fontFamily: "var(--font-body)" }}>AI-Driven Network</span>
         </div>
       </div>
 
@@ -108,8 +108,8 @@ export function Sidebar() {
             <p className="truncate text-sm font-medium text-foreground">
               {user?.name || "User"}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {user?.email || ""}
+            <p className="truncate text-[10px] text-muted-foreground">
+              {isAdmin ? "Administrator" : "User"}
             </p>
           </div>
           <Button

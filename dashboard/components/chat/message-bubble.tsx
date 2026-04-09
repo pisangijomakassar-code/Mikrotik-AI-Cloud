@@ -135,9 +135,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           className={cn(
             "relative max-w-[75%] rounded-2xl px-4 py-3 text-sm",
             isUser
-              ? "bg-slate-700/60 text-foreground backdrop-blur-sm"
-              : "border-l-2 border-primary bg-card/80 text-foreground backdrop-blur-sm"
+              ? "text-foreground"
+              : "border-l-2 border-[#4cd7f6] text-foreground"
           )}
+          style={isUser
+            ? { background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)' }
+            : { background: 'rgba(23, 31, 51, 0.8)', backdropFilter: 'blur(20px)' }
+          }
         >
           {message.imageUrl && (
             <button

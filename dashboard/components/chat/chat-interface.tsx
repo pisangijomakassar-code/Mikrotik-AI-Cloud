@@ -164,15 +164,16 @@ export function ChatInterface() {
   const isLoading = sendMessageMutation.isPending || uploadImageMutation.isPending
 
   return (
-    <div className="flex h-full overflow-hidden rounded-xl border border-border bg-card/30 backdrop-blur-sm">
+    <div className="flex h-full overflow-hidden rounded-lg" style={{ background: 'rgba(45, 52, 73, 0.6)', backdropFilter: 'blur(20px)', boxShadow: '0 0 32px rgba(76,215,246,0.08)', border: '1px solid rgba(61, 73, 76, 0.15)' }}>
       {/* Session sidebar */}
       <div
         className={cn(
-          "flex flex-col border-r border-border bg-card/50 transition-all",
-          showSidebar ? "w-72" : "w-0 overflow-hidden border-r-0",
+          "flex flex-col transition-all",
+          showSidebar ? "w-72" : "w-0 overflow-hidden",
           "max-lg:absolute max-lg:inset-y-0 max-lg:left-0 max-lg:z-20",
           !showSidebar && "max-lg:hidden"
         )}
+        style={showSidebar ? { borderRight: '1px solid rgba(61, 73, 76, 0.15)', background: 'rgba(35, 42, 60, 0.5)' } : undefined}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Chats</h2>
@@ -226,7 +227,7 @@ export function ChatInterface() {
       {/* Chat area */}
       <div className="flex flex-1 flex-col">
         {/* Chat header */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(61, 73, 76, 0.15)' }}>
           <button
             type="button"
             onClick={() => setShowSidebar(!showSidebar)}
@@ -283,7 +284,7 @@ export function ChatInterface() {
               {/* Loading indicator */}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl border-l-2 border-primary bg-card/80 px-4 py-3 backdrop-blur-sm">
+                  <div className="rounded-2xl border-l-2 border-primary px-4 py-3" style={{ background: 'rgba(23, 31, 51, 0.8)', backdropFilter: 'blur(20px)' }}>
                     <div className="flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:0ms]" />
                       <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
