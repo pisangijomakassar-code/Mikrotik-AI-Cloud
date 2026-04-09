@@ -19,14 +19,21 @@ from typing import Any
 import librouteros
 from mcp.server.fastmcp import FastMCP
 
-from registry import RouterRegistry
-
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 DATA_DIR = os.environ.get("DATA_DIR", "/app/data")
-registry = RouterRegistry(data_dir=DATA_DIR)
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+if DATABASE_URL:
+    from registry_pg import RouterRegistryPG
+    registry = RouterRegistryPG(database_url=DATABASE_URL)
+    logger.info("Using PostgreSQL registry")
+else:
+    from registry import RouterRegistry
+    registry = RouterRegistry(data_dir=DATA_DIR)
+    logger.info("Using JSON file registry")
 
 mcp = FastMCP(
     "mikrotik-agent",

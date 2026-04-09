@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String?    @unique
+  passwordHash  String?
+  name          String
+  telegramId    String     @unique
+  botToken      String?
+  role          UserRole   @default(USER)
+  status        UserStatus @default(ACTIVE)
+  isProvisioned Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  lastActiveAt  DateTime?
+
+  routers      Router[]
+  activityLogs ActivityLog[]
+
+  @@index([telegramId])
+  @@index([status])
+}
+
+model Router {
+  id              String    @id @default(cuid())
+  name            String
+  host            String
+  port            Int       @default(8728)
+  username        String
+  passwordEnc     String
+  label           String    @default("")
+  routerosVersion String    @default("")
+  board           String    @default("")
+  isDefault       Boolean   @default(false)
+  addedAt         DateTime  @default(now())
+  lastSeen        DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activityLogs ActivityLog[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  timestamp  DateTime @default(now())
+  action     String
+  tool       String?
+  status     String   @default("success")
+  durationMs Int?
+  details    String?
+  errorMsg   String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  routerId String?
+  router   Router? @relation(fields: [routerId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

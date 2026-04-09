@@ -1,30 +1,93 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mikrotik-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mikrotik
+      POSTGRES_USER: mikrotik
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    command: >
+      postgres
+        -c shared_buffers=32MB
+        -c work_mem=2MB
+        -c maintenance_work_mem=16MB
+        -c effective_cache_size=64MB
+        -c max_connections=20
+        -c log_min_messages=warning
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mikrotik"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dashboard:
+    container_name: mikrotik-dashboard
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
+      NEXTAUTH_URL: http://${VPS_HOST:-localhost}:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mikrotik.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
   mikrotik-agent:
     container_name: mikrotik-agent
     build:
       context: .
       dockerfile: Dockerfile
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
     volumes:
-      # Persist nanobot config, memory, and conversation history
       - nanobot-data:/root/.nanobot
-      # Mount skills (live reload during development)
       - ./skills:/app/skills:ro
-      # Mount MCP server (live reload during development)
       - ./mikrotik_mcp:/app/mikrotik_mcp:ro
-      # Per-user router registries
       - ./data:/app/data
+      - ./config:/app/config:ro
     ports:
-      - "18790:18790"   # Nanobot web UI (Nano-UI)
+      - "18790:18790"
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     deploy:
       resources:
         limits:
           cpus: "1"
-          memory: 1G
+          memory: 512M
         reservations:
           cpus: "0.25"
           memory: 256M
 
 volumes:
   nanobot-data:
+  pgdata:

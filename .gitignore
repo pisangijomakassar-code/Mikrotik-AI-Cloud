@@ -5,3 +5,7 @@ __pycache__/
 nanobot-data/
 .nanobot/
 data/
+dashboard/node_modules/
+dashboard/.next/
+dashboard/.env*
+!dashboard/.env.example
