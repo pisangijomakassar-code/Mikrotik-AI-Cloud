@@ -2,12 +2,21 @@
 
 import { useState, useRef, useCallback } from "react"
 import { Paperclip, Send, X, Mic } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 interface ChatInputProps {
   onSend: (message: string, image?: File) => void
   disabled?: boolean
 }
+
+const QUICK_ACTIONS = [
+  { label: "Diagnose connection", icon: "monitor_heart" },
+  { label: "Check logs", icon: "description" },
+  { label: "Update firmware", icon: "system_update" },
+  { label: "Audit Firewall", icon: "security" },
+] as const
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [message, setMessage] = useState("")
@@ -39,6 +48,14 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     clearImage()
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [message, imageFile, onSend, clearImage])
+
+  const handleQuickAction = useCallback(
+    (label: string) => {
+      if (disabled) return
+      onSend(label)
+    },
+    [disabled, onSend]
+  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -73,11 +90,12 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <div
       className={cn(
-        "p-6 transition-colors",
-        isDragOver && "bg-[#06b6d4]/5"
+        "w-full p-6 transition-colors",
+        isDragOver && "bg-cyan-500/5"
       )}
       style={{
-        background: "linear-gradient(to top, rgba(15, 23, 42, 1), rgba(15, 23, 42, 1), transparent)",
+        background:
+          "linear-gradient(to top, rgb(15, 23, 42), rgb(15, 23, 42), transparent)",
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -85,7 +103,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     >
       {/* Image preview */}
       {imagePreview && (
-        <div className="mb-3 flex items-start gap-2 max-w-4xl mx-auto">
+        <div className="mx-auto mb-3 flex max-w-4xl items-start gap-2">
           <div className="relative">
             <img
               src={imagePreview}
@@ -95,58 +113,55 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             <button
               type="button"
               onClick={clearImage}
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#93000a] text-white transition-colors hover:bg-[#93000a]/80"
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-900 text-white transition-colors hover:bg-red-800"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
-          <span className="text-xs text-slate-500">
-            {imageFile?.name}
-          </span>
+          <span className="text-xs text-slate-500">{imageFile?.name}</span>
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 max-w-4xl mx-auto">
-        {[
-          { label: "Diagnose connection", icon: "monitor_heart" },
-          { label: "Check logs", icon: "description" },
-          { label: "Update firmware", icon: "system_update" },
-          { label: "Audit Firewall", icon: "security" },
-        ].map((action) => (
-          <button
+      {/* Quick Actions - rounded-full pills matching Stitch */}
+      <div className="mx-auto mb-4 flex max-w-4xl gap-2 overflow-x-auto pb-2">
+        {QUICK_ACTIONS.map((action) => (
+          <Button
             key={action.label}
             type="button"
-            onClick={() => {
-              setMessage(action.label)
-              setTimeout(() => inputRef.current?.focus(), 0)
-            }}
+            variant="outline"
+            onClick={() => handleQuickAction(action.label)}
             disabled={disabled}
-            className="whitespace-nowrap px-4 py-2 rounded-lg border border-white/10 bg-white/5 hover:bg-[#06b6d4]/10 hover:border-[#06b6d4]/50 transition-all text-xs text-slate-400 hover:text-[#4cd7f6] disabled:opacity-50"
+            className="shrink-0 whitespace-nowrap rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
           >
             {action.label}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {/* Glass Card Input */}
-      <div className="relative max-w-4xl mx-auto">
+      {/* Glass Card Floating Input */}
+      <div className="relative mx-auto max-w-4xl">
         <div
-          className="flex items-center p-2 rounded-2xl shadow-2xl border border-white/20"
+          className="flex items-center rounded-2xl p-2 shadow-2xl"
           style={{
             background: "rgba(15, 23, 42, 0.6)",
             backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
           }}
         >
-          <button
+          {/* Mic button */}
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             disabled={disabled}
-            className="p-3 text-slate-400 hover:text-[#4cd7f6] transition-colors rounded-lg disabled:opacity-50"
+            className="h-10 w-10 shrink-0 rounded-lg text-slate-400 hover:text-cyan-400"
             title="Voice input"
           >
             <Mic className="h-5 w-5" />
-          </button>
-          <input
+          </Button>
+
+          {/* Input field - using shadcn Input */}
+          <Input
             ref={inputRef}
             type="text"
             value={message}
@@ -154,18 +169,22 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..."
             disabled={disabled}
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-slate-100 placeholder-slate-500 px-4 outline-none disabled:opacity-50"
+            className="flex-1 border-none bg-transparent px-4 text-sm text-slate-100 placeholder-slate-500 shadow-none ring-0 focus-visible:border-none focus-visible:ring-0"
           />
+
           <div className="flex items-center gap-2 pr-2">
-            <button
+            {/* Attach button */}
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="p-2 text-slate-400 hover:text-slate-200 transition-colors rounded-lg disabled:opacity-50"
-              title="Attach image"
+              className="h-9 w-9 rounded-lg text-slate-400 hover:text-slate-200"
+              title="Attach file"
             >
               <Paperclip className="h-5 w-5" />
-            </button>
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -176,22 +195,24 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
                 if (file) handleImageSelect(file)
               }}
             />
-            <button
+
+            {/* Send button */}
+            <Button
               type="button"
               onClick={handleSend}
               disabled={disabled || (!message.trim() && !imageFile)}
-              className="bg-[#06b6d4] text-slate-950 p-3 rounded-lg hover:bg-[#4cd7f6] active:scale-95 transition-all flex items-center justify-center disabled:opacity-50"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500 text-slate-950 hover:bg-cyan-400 active:scale-95"
               title="Send message"
             >
               <Send className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Drag overlay hint */}
       {isDragOver && (
-        <div className="mt-2 text-center text-xs text-[#4cd7f6]">
+        <div className="mt-2 text-center text-xs text-cyan-400">
           Drop image here
         </div>
       )}

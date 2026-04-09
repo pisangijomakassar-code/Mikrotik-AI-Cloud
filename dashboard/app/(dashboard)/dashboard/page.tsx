@@ -3,11 +3,8 @@
 import { StatsCards } from "@/components/stats-cards"
 import { ActivityFeed } from "@/components/activity-feed"
 import { RouterStatusCards } from "@/components/router-status-cards"
-import { useAuth } from "@/hooks/use-auth"
 
 export default function DashboardPage() {
-  const { user } = useAuth()
-
   return (
     <div>
       {/* Overview Cards */}
@@ -17,36 +14,45 @@ export default function DashboardPage() {
       <div className="grid grid-cols-12 gap-8 mt-8">
         {/* Left: System Overview & Stats */}
         <div className="col-span-12 lg:col-span-7 space-y-8">
-          {/* Network Throughput Chart */}
-          <div className="bg-[#131b2e] p-8 rounded-xl border border-white/[0.02]">
-            <div className="flex justify-between items-center mb-8">
+          {/* Network Throughput Placeholder */}
+          <div
+            className="rounded-xl p-8"
+            style={{
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <div className="flex justify-between items-center mb-6">
               <div>
-                <h3 className="font-headline text-lg font-bold text-[#dae2fd]">Network Throughput</h3>
-                <p className="text-xs text-slate-500">Real-time aggregate data flow across all routers</p>
-              </div>
-              <div className="flex gap-2">
-                <span className="px-3 py-1 bg-[#2d3449] rounded-lg text-[10px] text-[#4cd7f6] font-bold">1H</span>
-                <span className="px-3 py-1 text-[10px] text-slate-500 font-bold">24H</span>
+                <h3 className="font-headline text-lg font-bold text-[#dae2fd]">
+                  Network Throughput
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Aggregate data flow across all routers
+                </p>
               </div>
             </div>
-            <div className="h-64 flex items-end gap-2 relative">
-              {/* Abstract Chart Bars */}
-              <div className="flex-1 bg-cyan-900/20 rounded-t h-1/3" />
-              <div className="flex-1 bg-cyan-900/30 rounded-t h-1/2" />
-              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-2/3 border-t border-[#4cd7f6]/50" />
-              <div className="flex-1 bg-[#4cd7f6]/20 rounded-t h-3/4" />
-              <div className="flex-1 bg-[#4cd7f6]/60 rounded-t h-1/2 border-t border-[#4cd7f6]/50" />
-              <div className="flex-1 bg-[#4cd7f6]/80 rounded-t h-full border-t border-[#4cd7f6]/50 shadow-[0_0_20px_rgba(76,215,246,0.2)]" />
-              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-3/4" />
-              <div className="flex-1 bg-cyan-900/20 rounded-t h-1/2" />
-              <div className="flex-1 bg-cyan-900/30 rounded-t h-2/3" />
-              <div className="flex-1 bg-[#4cd7f6]/40 rounded-t h-1/2" />
-              <div className="flex-1 bg-[#4cd7f6]/10 rounded-t h-1/3" />
-              {/* Data Point Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 p-2 bg-[#2d3449] border border-[#4cd7f6]/30 rounded-lg text-center backdrop-blur-sm">
-                <p className="text-[10px] text-slate-400 font-headline uppercase">Peak Load</p>
-                <p className="text-xs font-bold text-[#4cd7f6] font-mono-tech">1.2 Gbps</p>
+            <div className="h-48 flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-[#4cd7f6]/10 flex items-center justify-center">
+                <svg
+                  className="h-6 w-6 text-[#4cd7f6]/40"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+                  />
+                </svg>
               </div>
+              <p className="text-sm text-slate-500">No chart data available</p>
+              <p className="text-[10px] text-slate-600">
+                Data will appear here once routers begin reporting traffic
+              </p>
             </div>
           </div>
 
@@ -54,7 +60,7 @@ export default function DashboardPage() {
           <RouterStatusCards />
         </div>
 
-        {/* Right: Activity Feed (Glass Card) */}
+        {/* Right: Activity Feed */}
         <div className="col-span-12 lg:col-span-5">
           <ActivityFeed />
         </div>

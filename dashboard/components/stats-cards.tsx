@@ -10,7 +10,15 @@ export function StatsCards() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-[#131b2e] p-6 rounded-xl">
+          <div
+            key={i}
+            className="p-6 rounded-xl"
+            style={{
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
             <div className="space-y-3 animate-pulse">
               <div className="h-4 w-24 rounded bg-[#222a3d]" />
               <div className="h-8 w-16 rounded bg-[#222a3d]" />
@@ -22,54 +30,69 @@ export function StatsCards() {
     )
   }
 
+  const cards = [
+    {
+      label: "Active Users",
+      value: stats?.activeUsers ?? 0,
+      sub: `of ${stats?.totalUsers ?? 0} total users`,
+      icon: Users,
+    },
+    {
+      label: "Total Routers",
+      value: stats?.totalRouters ?? 0,
+      sub: `${stats?.totalLogs ?? 0} total logs`,
+      icon: Router,
+    },
+    {
+      label: "Recent Activity",
+      value: stats?.recentActivity ?? 0,
+      sub: "events in last 24h",
+      icon: Wifi,
+    },
+    {
+      label: "LLM Status",
+      value: "Ready",
+      sub: null,
+      icon: Bot,
+      badge: true,
+    },
+  ]
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {/* Card 1: Active Users */}
-      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Users className="h-9 w-9" />
-        </div>
-        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Active Users</p>
-        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.activeUsers ?? 0}</h2>
-        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">of {stats?.totalUsers ?? 0} total users</p>
-      </div>
-
-      {/* Card 2: Total Routers */}
-      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Router className="h-9 w-9" />
-        </div>
-        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Total Routers</p>
-        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.totalRouters ?? 0}</h2>
-        <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">{stats?.totalLogs ?? 0} total logs</p>
-      </div>
-
-      {/* Card 3: Active Clients */}
-      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Wifi className="h-9 w-9" />
-        </div>
-        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">Recent Activity</p>
-        <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">{stats?.recentActivity ?? 0}</h2>
-        <div className="flex gap-1 mt-2">
-          <div className="h-1 w-full bg-[#06b6d4] rounded-full" />
-          <div className="h-1 w-12 bg-[#2d3449] rounded-full" />
-        </div>
-      </div>
-
-      {/* Card 4: LLM Status */}
-      <div className="bg-[#131b2e] p-6 rounded-xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Bot className="h-9 w-9" />
-        </div>
-        <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">LLM Status</p>
-        <div className="flex items-center gap-3">
-          <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">Ready</h2>
-          <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded-lg text-[10px] text-[#4ae176] font-bold animate-pulse">
-            OPTIMIZED
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className="p-6 rounded-xl relative overflow-hidden group"
+          style={{
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <card.icon className="h-9 w-9" />
           </div>
+          <p className="text-xs font-headline text-slate-400 uppercase tracking-widest mb-1">
+            {card.label}
+          </p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-4xl font-bold font-headline text-[#dae2fd]">
+              {card.value}
+            </h2>
+            {card.badge && (
+              <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded-lg text-[10px] text-[#4ae176] font-bold animate-pulse">
+                OPTIMIZED
+              </div>
+            )}
+          </div>
+          {card.sub && (
+            <p className="text-[10px] text-slate-500 mt-2 font-mono-tech">
+              {card.sub}
+            </p>
+          )}
         </div>
-      </div>
+      ))}
     </div>
   )
 }

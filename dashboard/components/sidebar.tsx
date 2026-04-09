@@ -13,6 +13,7 @@ import {
   Sparkles,
   Brain,
   MessageSquare,
+  BookOpen,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { label: "Routers", href: "/routers", icon: Router },
   { label: "Logs", href: "/logs", icon: Terminal },
   { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
+  { label: "Docs", href: "/docs", icon: BookOpen },
 ]
 
 export function Sidebar() {

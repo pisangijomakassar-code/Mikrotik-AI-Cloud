@@ -42,7 +42,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
       const content = line.replace(/^\s*[-*]\s/, "")
       elements.push(
         <div key={i} className="flex gap-2 pl-2">
-          <span className="text-[#4cd7f6]">-</span>
+          <span className="text-cyan-400">-</span>
           <span>{formatInline(content)}</span>
         </div>
       )
@@ -97,7 +97,7 @@ function formatInline(text: string): React.ReactNode[] {
       parts.push(
         <code
           key={key++}
-          className="rounded-lg bg-slate-950/50 px-1.5 py-0.5 font-mono text-xs text-[#4cd7f6] border border-white/5"
+          className="rounded bg-slate-950/50 px-1.5 py-0.5 font-mono text-xs text-cyan-400 border border-white/5"
         >
           {match[3]}
         </code>
@@ -138,25 +138,25 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {/* Avatar */}
         <div
           className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border",
+            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border",
             isUser
-              ? "bg-slate-800 border-white/10"
-              : "bg-[#06b6d4]/20 border-[#06b6d4]/50"
+              ? "border-white/10 bg-slate-800"
+              : "border-cyan-500/50 bg-cyan-500/20"
           )}
         >
           {isUser ? (
             <User className="h-4 w-4 text-slate-400" />
           ) : (
-            <Bot className="h-4 w-4 text-[#4cd7f6]" />
+            <Bot className="h-4 w-4 text-cyan-400" />
           )}
         </div>
 
         {/* Bubble */}
         <div
           className={cn(
-            "p-4 rounded-2xl text-sm",
+            "rounded-2xl p-4 text-sm",
             isUser
-              ? "rounded-tr-none bg-[#06b6d4]/20 border border-[#06b6d4]/30 text-slate-100"
+              ? "rounded-tr-none border border-cyan-500/30 bg-cyan-600/20 text-slate-100"
               : "rounded-tl-none border border-white/10 text-slate-200"
           )}
           style={
@@ -185,7 +185,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {message.content && (
             <div className="space-y-0.5">
               {isUser ? (
-                <p className="leading-relaxed whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap leading-relaxed">
                   {message.content}
                 </p>
               ) : (
@@ -196,10 +196,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
           <span
             className={cn(
-              "text-[10px] mt-2 block font-mono",
-              isUser
-                ? "text-[#06b6d4]/60 text-right"
-                : "text-slate-500"
+              "mt-2 block font-mono text-[10px]",
+              isUser ? "text-right text-cyan-500/60" : "text-slate-500"
             )}
           >
             {time}

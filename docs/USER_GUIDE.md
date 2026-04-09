@@ -7,7 +7,11 @@ Complete guide for managing your MikroTik routers through the Telegram bot using
 ## Table of Contents
 
 - [Getting Started](#getting-started)
-  - [Accessing the Bot](#accessing-the-bot)
+  - [Prerequisites](#prerequisites)
+  - [Step 1: Create Your Telegram Bot](#step-1-create-your-telegram-bot)
+  - [Step 2: Get Your Telegram User ID](#step-2-get-your-telegram-user-id)
+  - [Step 3: Register in the Dashboard](#step-3-register-in-the-dashboard)
+  - [Step 4: Start Chatting](#step-4-start-chatting)
   - [First-Time Setup](#first-time-setup)
   - [Understanding Responses](#understanding-responses)
 - [Router Management](#router-management)
@@ -63,19 +67,55 @@ Complete guide for managing your MikroTik routers through the Telegram bot using
 
 ## Getting Started
 
-### Accessing the Bot
+### Prerequisites
 
-The MikroTik AI Agent is a Telegram bot. To access it:
+Every user **must** create their own private Telegram bot. The MikroTik AI Agent does **not** use a shared/public bot -- each user runs their own bot instance for security and isolation.
 
-1. **Get access from the admin.** This is a paid service. After payment, the admin will provision your Telegram account.
-2. **Find the bot on Telegram.** Search for the bot username provided by the admin (e.g., `@MikrotikAgentBot`).
-3. **Start a conversation.** Send `/start` or any message to begin.
+**You will need:**
+1. A Telegram account
+2. Your own Telegram bot (created via `@BotFather`)
+3. Your Telegram bot token
+4. Your Telegram user ID (numeric)
 
-You must be using the Telegram account associated with the numeric user ID that the admin provisioned. Unauthorized users cannot interact with the bot.
+### Step 1: Create Your Telegram Bot
+
+1. Open Telegram and search for **@BotFather**.
+2. Send `/newbot` and follow the prompts:
+   - Choose a display name (e.g., "My MikroTik Agent")
+   - Choose a username ending in `bot` (e.g., `my_mikrotik_agent_bot`)
+3. BotFather will reply with your **bot token** -- a string like `7123456789:AAF...`. **Save this token securely.**
+4. (Optional) Send `/setdescription` to add a description, and `/setuserpic` to set a profile photo.
+
+### Step 2: Get Your Telegram User ID
+
+Your Telegram user ID is a numeric identifier (not your username). To find it:
+
+1. Search for **@userinfobot** on Telegram.
+2. Send any message to it.
+3. It will reply with your numeric user ID (e.g., `123456789`). **Copy this number.**
+
+Alternatively, forward any of your messages to `@userinfobot`.
+
+### Step 3: Register in the Dashboard
+
+1. **Get access from the admin.** This is a paid service. After payment, the admin will create your account in the dashboard.
+2. **Log in to the dashboard** with the credentials provided by the admin.
+3. Go to **Routers** and register your Telegram bot:
+   - **Telegram Bot Token** -- paste the token from BotFather
+   - **Telegram User ID** -- paste your numeric user ID
+4. The system will activate your bot instance and connect it to the AI Agent.
+
+> **Why a personal bot?** Each user having their own bot ensures complete isolation -- your router credentials, chat history, and commands are never shared with other users. It also means you have full control over your bot's name and appearance.
+
+### Step 4: Start Chatting
+
+1. Open your bot in Telegram (the one you created in Step 1).
+2. Send `/start` or any message to begin.
+3. The bot will detect that you have no routers registered and guide you through adding one.
 
 ### First-Time Setup
 
-When you message the bot for the first time, it will detect that you have no routers registered and guide you through adding one.
+When you message the bot for the first time, you will need to add at least one router.
 
 **What you need:**
 - A friendly name for your router (e.g., "Kantor", "Warnet", "RumahUtama")

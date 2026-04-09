@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, Lightbulb } from "lucide-react"
+import { Clock } from "lucide-react"
 import { useLogs } from "@/hooks/use-logs"
 import { cn } from "@/lib/utils"
 
@@ -30,14 +30,21 @@ export function ActivityFeed() {
 
   return (
     <div
-      className="bg-[#222a3d]/60 backdrop-blur-2xl p-6 rounded-xl h-[560px] flex flex-col border border-white/5 shadow-2xl relative"
+      className="rounded-xl p-6 h-[560px] flex flex-col shadow-2xl relative"
+      style={{
+        background: "rgba(15, 23, 42, 0.6)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255,255,255,0.1)",
+      }}
     >
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-[#4cd7f6]" />
           <h3 className="font-headline font-bold text-[#dae2fd]">Recent Activity</h3>
         </div>
-        <span className="px-2 py-0.5 bg-[#2d3449] text-[10px] rounded-lg border border-white/5 text-[#dae2fd]">LIVE</span>
+        <span className="px-2 py-0.5 bg-[#2d3449] text-[10px] rounded-lg border border-white/5 text-[#dae2fd]">
+          LIVE
+        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
@@ -54,9 +61,15 @@ export function ActivityFeed() {
             ))}
           </div>
         ) : !data?.data?.length ? (
-          <p className="py-8 text-center text-sm text-slate-400">
-            No recent activity
-          </p>
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#222a3d] flex items-center justify-center">
+              <Clock className="h-5 w-5 text-slate-600" />
+            </div>
+            <p className="text-sm text-slate-400">No activity yet</p>
+            <p className="text-[10px] text-slate-600">
+              Activity will appear here as users interact with routers
+            </p>
+          </div>
         ) : (
           data.data.map((log) => (
             <div
@@ -71,7 +84,9 @@ export function ActivityFeed() {
               />
               <div>
                 <p className="text-sm text-[#dae2fd]">
-                  <span className="font-bold text-white">{log.user?.name || "System"}</span>
+                  <span className="font-bold text-white">
+                    {log.user?.name || "System"}
+                  </span>
                   {log.tool && (
                     <>
                       {" "}executed{" "}
@@ -82,31 +97,20 @@ export function ActivityFeed() {
                   )}
                   {log.router?.name && (
                     <>
-                      {" "}on <span className="text-slate-400">{log.router.name}</span>
+                      {" "}on{" "}
+                      <span className="text-slate-400">{log.router.name}</span>
                     </>
                   )}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">
                   {formatTimeAgo(log.createdAt)}
-                  {log.action && ` \u2022 ${log.action.charAt(0).toUpperCase() + log.action.slice(1)}`}
+                  {log.action &&
+                    ` \u2022 ${log.action.charAt(0).toUpperCase() + log.action.slice(1)}`}
                 </p>
               </div>
             </div>
           ))
         )}
-      </div>
-
-      {/* AI Suggestion Popover */}
-      <div className="absolute -bottom-4 -left-6 w-64 bg-[#14bf59] text-[#00461b] p-4 rounded-xl shadow-2xl transform rotate-1 border border-[#4ae176]/30">
-        <div className="flex items-start gap-3">
-          <Lightbulb className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-bold leading-tight">AI Insight</p>
-            <p className="text-[10px] mt-1 opacity-90">
-              Unusual traffic pattern detected on Port 4. Recommend isolation check.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )

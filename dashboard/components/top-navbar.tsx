@@ -1,6 +1,7 @@
 "use client"
 
 import { Search, ShieldCheck, Cpu, Bell } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 export function TopNavBar() {
   return (
@@ -8,7 +9,7 @@ export function TopNavBar() {
       <div className="flex items-center gap-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
+          <Input
             className="bg-[#2d3449] border-none text-sm rounded-lg pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-[#4cd7f6] transition-all text-[#dae2fd] placeholder:text-slate-500 outline-none"
             placeholder="Query network state..."
             type="text"

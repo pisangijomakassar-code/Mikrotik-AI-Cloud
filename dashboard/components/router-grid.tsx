@@ -5,6 +5,7 @@ import { Router, MoreVertical, Users, ChevronLeft, ChevronRight, PlusCircle, Spa
 import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
 import { AddRouterDialog } from "@/components/add-router-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -56,25 +57,27 @@ export function RouterGrid() {
           <div className="h-6 w-px bg-white/10 mx-2" />
           <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
             <span className="text-xs text-slate-400">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 focus:ring-0 cursor-pointer outline-none"
-            >
-              <option value="">All Status</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-            </select>
+            <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>
+              <SelectTrigger className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 h-auto w-auto gap-1 shadow-none focus:ring-0">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#131b2e] border-white/10">
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2 bg-[#222a3d] px-3 py-1.5 rounded-lg border border-white/5">
             <span className="text-xs text-slate-400">Owner:</span>
-            <select
-              value={ownerFilter}
-              onChange={(e) => setOwnerFilter(e.target.value)}
-              className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 focus:ring-0 cursor-pointer outline-none"
-            >
-              <option value="">All Owners</option>
-            </select>
+            <Select value={ownerFilter || "all"} onValueChange={(val) => setOwnerFilter(val === "all" ? "" : val)}>
+              <SelectTrigger className="bg-transparent border-none text-xs font-bold text-[#4cd7f6] p-0 h-auto w-auto gap-1 shadow-none focus:ring-0">
+                <SelectValue placeholder="All Owners" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#131b2e] border-white/10">
+                <SelectItem value="all">All Owners</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <button
             onClick={resetFilters}

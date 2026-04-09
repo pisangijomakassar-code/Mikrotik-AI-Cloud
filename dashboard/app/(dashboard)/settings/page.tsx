@@ -16,6 +16,9 @@ import {
   Loader2,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 export default function SettingsPage() {
@@ -65,12 +68,17 @@ export default function SettingsPage() {
           <div className="bg-[#131b2e] p-6 rounded-xl border border-white/5 space-y-4">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Model Architecture</label>
-              <select className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-3 focus:ring-1 focus:ring-[#4cd7f6] text-[#dae2fd] outline-none">
-                <option>GPT-4o (Omni)</option>
-                <option>GPT-4 Turbo</option>
-                <option>Claude 3.5 Sonnet</option>
-                <option>Llama 3 70B</option>
-              </select>
+              <Select defaultValue="gpt4o">
+                <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-3 focus:ring-1 focus:ring-[#4cd7f6] text-[#dae2fd]">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#131b2e] border-white/10">
+                  <SelectItem value="gpt4o">GPT-4o (Omni)</SelectItem>
+                  <SelectItem value="gpt4turbo">GPT-4 Turbo</SelectItem>
+                  <SelectItem value="claude35sonnet">Claude 3.5 Sonnet</SelectItem>
+                  <SelectItem value="llama370b">Llama 3 70B</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Provider Gateway</label>
@@ -84,7 +92,7 @@ export default function SettingsPage() {
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">API Key</label>
               <div className="relative">
-                <input
+                <Input
                   className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-3 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] pr-12 text-[#dae2fd] outline-none"
                   type={showApiKey ? "text" : "password"}
                   defaultValue="sk-or-v1-847293847293847293847293"
@@ -116,7 +124,7 @@ export default function SettingsPage() {
         <div className="bg-[#131b2e] p-8 rounded-xl border border-white/5 space-y-8">
           <div>
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">System Instruction (Master Prompt)</label>
-            <textarea
+            <Textarea
               className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-4 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] leading-relaxed text-[#dae2fd] outline-none resize-none"
               placeholder="You are a MikroTik certified network engineer AI assistant..."
               rows={4}
@@ -125,19 +133,24 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Interface Language</label>
-              <select className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-3 focus:ring-1 focus:ring-[#4cd7f6] text-[#dae2fd] outline-none">
-                <option>English (United States)</option>
-                <option>Indonesian (Bahasa Indonesia)</option>
-                <option>German (Deutsch)</option>
-                <option>Spanish (Espanol)</option>
-              </select>
+              <Select defaultValue="en">
+                <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg text-sm p-3 focus:ring-1 focus:ring-[#4cd7f6] text-[#dae2fd]">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#131b2e] border-white/10">
+                  <SelectItem value="en">English (United States)</SelectItem>
+                  <SelectItem value="id">Indonesian (Bahasa Indonesia)</SelectItem>
+                  <SelectItem value="de">German (Deutsch)</SelectItem>
+                  <SelectItem value="es">Spanish (Espanol)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Max Response Length</label>
                 <span className="text-xs font-mono-tech text-[#4cd7f6]">2,048 Tokens</span>
               </div>
-              <input
+              <Input
                 className="w-full accent-[#4cd7f6] bg-[#2d3449] rounded-lg h-2"
                 max={4096}
                 min={128}

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { UserPlus, X, Eye, EyeOff, Shield, Check, Info } from "lucide-react"
 import { useCreateUser } from "@/hooks/use-users"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
 export function AddUserDialog() {
@@ -88,7 +89,7 @@ export function AddUserDialog() {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="e.g. Pak Budi"
                       type="text"
@@ -99,7 +100,7 @@ export function AddUserDialog() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="Numeric ID"
                       type="text"
@@ -112,7 +113,7 @@ export function AddUserDialog() {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="user@example.com"
                       type="email"
@@ -122,7 +123,7 @@ export function AddUserDialog() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="Dashboard login password"
                       type="password"
@@ -134,7 +135,7 @@ export function AddUserDialog() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram Bot Token</label>
                   <div className="relative">
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none pr-10"
                       placeholder="BotFather generated token"
                       type={showToken ? "text" : "password"}

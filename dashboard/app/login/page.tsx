@@ -5,6 +5,7 @@ import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Router, Sparkles, AtSign, Lock, LogIn, ShieldCheck, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
 export default function LoginPage() {
@@ -85,7 +86,7 @@ export default function LoginPage() {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <AtSign className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
                 </div>
-                <input
+                <Input
                   className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
                   id="email"
                   type="email"
@@ -112,7 +113,7 @@ export default function LoginPage() {
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Lock className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
                 </div>
-                <input
+                <Input
                   className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
                   id="password"
                   type="password"
