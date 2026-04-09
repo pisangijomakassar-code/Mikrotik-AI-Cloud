@@ -701,6 +701,887 @@ def run_routeros_query(user_id: str, api_path: str, router: str = "") -> list[di
 
 
 # ─────────────────────────────────────────────
+#  KICK / DISCONNECT (Write — destructive)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def kick_hotspot_user(user_id: str, session_id: str, router: str = "") -> dict:
+    """Kick an active hotspot user by their session ID (.id from list_hotspot_active).
+
+    Args:
+        user_id: Telegram user ID
+        session_id: The .id of the active session to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/hotspot/active").remove(session_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Hotspot session '{session_id}' kicked"}
+    except Exception as e:
+        return {"error": f"Failed to kick hotspot user: {e}"}
+
+
+@mcp.tool()
+def remove_dhcp_lease(user_id: str, lease_id: str, router: str = "") -> dict:
+    """Remove a DHCP lease to force client to re-request IP.
+
+    Args:
+        user_id: Telegram user ID
+        lease_id: The .id of the lease to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/dhcp-server/lease").remove(lease_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"DHCP lease '{lease_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove DHCP lease: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  INTERFACE MANAGEMENT (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def enable_interface(user_id: str, name: str, router: str = "") -> dict:
+    """Enable a network interface by name.
+
+    Args:
+        user_id: Telegram user ID
+        name: Interface name (e.g. 'ether1', 'wlan1')
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            ifaces = list(api.path("/interface").select(
+                librouteros.query.Key("name") == name
+            ))
+            if not ifaces:
+                return {"error": f"Interface '{name}' not found"}
+            api.path("/interface").update(**{".id": ifaces[0][".id"], "disabled": "false"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Interface '{name}' enabled"}
+    except Exception as e:
+        return {"error": f"Failed to enable interface: {e}"}
+
+
+@mcp.tool()
+def disable_interface(user_id: str, name: str, router: str = "") -> dict:
+    """Disable a network interface by name.
+
+    Args:
+        user_id: Telegram user ID
+        name: Interface name (e.g. 'ether1', 'wlan1')
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            ifaces = list(api.path("/interface").select(
+                librouteros.query.Key("name") == name
+            ))
+            if not ifaces:
+                return {"error": f"Interface '{name}' not found"}
+            api.path("/interface").update(**{".id": ifaces[0][".id"], "disabled": "true"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Interface '{name}' disabled"}
+    except Exception as e:
+        return {"error": f"Failed to disable interface: {e}"}
+
+
+@mcp.tool()
+def list_bridge_ports(user_id: str, router: str = "") -> list[dict]:
+    """List bridge port assignments.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/bridge/port", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_vlans(user_id: str, router: str = "") -> list[dict]:
+    """List VLAN interfaces.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/interface/vlan", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  FIREWALL MANAGEMENT (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_firewall_address_lists(user_id: str, router: str = "") -> list[dict]:
+    """List firewall address lists.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/firewall/address-list", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def add_to_address_list(user_id: str, list_name: str, address: str, comment: str = "", timeout: str = "", router: str = "") -> dict:
+    """Add an IP address to a firewall address list.
+
+    Args:
+        user_id: Telegram user ID
+        list_name: Name of the address list (e.g. 'blocked', 'whitelist')
+        address: IP address or subnet (e.g. '192.168.1.100', '10.0.0.0/24')
+        comment: Optional comment
+        timeout: Optional timeout (e.g. '1h', '30m', '1d'). Empty = permanent.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params = {"list": list_name, "address": address}
+            if comment:
+                params["comment"] = comment
+            if timeout:
+                params["timeout"] = timeout
+            api.path("/ip/firewall/address-list").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Added {address} to address list '{list_name}'"}
+    except Exception as e:
+        return {"error": f"Failed to add to address list: {e}"}
+
+
+@mcp.tool()
+def remove_from_address_list(user_id: str, entry_id: str, router: str = "") -> dict:
+    """Remove an entry from a firewall address list by its .id.
+
+    Args:
+        user_id: Telegram user ID
+        entry_id: The .id of the address list entry to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/firewall/address-list").remove(entry_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Removed entry '{entry_id}' from address list"}
+    except Exception as e:
+        return {"error": f"Failed to remove from address list: {e}"}
+
+
+@mcp.tool()
+def list_firewall_mangle(user_id: str, router: str = "") -> list[dict]:
+    """List mangle rules.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/firewall/mangle", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_connections(user_id: str, router: str = "") -> list[dict]:
+    """List active connections (connection tracking). Returns first 100 entries to avoid huge responses.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/firewall/connection", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result[:100]
+
+
+# ─────────────────────────────────────────────
+#  IP MANAGEMENT (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def add_ip_address(user_id: str, address: str, interface: str, comment: str = "", router: str = "") -> dict:
+    """Add an IP address to an interface. Example: address='192.168.1.1/24'.
+
+    Args:
+        user_id: Telegram user ID
+        address: IP address with prefix (e.g. '192.168.1.1/24')
+        interface: Interface name to assign the address to (e.g. 'ether1')
+        comment: Optional comment
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            params = {"address": address, "interface": interface}
+            if comment:
+                params["comment"] = comment
+            api.path("/ip/address").add(**params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Added {address} to interface '{interface}'"}
+    except Exception as e:
+        return {"error": f"Failed to add IP address: {e}"}
+
+
+@mcp.tool()
+def remove_ip_address(user_id: str, address_id: str, router: str = "") -> dict:
+    """Remove an IP address by its .id.
+
+    Args:
+        user_id: Telegram user ID
+        address_id: The .id of the IP address entry to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/address").remove(address_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Removed IP address '{address_id}'"}
+    except Exception as e:
+        return {"error": f"Failed to remove IP address: {e}"}
+
+
+@mcp.tool()
+def list_ip_pools(user_id: str, router: str = "") -> list[dict]:
+    """List IP address pools.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/pool", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_ip_services(user_id: str, router: str = "") -> list[dict]:
+    """List enabled/disabled IP services (api, ssh, winbox, www, etc.).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/service", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  DHCP EXTENDED (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_dhcp_servers(user_id: str, router: str = "") -> list[dict]:
+    """List DHCP server configurations.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/dhcp-server", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_dhcp_networks(user_id: str, router: str = "") -> list[dict]:
+    """List DHCP network configurations (gateway, DNS, domain handed out to clients).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/dhcp-server/network", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def make_dhcp_static(user_id: str, lease_id: str, router: str = "") -> dict:
+    """Convert a dynamic DHCP lease to static. Reads the lease, then creates a static entry
+    with the same MAC and address. The original dynamic lease is removed.
+
+    Args:
+        user_id: Telegram user ID
+        lease_id: The .id of the dynamic lease to make static
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            # First try the make-static command via generic API call
+            try:
+                params = {".id": lease_id}
+                list(api.rawCmd("/ip/dhcp-server/lease/make-static", **params))
+                registry.update_last_seen(user_id, conn["name"])
+                return {"status": "ok", "message": f"Lease '{lease_id}' converted to static"}
+            except Exception:
+                # Fallback: read lease details, remove dynamic, add static
+                leases = list(api.path("/ip/dhcp-server/lease").select(
+                    librouteros.query.Key(".id") == lease_id
+                ))
+                if not leases:
+                    return {"error": f"Lease '{lease_id}' not found"}
+                lease = leases[0]
+                mac = lease.get("mac-address")
+                address = lease.get("address") or lease.get("active-address")
+                server = lease.get("server", "")
+                if not mac or not address:
+                    return {"error": "Lease missing MAC or address — cannot convert"}
+                params = {
+                    "address": address,
+                    "mac-address": mac,
+                }
+                if server:
+                    params["server"] = server
+                api.path("/ip/dhcp-server/lease").add(**params)
+                registry.update_last_seen(user_id, conn["name"])
+                return {"status": "ok", "message": f"Static lease created for {mac} -> {address}"}
+    except Exception as e:
+        return {"error": f"Failed to make lease static: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  DNS MANAGEMENT (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_dns_static(user_id: str, router: str = "") -> list[dict]:
+    """List static DNS entries.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/dns/static", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def add_dns_static(user_id: str, name: str, address: str, router: str = "") -> dict:
+    """Add a static DNS entry.
+
+    Args:
+        user_id: Telegram user ID
+        name: DNS hostname (e.g. 'myserver.local')
+        address: IP address to resolve to (e.g. '192.168.1.100')
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/dns/static").add(name=name, address=address)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"DNS static entry added: {name} -> {address}"}
+    except Exception as e:
+        return {"error": f"Failed to add DNS entry: {e}"}
+
+
+@mcp.tool()
+def remove_dns_static(user_id: str, entry_id: str, router: str = "") -> dict:
+    """Remove a static DNS entry by its .id.
+
+    Args:
+        user_id: Telegram user ID
+        entry_id: The .id of the DNS static entry to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ip/dns/static").remove(entry_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"DNS static entry '{entry_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove DNS entry: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  HOTSPOT EXTENDED (Read)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_hotspot_profiles(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot user profiles with rate limits.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot/profile", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_hotspot_ip_bindings(user_id: str, router: str = "") -> list[dict]:
+    """List hotspot IP bindings (bypass/block rules).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ip/hotspot/ip-binding", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+# ─────────────────────────────────────────────
+#  PPP / VPN (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def list_ppp_active(user_id: str, router: str = "") -> list[dict]:
+    """List active PPP/VPN connections.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/ppp/active", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_ppp_secrets(user_id: str, router: str = "") -> list[dict]:
+    """List PPP user accounts (PPPoE, PPTP, L2TP, etc.). Passwords are stripped from output.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    rows = _query_path("/ppp/secret", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    # Strip passwords from output for security
+    for row in rows:
+        row.pop("password", None)
+    return rows
+
+
+@mcp.tool()
+def add_ppp_secret(user_id: str, name: str, password: str, service: str = "any", profile: str = "default", router: str = "") -> dict:
+    """Add a PPP user account (PPPoE, PPTP, L2TP, etc.).
+
+    Args:
+        user_id: Telegram user ID
+        name: Username for the PPP account
+        password: Password for the PPP account
+        service: Service type — 'any', 'pppoe', 'pptp', 'l2tp', etc. (default: 'any')
+        profile: PPP profile to assign (default: 'default')
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ppp/secret").add(
+                name=name, password=password, service=service, profile=profile
+            )
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"PPP secret '{name}' created (service={service}, profile={profile})"}
+    except Exception as e:
+        return {"error": f"Failed to add PPP secret: {e}"}
+
+
+@mcp.tool()
+def remove_ppp_secret(user_id: str, name: str, router: str = "") -> dict:
+    """Remove a PPP user account by name.
+
+    Args:
+        user_id: Telegram user ID
+        name: Username of the PPP secret to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            secrets = list(api.path("/ppp/secret").select(
+                librouteros.query.Key("name") == name
+            ))
+            if not secrets:
+                return {"error": f"PPP secret '{name}' not found"}
+            api.path("/ppp/secret").remove(secrets[0][".id"])
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"PPP secret '{name}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove PPP secret: {e}"}
+
+
+@mcp.tool()
+def kick_ppp_user(user_id: str, session_id: str, router: str = "") -> dict:
+    """Disconnect an active PPP session by its .id.
+
+    Args:
+        user_id: Telegram user ID
+        session_id: The .id of the active PPP session to disconnect
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/ppp/active").remove(session_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"PPP session '{session_id}' disconnected"}
+    except Exception as e:
+        return {"error": f"Failed to kick PPP user: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  SYSTEM EXTENDED (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def get_system_clock(user_id: str, router: str = "") -> dict:
+    """Get router date and time.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    rows = _query_path("/system/clock", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return rows[0] if rows else {"error": "No clock data returned"}
+
+
+@mcp.tool()
+def list_system_scheduler(user_id: str, router: str = "") -> list[dict]:
+    """List scheduled tasks.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/system/scheduler", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def list_system_scripts(user_id: str, router: str = "") -> list[dict]:
+    """List RouterOS scripts.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    result = _query_path("/system/script", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    return result
+
+
+@mcp.tool()
+def run_system_script(user_id: str, script_name: str, router: str = "") -> dict:
+    """Run a named RouterOS script. DANGEROUS — ensure you know what the script does before running it.
+
+    Args:
+        user_id: Telegram user ID
+        script_name: Name of the script to run
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            scripts = list(api.path("/system/script").select(
+                librouteros.query.Key("name") == script_name
+            ))
+            if not scripts:
+                return {"error": f"Script '{script_name}' not found"}
+            script_id = scripts[0][".id"]
+            list(api.rawCmd("/system/script/run", **{".id": script_id}))
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Script '{script_name}' executed"}
+    except Exception as e:
+        return {"error": f"Failed to run script: {e}"}
+
+
+@mcp.tool()
+def list_system_users(user_id: str, router: str = "") -> list[dict]:
+    """List RouterOS user accounts. Passwords are not included.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return [conn]
+    rows = _query_path("/user", conn["host"], conn["port"], conn["username"], conn["password"])
+    registry.update_last_seen(user_id, conn["name"])
+    # Strip passwords for security
+    for row in rows:
+        row.pop("password", None)
+    return rows
+
+
+@mcp.tool()
+def get_system_health(user_id: str, router: str = "") -> dict:
+    """Get hardware health info (voltage, temperature if available). Not all models support this.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        rows = _query_path("/system/health", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        if rows and len(rows) == 1:
+            return rows[0]
+        # RouterOS v7 returns list of name/value pairs
+        if rows and "name" in rows[0]:
+            return {r["name"]: r.get("value", "") for r in rows}
+        return rows[0] if rows else {"info": "No health data available on this device"}
+    except Exception:
+        return {"info": "Health monitoring not supported on this device"}
+
+
+@mcp.tool()
+def get_system_routerboard(user_id: str, router: str = "") -> dict:
+    """Get RouterBoard hardware info (model, serial number, firmware versions).
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        rows = _query_path("/system/routerboard", conn["host"], conn["port"], conn["username"], conn["password"])
+        registry.update_last_seen(user_id, conn["name"])
+        return rows[0] if rows else {"info": "Not a RouterBoard device"}
+    except Exception:
+        return {"info": "RouterBoard info not available (may be a non-RB device like x86)"}
+
+
+@mcp.tool()
+def reboot_router(user_id: str, router: str = "") -> dict:
+    """Reboot the router. DANGEROUS — the router will go offline for 1-3 minutes.
+    Only use when explicitly requested by the user.
+
+    Args:
+        user_id: Telegram user ID
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            registry.update_last_seen(user_id, conn["name"])
+            list(api.rawCmd("/system/reboot"))
+            return {"status": "ok", "message": f"Router '{conn['name']}' is rebooting. It will be offline for 1-3 minutes."}
+    except Exception as e:
+        # Connection may drop during reboot — that's expected
+        err_str = str(e).lower()
+        if "connection" in err_str or "closed" in err_str or "eof" in err_str:
+            return {"status": "ok", "message": f"Router '{conn['name']}' is rebooting (connection dropped as expected)."}
+        return {"error": f"Failed to reboot router: {e}"}
+
+
+# ─────────────────────────────────────────────
+#  TOOLS — Diagnostic
+#  NOTE: ping_from_router and list_torch are SKIPPED.
+#  /tool/ping and /tool/torch are streaming commands in RouterOS
+#  that require async/streaming handling not compatible with
+#  synchronous MCP stdio transport. Use run_routeros_query as a
+#  workaround if needed, though results may be incomplete.
+# ─────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────
+#  QUEUE EXTENDED (Read + Write)
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def add_simple_queue(user_id: str, name: str, target: str, max_limit: str, router: str = "") -> dict:
+    """Add a simple queue (bandwidth limit).
+
+    Args:
+        user_id: Telegram user ID
+        name: Queue name (e.g. 'limit-john')
+        target: Target IP or subnet (e.g. '192.168.1.100/32')
+        max_limit: Upload/download limit (e.g. '5M/10M' for 5Mbps up / 10Mbps down)
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/queue/simple").add(
+                name=name, target=target, **{"max-limit": max_limit}
+            )
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Simple queue '{name}' created: target={target}, max-limit={max_limit}"}
+    except Exception as e:
+        return {"error": f"Failed to add simple queue: {e}"}
+
+
+@mcp.tool()
+def remove_simple_queue(user_id: str, queue_id: str, router: str = "") -> dict:
+    """Remove a simple queue by its .id.
+
+    Args:
+        user_id: Telegram user ID
+        queue_id: The .id of the queue to remove
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/queue/simple").remove(queue_id)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Simple queue '{queue_id}' removed"}
+    except Exception as e:
+        return {"error": f"Failed to remove simple queue: {e}"}
+
+
+@mcp.tool()
+def enable_simple_queue(user_id: str, queue_id: str, router: str = "") -> dict:
+    """Enable a disabled simple queue.
+
+    Args:
+        user_id: Telegram user ID
+        queue_id: The .id of the queue to enable
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/queue/simple").update(**{".id": queue_id, "disabled": "false"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Simple queue '{queue_id}' enabled"}
+    except Exception as e:
+        return {"error": f"Failed to enable simple queue: {e}"}
+
+
+@mcp.tool()
+def disable_simple_queue(user_id: str, queue_id: str, router: str = "") -> dict:
+    """Disable a simple queue (stops bandwidth limiting without removing the rule).
+
+    Args:
+        user_id: Telegram user ID
+        queue_id: The .id of the queue to disable
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            api.path("/queue/simple").update(**{".id": queue_id, "disabled": "true"})
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Simple queue '{queue_id}' disabled"}
+    except Exception as e:
+        return {"error": f"Failed to disable simple queue: {e}"}
+
+
+# ─────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────
 

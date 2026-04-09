@@ -48,6 +48,14 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 |------|-----------|-------------|
 | `get_system_info` | `user_id, router?` | CPU, memory, uptime, board, version |
 | `get_system_identity` | `user_id, router?` | Router hostname/identity |
+| `get_system_clock` | `user_id, router?` | Router date/time |
+| `get_system_health` | `user_id, router?` | Hardware health (voltage, temp) |
+| `get_system_routerboard` | `user_id, router?` | Hardware info (serial, firmware) |
+| `list_system_users` | `user_id, router?` | RouterOS user accounts |
+| `list_system_scheduler` | `user_id, router?` | Scheduled tasks |
+| `list_system_scripts` | `user_id, router?` | RouterOS scripts |
+| `run_system_script` | `user_id, script_name, router?` | Run a script. **DOUBLE CONFIRM.** |
+| `reboot_router` | `user_id, router?` | Reboot router. **DOUBLE CONFIRM.** |
 
 ### Network
 
@@ -59,6 +67,24 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_ip_routes` | `user_id, router?` | Routing table |
 | `list_dns_settings` | `user_id, router?` | DNS configuration |
 
+### Interface Management
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `enable_interface` | `user_id, name, router?` | Enable interface. **CONFIRM.** |
+| `disable_interface` | `user_id, name, router?` | Disable interface. **CONFIRM.** |
+| `list_bridge_ports` | `user_id, router?` | Bridge port assignments |
+| `list_vlans` | `user_id, router?` | VLAN interfaces |
+
+### IP Management
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `add_ip_address` | `user_id, address, interface, comment?, router?` | Add IP to interface. **CONFIRM.** |
+| `remove_ip_address` | `user_id, address_id, router?` | Remove IP. **CONFIRM.** |
+| `list_ip_pools` | `user_id, router?` | IP address pools |
+| `list_ip_services` | `user_id, router?` | Enabled services (api, ssh, winbox, www) |
+
 ### Clients & Devices
 
 | Tool | Parameters | Description |
@@ -69,12 +95,39 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_neighbors` | `user_id, router?` | CDP/MNDP/LLDP discovered devices |
 | `list_wireless_clients` | `user_id, router?` | Connected WiFi clients |
 
+### DHCP Extended
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_dhcp_servers` | `user_id, router?` | DHCP server configs |
+| `list_dhcp_networks` | `user_id, router?` | DHCP network configs |
+| `make_dhcp_static` | `user_id, lease_id, router?` | Convert dynamic lease to static. **CONFIRM.** |
+| `remove_dhcp_lease` | `user_id, lease_id, router?` | Remove DHCP lease, force client reconnect. **CONFIRM.** |
+
+### DNS Management
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_dns_static` | `user_id, router?` | Static DNS entries |
+| `add_dns_static` | `user_id, name, address, router?` | Add static DNS. **CONFIRM.** |
+| `remove_dns_static` | `user_id, entry_id, router?` | Remove static DNS. **CONFIRM.** |
+
 ### Security
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_firewall_filter` | `user_id, router?` | Firewall filter rules |
 | `list_firewall_nat` | `user_id, router?` | NAT rules |
+
+### Firewall Extended
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_firewall_address_lists` | `user_id, router?` | Address lists |
+| `add_to_address_list` | `user_id, list_name, address, comment?, timeout?, router?` | Add IP to address list. **CONFIRM.** |
+| `remove_from_address_list` | `user_id, entry_id, router?` | Remove from address list. **CONFIRM.** |
+| `list_firewall_mangle` | `user_id, router?` | Mangle rules |
+| `list_connections` | `user_id, router?` | Active connections (first 100) |
 
 ### Hotspot
 
@@ -84,12 +137,34 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_hotspot_users` | `user_id, router?` | All hotspot user accounts |
 | `add_hotspot_user` | `user_id, username, password, profile?, router?` | Create hotspot user. **CONFIRM before calling.** |
 | `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM before calling.** |
+| `kick_hotspot_user` | `user_id, session_id, router?` | Disconnect active hotspot session. **CONFIRM.** |
+
+### Hotspot Extended
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_hotspot_profiles` | `user_id, router?` | Hotspot profiles with rate limits |
+| `list_hotspot_ip_bindings` | `user_id, router?` | IP bindings (bypass/block) |
+
+### PPP/VPN
+
+| Tool | Parameters | Description |
+|------|-----------|-------------|
+| `list_ppp_active` | `user_id, router?` | Active PPP/VPN connections |
+| `list_ppp_secrets` | `user_id, router?` | PPP user accounts |
+| `add_ppp_secret` | `user_id, name, password, service?, profile?, router?` | Add PPP user. **CONFIRM.** |
+| `remove_ppp_secret` | `user_id, name, router?` | Remove PPP user. **CONFIRM.** |
+| `kick_ppp_user` | `user_id, session_id, router?` | Disconnect active PPP/VPN session. **CONFIRM.** |
 
 ### Bandwidth
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_simple_queues` | `user_id, router?` | Bandwidth limit rules |
+| `add_simple_queue` | `user_id, name, target, max_limit, router?` | Add bandwidth limit. **CONFIRM.** |
+| `remove_simple_queue` | `user_id, queue_id, router?` | Remove queue. **CONFIRM.** |
+| `enable_simple_queue` | `user_id, queue_id, router?` | Enable queue. **CONFIRM.** |
+| `disable_simple_queue` | `user_id, queue_id, router?` | Disable queue. **CONFIRM.** |
 
 ### Logs
 
@@ -124,9 +199,29 @@ Before ANY write/destructive operation:
 - `set_default_router`
 - `add_hotspot_user`
 - `remove_hotspot_user`
+- `kick_hotspot_user`
+- `remove_dhcp_lease`
+- `kick_ppp_user`
+- `enable_interface`
+- `disable_interface`
+- `add_to_address_list`
+- `remove_from_address_list`
+- `add_ip_address`
+- `remove_ip_address`
+- `make_dhcp_static`
+- `add_dns_static`
+- `remove_dns_static`
+- `add_ppp_secret`
+- `remove_ppp_secret`
+- `add_simple_queue`
+- `remove_simple_queue`
+- `enable_simple_queue`
+- `disable_simple_queue`
 
 ### Dangerous tools (require double confirmation)
 - `run_routeros_query` — You must show the exact `api_path` you intend to use, explain what it does, then ask for confirmation twice before executing.
+- `run_system_script` — You must show the script name, explain what it does, then ask for confirmation twice before executing.
+- `reboot_router` — You must state the router name, warn about downtime, then ask for confirmation twice before executing.
 
 ## Response Guidelines
 
