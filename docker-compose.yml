@@ -9,8 +9,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
+    networks:
+      - internal
     deploy:
       resources:
         limits:
@@ -48,6 +48,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "3000:3000"
+    networks:
+      - internal
     restart: unless-stopped
     depends_on:
       postgres:
@@ -73,8 +75,8 @@ services:
       - ./mikrotik_mcp:/app/mikrotik_mcp:ro
       - ./data:/app/data
       - ./config:/app/config:ro
-    ports:
-      - "18790:18790"
+    networks:
+      - internal
     restart: unless-stopped
     depends_on:
       postgres:
@@ -91,3 +93,7 @@ services:
 volumes:
   nanobot-data:
   pgdata:
+
+networks:
+  internal:
+    driver: bridge

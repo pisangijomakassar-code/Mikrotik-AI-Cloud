@@ -72,12 +72,12 @@ export function useRouters(search?: string) {
             status: health.status,
             cpuLoad: health.cpuLoad ?? 0,
             memoryPercent: health.memoryPercent ?? 0,
-            memoryUsed: 0,
-            memoryTotal: 0,
+            memoryUsed: ((health as Record<string, unknown>).memoryTotalMB as number ?? 0) - ((health as Record<string, unknown>).memoryFreeMB as number ?? 0),
+            memoryTotal: (health as Record<string, unknown>).memoryTotalMB as number ?? 0,
             activeClients: health.activeClients ?? 0,
             uptime: health.uptime ?? "",
             version: health.version ?? "",
-            board: "",
+            board: (health as Record<string, unknown>).board as string ?? "",
           }
         : undefined,
     }

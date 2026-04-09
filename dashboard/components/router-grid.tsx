@@ -224,13 +224,13 @@ export function RouterGrid() {
                             <div className="flex items-center justify-between text-[10px] text-slate-400">
                               <span>MEM</span>
                               <span className="font-mono-tech">
-                                {Math.round(health.memoryUsed / 1024 / 1024)}/{Math.round(health.memoryTotal / 1024 / 1024)} MB
+                                {health.memoryUsed}/{health.memoryTotal} MB
                               </span>
                             </div>
                             <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-[#4cd7f6] rounded-full"
-                                style={{ width: `${Math.round((health.memoryUsed / health.memoryTotal) * 100)}%` }}
+                                style={{ width: `${health.memoryTotal > 0 ? Math.round((health.memoryUsed / health.memoryTotal) * 100) : 0}%` }}
                               />
                             </div>
                           </div>
