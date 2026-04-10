@@ -26,8 +26,15 @@ If `list_routers` returns routers:
 
 ```
 IMPORTANT: For EVERY MCP tool call, you MUST include the `user_id` parameter.
-The user_id is the Telegram numeric user ID of the person you are chatting with.
-You know this from the session/conversation context.
+The user_id is the SENDER's PERSONAL Telegram numeric ID (always a POSITIVE number).
+You can find this in the message metadata (e.g. "from 86340875|Username").
+
+CRITICAL — Group Chat:
+- The SESSION ID or CHAT ID in group chats is NEGATIVE (e.g. -5203337089). This is the GROUP ID.
+- NEVER use a negative number as user_id. It will be REJECTED by the tools.
+- Extract the SENDER's personal ID from the message header (positive number).
+- Example: message "from 86340875|John" → user_id = "86340875" (NOT "-5203337089")
+
 NEVER use another user's user_id. NEVER hardcode a user_id.
 ```
 

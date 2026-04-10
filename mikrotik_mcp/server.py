@@ -107,12 +107,30 @@ def _format_bytes(n: int | str) -> str:
     return f"{n:.1f} TB"
 
 
+def _validate_user_id(user_id: str) -> str | None:
+    """Return an error message if user_id looks like a group chat ID, else None."""
+    try:
+        uid = int(user_id)
+    except (ValueError, TypeError):
+        return f"Invalid user_id '{user_id}'. Must be a numeric Telegram user ID."
+    if uid < 0:
+        return (
+            f"ERROR: user_id '{user_id}' is a Telegram GROUP CHAT ID (negative number). "
+            "You MUST use the SENDER's personal Telegram user ID (positive number) instead. "
+            "Look at the message metadata for the sender's numeric ID."
+        )
+    return None
+
+
 def _resolve_connection(user_id: str, router: str = "") -> dict:
     """Resolve user_id + router name to connection details.
 
     Returns dict with host, port, username, password, name.
     On error returns dict with 'error' key.
     """
+    err = _validate_user_id(user_id)
+    if err:
+        return {"error": err}
     try:
         return registry.resolve(user_id, router or None)
     except ValueError as e:
@@ -128,8 +146,11 @@ def list_routers(user_id: str) -> list[dict]:
     """List all routers registered by this user.
 
     Args:
-        user_id: Telegram user ID
+        user_id: Telegram user ID (must be the sender's PERSONAL ID, not a group chat ID)
     """
+    err = _validate_user_id(user_id)
+    if err:
+        return [{"error": err}]
     return registry.list_routers(user_id)
 
 
