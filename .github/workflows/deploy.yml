@@ -61,7 +61,8 @@ jobs:
             mkdir -p data
 
             # Stop ALL containers before building (free up RAM for build)
-            docker compose down || true
+            docker compose down --remove-orphans || true
+            docker rm -f mikrotik-db mikrotik-dashboard mikrotik-agent 2>/dev/null || true
 
             # Build images one at a time to limit RAM usage
             echo "Building mikrotik-agent..."
