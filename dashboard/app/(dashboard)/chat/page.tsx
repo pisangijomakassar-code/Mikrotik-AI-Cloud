@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Bot, User, Send, Paperclip, Mic, Heart, Shield, FileText, Cpu, Wifi, Plus, MessageSquare, Trash2, Pencil, Check, X, HardDrive, Router } from "lucide-react"
+import { Bot, User, Send, Paperclip, Heart, Shield, FileText, Cpu, Wifi, Plus, MessageSquare, Trash2, Pencil, Check, X, HardDrive, Router } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -234,8 +234,7 @@ export default function ChatPage() {
           </div>
           <div className="relative max-w-4xl mx-auto">
             <div className="flex items-center p-2 rounded-2xl shadow-2xl" style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)" }}>
-              <button className="p-3 text-slate-400 hover:text-cyan-400 transition-colors"><Mic className="h-5 w-5" /></button>
-              <input className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-4" placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() }}} disabled={isLoading} />
+              <input className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-4 pl-5" placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() }}} disabled={isLoading} />
               <div className="flex items-center gap-2 pr-2">
                 <label className="p-2 text-slate-400 hover:text-slate-200 transition-colors">
                   <Paperclip className="h-5 w-5" />
@@ -274,7 +273,7 @@ export default function ChatPage() {
               <div
                 key={conv.id}
                 className={cn(
-                  "group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors",
+                  "group/conv flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors relative",
                   activeId === conv.id
                     ? "bg-[#222a3d] text-[#4cd7f6]"
                     : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-300"
@@ -291,7 +290,7 @@ export default function ChatPage() {
                       onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setEditingConvId(null) }}
                       autoFocus
                     />
-                    <button onClick={saveRename} className="p-0.5 text-[#4ae176] hover:text-[#4ae176]">
+                    <button onClick={saveRename} className="p-0.5 text-[#4ae176]">
                       <Check className="h-3 w-3" />
                     </button>
                     <button onClick={() => setEditingConvId(null)} className="p-0.5 text-slate-500 hover:text-slate-300">
@@ -304,16 +303,16 @@ export default function ChatPage() {
                       <p className="text-xs truncate">{conv.title}</p>
                       <p className="text-[10px] text-slate-600">{conv.messages.length - 1} messages</p>
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+                    <div className="hidden group-hover/conv:flex items-center gap-0.5 shrink-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); startRename(conv.id, conv.title) }}
-                        className="p-1 text-slate-600 hover:text-[#4cd7f6]"
+                        className="p-1 text-slate-600 hover:text-[#4cd7f6] transition-colors"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
-                        className="p-1 text-slate-600 hover:text-[#ffb4ab]"
+                        className="p-1 text-slate-600 hover:text-[#ffb4ab] transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
