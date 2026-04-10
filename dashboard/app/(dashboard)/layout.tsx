@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/sidebar"
 import { TopNavBar } from "@/components/top-navbar"
+import { SidebarProvider } from "@/components/sidebar-context"
 import { useAuth } from "@/hooks/use-auth"
 
 export default function DashboardLayout({
@@ -36,12 +37,14 @@ export default function DashboardLayout({
   }
 
   return (
+    <SidebarProvider>
     <div className="min-h-screen bg-[#0b1326] text-[#dae2fd]">
       <Sidebar />
       <TopNavBar />
-      <main className="ml-64 p-8 min-h-screen">
+      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">
         {children}
       </main>
     </div>
+    </SidebarProvider>
   )
 }

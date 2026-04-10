@@ -68,9 +68,9 @@ export function AddUserDialog() {
       {/* Modal Overlay */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
             {/* Header */}
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Provision New User</h3>
                 <p className="text-sm text-slate-500">Configure credentials for AI network control.</p>
@@ -85,8 +85,8 @@ export function AddUserDialog() {
 
             {/* Form Body */}
             <form onSubmit={handleSubmit}>
-              <div className="p-8 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+              <div className="p-4 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
                     <Input
@@ -110,7 +110,7 @@ export function AddUserDialog() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
                     <Input
@@ -162,7 +162,7 @@ export function AddUserDialog() {
                     </span>
                     <div className="px-3 py-1 bg-[#4cd7f6] text-[#003640] text-[10px] font-bold rounded-lg">Standard Tier</div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <label className="flex items-center gap-3 cursor-pointer group">
                       <div className="w-5 h-5 rounded border border-white/20 flex items-center justify-center group-hover:border-[#4cd7f6] transition-colors">
                         <Check className="h-3 w-3 text-[#4cd7f6]" />
@@ -180,7 +180,7 @@ export function AddUserDialog() {
               </div>
 
               {/* Footer */}
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => { setOpen(false); resetForm() }}

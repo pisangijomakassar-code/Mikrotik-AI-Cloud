@@ -151,7 +151,7 @@ export default function CommunicationPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main form card */}
         <div className="col-span-12 lg:col-span-8">
           <div
@@ -167,7 +167,7 @@ export default function CommunicationPage() {
               <label className="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-widest mb-3 block">
                 Recipient Type
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={() => setMode("single")}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer ${
@@ -330,7 +330,7 @@ export default function CommunicationPage() {
             <button
               onClick={handleSend}
               disabled={!canSend || sendMutation.isPending}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[#06b6d4] hover:bg-[#4cd7f6] text-[#00424f]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[#06b6d4] hover:bg-[#4cd7f6] text-[#00424f]"
             >
               {sendMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

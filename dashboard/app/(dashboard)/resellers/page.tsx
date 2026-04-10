@@ -337,8 +337,8 @@ export default function ResellersPage() {
       {/* Add Reseller Dialog */}
       {showAddDialog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add Reseller</h3>
                 <p className="text-sm text-slate-500">Create a new reseller account.</p>
@@ -351,7 +351,7 @@ export default function ResellersPage() {
               </button>
             </div>
             <form onSubmit={handleAddSubmit}>
-              <div className="p-8 space-y-6">
+              <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name *</label>
                   <Input
@@ -362,7 +362,7 @@ export default function ResellersPage() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Phone</label>
                     <Input
@@ -394,7 +394,7 @@ export default function ResellersPage() {
                   />
                 </div>
               </div>
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => { setShowAddDialog(false); resetAddForm() }}
@@ -418,8 +418,8 @@ export default function ResellersPage() {
       {/* Edit Reseller Dialog */}
       {showEditDialog && editReseller && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Edit Reseller</h3>
                 <p className="text-sm text-slate-500">Update reseller information.</p>
@@ -432,7 +432,7 @@ export default function ResellersPage() {
               </button>
             </div>
             <form onSubmit={handleEditSubmit}>
-              <div className="p-8 space-y-6">
+              <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name</label>
                   <Input
@@ -441,7 +441,7 @@ export default function ResellersPage() {
                     onChange={(e) => setEditName(e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Phone</label>
                     <Input
@@ -472,7 +472,7 @@ export default function ResellersPage() {
                   </Select>
                 </div>
               </div>
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => { setShowEditDialog(false); setEditReseller(null) }}
@@ -496,8 +496,8 @@ export default function ResellersPage() {
       {/* Saldo Top Up / Top Down Dialog */}
       {showSaldoDialog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-md bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="w-full max-w-md mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">
                   {showSaldoDialog.type === "topup" ? "Top Up Saldo" : "Top Down Saldo"}
@@ -514,7 +514,7 @@ export default function ResellersPage() {
               </button>
             </div>
             <form onSubmit={handleSaldoSubmit}>
-              <div className="p-8 space-y-6">
+              <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
                   <Input
@@ -537,7 +537,7 @@ export default function ResellersPage() {
                   />
                 </div>
               </div>
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => setShowSaldoDialog(null)}

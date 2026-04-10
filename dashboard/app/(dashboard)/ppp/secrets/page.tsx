@@ -65,8 +65,8 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+      <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
           <div>
             <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add PPP Secret</h3>
             <p className="text-sm text-slate-500">Create a new PPP user account.</p>
@@ -80,8 +80,8 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+          <div className="p-4 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name</label>
                 <Input
@@ -105,7 +105,7 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Service</label>
                 <Select value={service} onValueChange={setService}>
@@ -137,7 +137,7 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Local Address</label>
                 <Input
@@ -171,7 +171,7 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={() => { onClose(); resetForm() }}
@@ -254,14 +254,14 @@ export default function PPPSecretsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Local Address</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Remote Address</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Comment</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Local Address</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Remote Address</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -269,7 +269,7 @@ export default function PPPSecretsPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-6 py-5">
+                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
                     ))}
@@ -290,24 +290,24 @@ export default function PPPSecretsPage() {
                   const disabled = secret.disabled === true || secret.disabled === "true"
                   return (
                     <tr key={secret.name as string} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-6 py-5">
-                        <span className="text-sm font-bold text-[#dae2fd]">{secret.name as string}</span>
+                      <td className="px-3 py-3 md:px-6 md:py-5">
+                        <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{secret.name as string}</span>
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="px-3 py-3 md:px-6 md:py-5">
                         <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium uppercase">
                           {(secret.service as string) || "any"}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-sm text-slate-400">
+                      <td className="px-3 py-3 md:px-6 md:py-5 text-xs md:text-sm text-slate-400">
                         {(secret.profile as string) || "--"}
                       </td>
-                      <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
+                      <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
                         {(secret["local-address"] as string) || "--"}
                       </td>
-                      <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
+                      <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
                         {(secret["remote-address"] as string) || "--"}
                       </td>
-                      <td className="px-6 py-5">
+                      <td className="px-3 py-3 md:px-6 md:py-5">
                         {disabled ? (
                           <span className="text-xs px-2.5 py-1 rounded-full bg-[#93000a]/20 text-[#ffb4ab] font-medium">
                             Disabled
@@ -318,10 +318,10 @@ export default function PPPSecretsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-5 text-sm text-slate-400 max-w-[160px] truncate">
+                      <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 max-w-[160px] truncate hidden md:table-cell">
                         {(secret.comment as string) || "--"}
                       </td>
-                      <td className="px-6 py-5 text-right">
+                      <td className="px-3 py-3 md:px-6 md:py-5 text-right">
                         <ConfirmDialog
                           trigger={
                             <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
@@ -345,7 +345,7 @@ export default function PPPSecretsPage() {
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
-          <span className="text-xs text-slate-500">
+          <span className="text-[10px] md:text-xs text-slate-500">
             Showing {filteredSecrets?.length ?? 0} of {secrets?.length ?? 0} secrets
           </span>
         </div>

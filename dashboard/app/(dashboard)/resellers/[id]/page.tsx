@@ -476,8 +476,8 @@ export default function ResellerDetailPage({
       {/* Saldo Dialog */}
       {showSaldoDialog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-md bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="w-full max-w-md mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">
                   {showSaldoDialog === "topup" ? "Top Up Saldo" : "Top Down Saldo"}
@@ -494,7 +494,7 @@ export default function ResellerDetailPage({
               </button>
             </div>
             <form onSubmit={handleSaldoSubmit}>
-              <div className="p-8 space-y-6">
+              <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
                   <Input
@@ -517,7 +517,7 @@ export default function ResellerDetailPage({
                   />
                 </div>
               </div>
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => setShowSaldoDialog(null)}
@@ -550,8 +550,8 @@ export default function ResellerDetailPage({
       {/* Generate Voucher Dialog */}
       {showVoucherDialog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Generate Vouchers</h3>
                 <p className="text-sm text-slate-500">Create hotspot vouchers for {reseller.name}</p>
@@ -564,7 +564,7 @@ export default function ResellerDetailPage({
               </button>
             </div>
             <form onSubmit={handleGenerateVouchers}>
-              <div className="p-8 space-y-6">
+              <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile *</label>
                   <Select value={vProfile || "__default__"} onValueChange={(v) => setVProfile(v === "__default__" ? "" : v)}>
@@ -588,7 +588,7 @@ export default function ResellerDetailPage({
                     onChange={(e) => setVRouter(e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Count *</label>
                     <Input
@@ -639,7 +639,7 @@ export default function ResellerDetailPage({
                   </div>
                 </div>
               </div>
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => setShowVoucherDialog(false)}

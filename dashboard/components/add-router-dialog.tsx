@@ -72,9 +72,9 @@ export function AddRouterDialog() {
       {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
             {/* Header */}
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Provision Node</h3>
                 <p className="text-sm text-slate-500">Add a new MikroTik router to the management system.</p>
@@ -89,8 +89,8 @@ export function AddRouterDialog() {
 
             {/* Form Body */}
             <form onSubmit={handleSubmit}>
-              <div className="p-8 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
+              <div className="p-4 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name</label>
                     <Input
@@ -113,7 +113,7 @@ export function AddRouterDialog() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                   <div className="col-span-2 space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Host / IP Address</label>
                     <Input
@@ -136,7 +136,7 @@ export function AddRouterDialog() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
                     <Input
@@ -172,7 +172,7 @@ export function AddRouterDialog() {
               </div>
 
               {/* Footer */}
-              <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => { setOpen(false); resetForm() }}

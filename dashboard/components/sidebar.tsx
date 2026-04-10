@@ -29,6 +29,8 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
+import { useSidebar } from "@/components/sidebar-context"
+import { X } from "lucide-react"
 
 interface NavItem {
   label: string
@@ -154,12 +156,14 @@ function CollapsibleGroup({
   pathname,
   isOpen,
   onToggle,
+  onNavClick,
 }: {
   group: NavGroup
   isAdmin: boolean
   pathname: string
   isOpen: boolean
   onToggle: () => void
+  onNavClick: () => void
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined)
@@ -215,6 +219,7 @@ function CollapsibleGroup({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavClick}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 transition-all duration-300",
                 isActive
@@ -236,6 +241,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user, isAdmin } = useAuth()
   const planInfo = usePlanInfo()
+  const { isOpen, close } = useSidebar()
 
   // Determine which groups to show (filter adminOnly groups)
   const visibleGroups = useMemo(
@@ -305,7 +311,24 @@ export function Sidebar() {
     : "?"
 
   return (
-    <aside className="flex flex-col fixed left-0 top-0 h-full h-screen w-64 border-r border-cyan-900/20 bg-slate-950 shadow-[0_0_32px_rgba(76,215,246,0.08)] z-50">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[55] bg-black/50 lg:hidden" onClick={close} />
+      )}
+    <aside className={cn(
+      "flex flex-col fixed left-0 top-0 h-full h-screen w-64 border-r border-cyan-900/20 bg-slate-950 shadow-[0_0_32px_rgba(76,215,246,0.08)] z-[60] transition-transform duration-300",
+      isOpen ? "translate-x-0" : "-translate-x-full",
+      "lg:translate-x-0"
+    )}>
+      {/* Mobile close button */}
+      <button
+        onClick={close}
+        className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white lg:hidden"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
       {/* Logo */}
       <div className="p-6 flex flex-col gap-1">
         <div className="flex items-center gap-3">
@@ -336,6 +359,7 @@ export function Sidebar() {
               pathname={pathname ?? ""}
               isOpen={!!openState[group.label]}
               onToggle={() => toggleGroup(group.label)}
+              onNavClick={() => { if (window.innerWidth < 1024) close() }}
             />
           </div>
         ))}
@@ -378,5 +402,6 @@ export function Sidebar() {
         </Link>
       </div>
     </aside>
+    </>
   )
 }

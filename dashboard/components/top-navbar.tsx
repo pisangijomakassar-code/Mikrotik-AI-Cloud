@@ -1,8 +1,9 @@
 "use client"
 
-import { ShieldCheck, Cpu, Bell, LogOut, User, Settings, CreditCard } from "lucide-react"
+import { ShieldCheck, Cpu, Bell, LogOut, User, Settings, CreditCard, Menu } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { useSidebar } from "@/components/sidebar-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +15,18 @@ import {
 
 export function TopNavBar() {
   const router = useRouter()
+  const { toggle } = useSidebar()
 
   return (
-    <header className="flex items-center justify-between px-8 ml-64 w-[calc(100%-16rem)] h-16 sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 font-headline font-medium">
-      <div className="flex items-center gap-6" />
+    <header className="flex items-center justify-between px-4 lg:px-8 lg:ml-64 w-full lg:w-[calc(100%-16rem)] h-16 sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 font-headline font-medium">
+      <div className="flex items-center gap-6">
+        <button
+          onClick={toggle}
+          className="p-2 text-slate-400 hover:text-cyan-300 transition-colors lg:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.push("/routers")}

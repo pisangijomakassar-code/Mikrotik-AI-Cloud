@@ -59,8 +59,8 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+      <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
           <div>
             <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add Hotspot User</h3>
             <p className="text-sm text-slate-500">Create a new hotspot user account.</p>
@@ -74,8 +74,8 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="p-8 space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+          <div className="p-4 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
                 <Input
@@ -98,7 +98,7 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile</label>
                 <Select value={profile || "__default__"} onValueChange={(v) => setProfile(v === "__default__" ? "" : v)}>
@@ -124,7 +124,7 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Limit Uptime</label>
                 <Input
@@ -148,7 +148,7 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={() => { onClose(); resetForm() }}
@@ -260,13 +260,13 @@ export default function HotspotUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Server</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Limit Uptime</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Comment</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Limit Uptime</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
+                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -274,7 +274,7 @@ export default function HotspotUsersPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-6 py-5">
+                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
                     ))}
@@ -293,21 +293,21 @@ export default function HotspotUsersPage() {
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.name} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-[#dae2fd]">{user.name}</span>
+                    <td className="px-3 py-3 md:px-6 md:py-5">
+                      <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{user.name}</span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-3 py-3 md:px-6 md:py-5">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium">
                         {user.profile || "--"}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-sm text-slate-400">
+                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 hidden md:table-cell">
                       {user.server || "all"}
                     </td>
-                    <td className="px-6 py-5 text-sm text-slate-400 font-mono-tech">
+                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
                       {user["limit-uptime"] || "--"}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-3 py-3 md:px-6 md:py-5">
                       <div
                         className={cn(
                           "w-10 h-5 rounded-full relative p-1 cursor-pointer transition-colors",
@@ -325,10 +325,10 @@ export default function HotspotUsersPage() {
                         />
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-sm text-slate-400 max-w-[200px] truncate">
+                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 max-w-[200px] truncate hidden md:table-cell">
                       {user.comment || "--"}
                     </td>
-                    <td className="px-6 py-5 text-right">
+                    <td className="px-3 py-3 md:px-6 md:py-5 text-right">
                       <ConfirmDialog
                         trigger={
                           <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
@@ -351,7 +351,7 @@ export default function HotspotUsersPage() {
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
-          <span className="text-xs text-slate-500">
+          <span className="text-[10px] md:text-xs text-slate-500">
             Showing {filteredUsers?.length ?? 0} of {users?.length ?? 0} users
           </span>
         </div>
