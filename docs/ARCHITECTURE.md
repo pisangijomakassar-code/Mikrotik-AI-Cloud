@@ -2,18 +2,22 @@
 
 ## Overview
 
-AI-powered MikroTik router management service. Paid users interact with a shared Telegram bot to monitor and manage their MikroTik routers using natural language. A single Nanobot instance serves all provisioned users with full data isolation.
+AI-powered MikroTik router management service. Each paid user gets their own dedicated AI agent — powered by [Nanobot](https://github.com/nanobot-ai/nanobot) — to monitor and manage their MikroTik routers using natural language via Telegram.
+
+**Core concept: 1 User = 1 Agent.** Every user interacts with their own personal AI agent that knows their routers, remembers their conversation history, and operates independently from other users' agents. Nanobot serves as the agent runtime, providing session isolation, LLM orchestration, and MCP tool execution per user.
 
 ## Core Principle
 
 ```
-1 Nanobot Instance (shared) → N Users (paid, manually provisioned) → Each User has N Routers
+1 Nanobot Gateway → N Agents (1 per user) → Each Agent manages N Routers
 ```
 
-- **Single deployment** — one Docker container runs the entire service
+- **1 Agent = 1 User** — every provisioned user has their own dedicated AI agent with isolated context, memory, and router data
+- **Nanobot as agent runtime** — Nanobot provides the agent framework: session isolation, LLM orchestration, MCP tool routing, and conversation memory per user
+- **Single deployment** — one Docker container runs the Nanobot gateway, which spawns and manages individual user agents
 - **Paid access** — admin manually provisions users after payment
-- **Conversational setup** — once granted access, users self-register their routers via chat
-- **Per-user isolation** — each user's routers and data are fully separated within the same Nanobot gateway
+- **Conversational setup** — once granted access, users self-register their routers via chat with their personal agent
+- **Full isolation** — Agent A cannot access Agent B's routers, conversation history, or data
 
 ---
 
@@ -22,11 +26,62 @@ AI-powered MikroTik router management service. Paid users interact with a shared
 This is a **paid access service**, not a public/free bot.
 
 1. **Payment** — User pays for access (handled outside the system)
-2. **Provisioning** — Admin adds the user's Telegram numeric ID to the `allowFrom` list in `config/config.json` and redeploys
-3. **Self-service onboarding** — Once allowed, the user messages the Telegram bot, and the agent guides them through registering their MikroTik routers
-4. **Usage** — User manages their routers through natural language chat
+2. **Provisioning** — Admin adds the user's Telegram numeric ID to the `allowFrom` list in `config/config.json` and redeploys. This effectively creates a new agent for the user.
+3. **Self-service onboarding** — Once provisioned, the user messages the Telegram bot and their personal agent guides them through registering their MikroTik routers
+4. **Usage** — User manages their routers through natural language chat with their dedicated agent
 
-Users cannot access the bot unless their Telegram ID is explicitly listed in `allowFrom`. There is no self-registration or public access.
+Users cannot access the bot unless their Telegram ID is explicitly listed in `allowFrom`. There is no self-registration or public access. Each provisioned user gets their own isolated agent.
+
+---
+
+## Agent Model — 1 Agent per User
+
+Nanobot is the AI agent runtime. It does not serve users directly as a shared chatbot — instead, it creates and manages **one dedicated agent per user**.
+
+### What is an Agent?
+
+An agent is an isolated AI assistant instance that belongs to a single user. Each agent has:
+
+| Property        | Scope                                                                   |
+| --------------- | ----------------------------------------------------------------------- |
+| **Session**     | Isolated — Agent A's conversation is invisible to Agent B               |
+| **Memory**      | Per-user — each agent remembers its own user's context                  |
+| **Router data** | Isolated — PostgreSQL rows scoped by `userId` FK, encrypted credentials |
+| **LLM context** | Separate — each agent gets its own conversation thread                  |
+| **Personality** | Shared — all agents share the same SOUL.md personality                  |
+| **Skills**      | Shared — all agents use the same SKILL.md tool instructions             |
+| **MCP tools**   | Shared — all agents access the same 137 tools, but scoped by `user_id`  |
+
+### How it works
+
+```
+User A sends message
+  → Nanobot identifies User A (Telegram ID)
+  → Nanobot routes to Agent A (User A's dedicated agent)
+  → Agent A processes using its own session/memory
+  → Agent A calls MCP tools with user_id = User A
+  → MCP loads only User A's router data
+  → Agent A responds to User A
+```
+
+### Why 1:1?
+
+- **Privacy** — users never see each other's data or conversations
+- **Context** — each agent builds up context about its user's specific routers and habits
+- **Reliability** — one user's heavy usage doesn't pollute another user's agent context
+- **Simplicity** — the MCP server only needs to scope by `user_id`, no complex multi-tenant logic
+
+### Shared vs. Isolated
+
+```
+SHARED (one copy for all agents):          ISOLATED (one copy per agent):
+├── LLM model (GPT-5.4 Nano)              ├── Conversation session
+├── SOUL.md (personality)                  ├── Conversation memory
+├── SKILL.md (tool instructions)           ├── Router data (PostgreSQL rows, encrypted)
+├── MCP Server (137 tools)                 └── LLM context window
+├── PostgreSQL database
+└── Docker containers
+```
 
 ---
 
@@ -40,39 +95,57 @@ Users cannot access the bot unless their Telegram ID is explicitly listed in `al
 │  via @MikrotikAgentBot    via @MikrotikAgentBot                │
 │                                                                │
 │  (Only users listed in allowFrom can interact)                 │
-└──────────────────────────────┬─────────────────────────────────┘
-                               │
-                               ▼
+└──────────────┬───────────────────────────┬─────────────────────┘
+               │                           │
+               ▼                           ▼
 ┌────────────────────────────────────────────────────────────────┐
-│                  NANOBOT GATEWAY (single instance)              │
+│                  NANOBOT GATEWAY (agent runtime)               │
 │                                                                │
-│  ┌────────────┐  ┌─────────────┐  ┌────────────────────────┐  │
-│  │    LLM     │  │   Memory    │  │   Skills               │  │
-│  │  Gemini    │  │   (Dream)   │  │   - mikrotik-admin     │  │
-│  │  2.5 Flash │  │  per-session │  │                        │  │
-│  │  Lite via  │  │             │  │   Personality:          │  │
-│  │  OpenRouter│  │             │  │   - config/SOUL.md      │  │
-│  └─────┬──────┘  └─────────────┘  └────────────────────────┘  │
-│        │                                                       │
-│        ▼                                                       │
+│  Nanobot manages one dedicated AI agent per user.              │
+│  Each agent has its own session, memory, and context.          │
+│                                                                │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐     │
+│  │   AGENT A (User A)      │  │   AGENT B (User B)      │     │
+│  │                         │  │                         │     │
+│  │  Session: isolated      │  │  Session: isolated      │     │
+│  │  Memory:  per-user      │  │  Memory:  per-user      │     │
+│  │  Context: User A only   │  │  Context: User B only   │     │
+│  │  Routers: UmmiNEW,      │  │  Routers: Warnet        │     │
+│  │           Kantor        │  │                         │     │
+│  └────────────┬────────────┘  └────────────┬────────────┘     │
+│               │                            │                   │
+│  ┌────────────┴────────────────────────────┴────────────┐     │
+│  │               SHARED INFRASTRUCTURE                   │     │
+│  │                                                       │     │
+│  │  ┌────────────┐  ┌────────────────────────────────┐  │     │
+│  │  │    LLM     │  │   Skills & Personality          │  │     │
+│  │  │  GPT-5.4   │  │   - mikrotik-admin (SKILL.md)  │  │     │
+│  │  │  Nano via  │  │   - SOUL.md (personality)       │  │     │
+│  │  │  OpenRouter│  │                                 │  │     │
+│  │  └────────────┘  └────────────────────────────────┘  │     │
+│  └──────────────────────────────────────────────────────┘     │
+│                                                                │
 │  ┌────────────────────────────────────────────────────────┐   │
-│  │              MikroTik MCP Server (66 tools)             │   │
+│  │              MikroTik MCP Server (137 tools)             │   │
+│  │                                                         │   │
+│  │  All tools scoped to user_id — each agent can only      │   │
+│  │  access its own user's router data.                     │   │
 │  │                                                         │   │
 │  │  ┌───────────────────────────────────────────────────┐ │   │
 │  │  │            Per-User Router Registry                │ │   │
 │  │  │                                                    │ │   │
 │  │  │  data/                                             │ │   │
-│  │  │  ├── 86340875.json   (User A's routers)           │ │   │
+│  │  │  ├── 86340875.json   (Agent A's routers)          │ │   │
 │  │  │  │   ├── UmmiNEW   → id30.tunnel.my.id:12065     │ │   │
 │  │  │  │   └── Kantor    → office.tunnel.my.id:8728    │ │   │
 │  │  │  │                                                │ │   │
-│  │  │  ├── 12345678.json   (User B's routers)           │ │   │
+│  │  │  ├── 12345678.json   (Agent B's routers)          │ │   │
 │  │  │  │   └── Warnet    → warnet.tunnel.my.id:8728    │ │   │
 │  │  │  │                                                │ │   │
 │  │  │  └── ...                                          │ │   │
 │  │  └───────────────────────────────────────────────────┘ │   │
 │  │                                                         │   │
-│  │  Tools (66 total, all scoped to user_id):               │   │
+│  │  Tools (100+ total, all scoped to user_id):               │   │
 │  │  ├─ Router Mgmt: register/remove/list/set_default       │   │
 │  │  ├─ System: info, identity, clock, health, routerboard  │   │
 │  │  │          users, scheduler, scripts, reboot            │   │
@@ -90,15 +163,14 @@ Users cannot access the bot unless their Telegram ID is explicitly listed in `al
 │  │  └─ Advanced: raw RouterOS API query                     │   │
 │  └────────────────────────────────────────────────────────┘   │
 └───────────────────────────────────────────────────────────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              ▼                ▼                ▼
-     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-     │  MikroTik A  │ │  MikroTik B  │ │  MikroTik C  │
-     │  User A      │ │  User A      │ │  User B      │
-     │  hEX v6      │ │  RB750 v7    │ │  CCR v7      │
-     │  :12065      │ │  :8728       │ │  :8728       │
-     └──────────────┘ └──────────────┘ └──────────────┘
+               │                            │
+               ▼                            ▼
+      ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+      │  MikroTik A  │ │  MikroTik B  │ │  MikroTik C  │
+      │  Agent A     │ │  Agent A     │ │  Agent B     │
+      │  hEX v6      │ │  RB750 v7    │ │  CCR v7      │
+      │  :12065      │ │  :8728       │ │  :8728       │
+      └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
 ---
@@ -138,7 +210,7 @@ Redeploy to apply changes.
 
 ### Step 2: First Contact
 
-User messages the bot. The agent detects they have no routers and guides them through registration.
+User messages the bot. Nanobot creates a dedicated agent for the user. The agent detects they have no routers and guides them through registration.
 
 ```
 User:  /start
@@ -183,90 +255,109 @@ Bot:   15 user online di Kantor
 
 ## Data Flow
 
-### Read Query (scoped to user)
+### Read Query (agent-scoped)
+
 ```
 User A: "Berapa client online di Kantor?"
   │
-  ├─ Nanobot → Session: identify user_id = 86340875
-  ├─ LLM → MCP: count_active_clients(user_id="86340875", router="Kantor")
+  ├─ Nanobot → Route to Agent A (user_id = 86340875)
+  ├─ Agent A → MCP: count_active_clients(user_id="86340875", router="Kantor")
   ├─ MCP → Registry: load data/86340875.json → find "Kantor"
   ├─ MCP → RouterOS API: connect office.tunnel.my.id:8728
-  ├─ MCP → LLM: {active_clients: 15}
-  └─ LLM → User A: "15 user online di Kantor"
+  ├─ MCP → Agent A: {active_clients: 15}
+  └─ Agent A → User A: "15 user online di Kantor"
 ```
 
-### User Isolation
+### Agent Isolation
+
 ```
-User A asks: "List routers"  →  sees: UmmiNEW, Kantor
-User B asks: "List routers"  →  sees: Warnet
+Agent A (User A): "List routers"  →  sees: UmmiNEW, Kantor
+Agent B (User B): "List routers"  →  sees: Warnet
 ```
 
-User A cannot see or access User B's routers. The MCP server enforces this by loading only the requesting user's registry file.
+Agent A cannot see or access Agent B's routers. Each agent only has access to its own user's data, enforced by the MCP server loading only the requesting agent's user registry file.
 
 ### Write Operation (with confirmation)
+
 ```
-User: "Hapus user hotspot tamu di UmmiNEW"
+User A: "Hapus user hotspot tamu di UmmiNEW"
   │
-  ├─ LLM: detect destructive action → ask confirmation
-  ├─ Bot → User: "Mau hapus user hotspot tamu di UmmiNEW nih, lanjut? (ya/tidak)"
-  ├─ User: "ya"
-  ├─ LLM → MCP: remove_hotspot_user(user_id=..., router="UmmiNEW", username="tamu")
-  └─ Bot → User: "User tamu udah dihapus dari UmmiNEW"
+  ├─ Agent A: detect destructive action → ask confirmation
+  ├─ Agent A → User A: "Mau hapus user hotspot tamu di UmmiNEW nih, lanjut? (ya/tidak)"
+  ├─ User A: "ya"
+  ├─ Agent A → MCP: remove_hotspot_user(user_id=..., router="UmmiNEW", username="tamu")
+  └─ Agent A → User A: "User tamu udah dihapus dari UmmiNEW"
 ```
 
 ---
 
 ## Per-User Router Registry
 
-### Storage Structure
+### Storage: PostgreSQL (Production)
+
+Router data is stored in PostgreSQL, shared with the admin dashboard via Prisma. The MCP server accesses the same database directly using `psycopg2` (`registry_pg.py`).
+
+**Database tables** (Prisma schema at `dashboard/prisma/schema.prisma`):
 
 ```
-data/
-├── 86340875.json          # User A (Neutron)
-├── 12345678.json          # User B
-├── 99887766.json          # User C
-└── ...
+"User" table:
+  id, email, name, telegramId, role, status, isProvisioned, ...
+
+"Router" table:
+  id, name, host, port, username, passwordEnc (Fernet-encrypted),
+  label, routerosVersion, board, isDefault, addedAt, lastSeen, userId (FK → User)
+
+"ActivityLog" table:
+  id, timestamp, action, tool, status, durationMs, details, userId, routerId
 ```
 
-### Registry File Format
+**Unique constraints**: `(userId, name)` on Router — each user's routers must have unique names.
 
-File: `data/{telegram_user_id}.json`
-
-```json
-{
-  "version": 1,
-  "user_id": "86340875",
-  "default_router": "UmmiNEW",
-  "routers": {
-    "UmmiNEW": {
-      "host": "id30.tunnel.my.id",
-      "port": 12065,
-      "username": "Ejen4li",
-      "password": "<encrypted>",
-      "label": "Router Rumah Ummi",
-      "routeros_version": "6.49.8",
-      "board": "hEX",
-      "added_at": "2026-04-09T10:00:00Z",
-      "last_seen": "2026-04-09T16:45:00Z"
-    },
-    "Kantor": {
-      "host": "office.tunnel.my.id",
-      "port": 8728,
-      "username": "admin",
-      "password": "<encrypted>",
-      "label": "Router Kantor Pusat",
-      "routeros_version": "7.14",
-      "board": "RB750Gr3",
-      "added_at": "2026-04-10T08:00:00Z",
-      "last_seen": "2026-04-10T15:30:00Z"
-    }
-  }
-}
+**Example data relationship**:
 ```
+User (telegramId: "86340875")
+  ├── Router: UmmiNEW  → id30.tunnel.my.id:12065  (isDefault: true)
+  └── Router: Kantor   → office.tunnel.my.id:8728  (isDefault: false)
+
+User (telegramId: "12345678")
+  └── Router: Warnet   → warnet.tunnel.my.id:8728  (isDefault: true)
+```
+
+### Registry Implementation
+
+The MCP server selects the registry backend at startup (`server.py`):
+
+```python
+if DATABASE_URL:
+    from registry_pg import RouterRegistryPG
+    registry = RouterRegistryPG(database_url=DATABASE_URL)  # Production
+else:
+    from registry import RouterRegistry
+    registry = RouterRegistry(data_dir=DATA_DIR)             # Legacy fallback (JSON files)
+```
+
+`RouterRegistryPG` uses a threaded connection pool (1-10 connections) and speaks directly to the same PostgreSQL database that the dashboard manages via Prisma. Both share the same `"User"` and `"Router"` tables with PascalCase quoted identifiers.
+
+### Credential Encryption
+
+All router passwords are encrypted with **Fernet symmetric encryption** before storage:
+
+```
+Registration: password → crypto.encrypt() → stored as passwordEnc in "Router" table
+Connection:   passwordEnc → crypto.decrypt() → used for RouterOS API login (server-side only)
+```
+
+- Master key auto-generated at first run, stored at `data/.master_key` (chmod 600)
+- Implementation: `mikrotik_mcp/crypto.py` using `cryptography.fernet.Fernet`
+- Both `registry_pg.py` (PostgreSQL) and `registry.py` (JSON) use the same `CredentialStore`
+
+### Legacy: JSON File Registry (Fallback)
+
+When `DATABASE_URL` is not set, the system falls back to per-user JSON files in `data/{user_id}.json`. This mode is only used for local development without a database.
 
 ### How user_id Reaches MCP Tools
 
-Nanobot's session system identifies each Telegram user by their numeric ID. The LLM knows the user's identity from the session context. The skill instructs the LLM to always pass `user_id` when calling MCP tools.
+Each agent is bound to a specific user via Nanobot's session system. When a Telegram message arrives, Nanobot identifies the user by their numeric Telegram ID and routes the message to that user's agent. The agent knows its user's identity from the session context. The skill (SKILL.md) instructs the agent to always pass `user_id` when calling MCP tools, ensuring data isolation at the tool level.
 
 ```
 SKILL.md:
@@ -279,9 +370,9 @@ SKILL.md:
 
 All query tools accept `user_id` (required) + `router` (optional):
 
-1. Load `data/{user_id}.json`
+1. Look up `User` by `telegramId`, then load their `Router` records from PostgreSQL
 2. If `router` param provided → use that router
-3. If not provided → use `default_router`
+3. If not provided → use the router where `isDefault = true`
 4. If no routers exist → return error message guiding user to add one
 5. Special keyword `"all"` → query all of this user's routers
 
@@ -291,14 +382,15 @@ All query tools accept `user_id` (required) + `router` (optional):
 
 ### Access Control
 
-| Layer | Mechanism |
-|-------|-----------|
-| **Bot access** | `allowFrom` in config — only manually provisioned Telegram user IDs can interact |
-| **Data isolation** | Per-user JSON files — MCP server only loads requesting user's data |
-| **Write operations** | LLM-enforced confirmation before destructive actions |
-| **Credentials** | Encrypted at rest (Fernet); never sent through LLM context after registration |
-| **Network** | RouterOS API via tunnel; credentials stay server-side |
-| **Container** | Docker; resource limits (1 CPU, 1GB RAM) |
+| Layer                | Mechanism                                                                        |
+| -------------------- | -------------------------------------------------------------------------------- |
+| **Bot access**       | `allowFrom` in config — only manually provisioned Telegram user IDs can interact |
+| **Data isolation**   | PostgreSQL with per-user scoping — MCP server queries only the requesting user's routers via `telegramId → userId` |
+| **Write operations** | LLM-enforced confirmation before destructive actions                             |
+| **Credentials**      | Encrypted at rest (Fernet); never sent through LLM context after registration    |
+| **Network**          | RouterOS API via tunnel; credentials stay server-side                            |
+| **Database**         | PostgreSQL with Prisma ORM (dashboard) + psycopg2 (MCP server)                  |
+| **Container**        | Docker Compose; 3 services with resource limits                                  |
 
 ### allowFrom — Paid Users Only
 
@@ -314,46 +406,49 @@ The `allowFrom` field in `config/config.json` is the access gate. It is **not** 
 }
 ```
 
-The `TELEGRAM_USER_ID` environment variable is set in `.env` on the VPS. To add more users, the admin adds their numeric Telegram IDs to this list and redeploys.
+The initial admin's `TELEGRAM_USER_ID` is set in `.env`. Additional users are provisioned via the admin dashboard, which auto-generates `config.generated.json` with the updated `allowFrom` list. The agent hot-reloads on config change — no manual redeploy required.
 
-### Credential Storage
+### Credential Storage (Current: PostgreSQL + Fernet)
 
-| Phase | Method | Detail |
-|-------|--------|--------|
-| Phase 1 (current) | Plain text in .env | Single user, for testing |
-| Phase 2 (multi-router) | Plain text in per-user JSON | Functional but not secure |
-| Phase 3 (encryption) | Fernet symmetric encryption | Passwords encrypted at rest |
+Router passwords are **Fernet-encrypted at rest** in the `"Router".passwordEnc` column in PostgreSQL. The encryption key (`data/.master_key`) is auto-generated on first run and stored with `chmod 600`.
+
+| Layer | Detail |
+| ----- | ------ |
+| **At rest** | Fernet-encrypted in PostgreSQL `passwordEnc` column |
+| **In transit (internal)** | Decrypted server-side by MCP server only when connecting to RouterOS |
+| **LLM exposure** | Password passes through LLM **once** during `register_router` call, never again |
+| **Master key** | `data/.master_key` — auto-generated, `chmod 600`, shared between JSON and PG registries |
 
 ### Credential Flow (credentials never touch the LLM after registration)
 
 ```
 User: "Tambah router: host x.x.x.x port 8728 user admin pass secret"
   │
-  ├─ LLM extracts params from user message
-  ├─ LLM → MCP: register_router(user_id, name, host, port, user, pass)
-  ├─ MCP: stores password in data/{user_id}.json (encrypted)
+  ├─ Agent extracts params from user message
+  ├─ Agent → MCP: register_router(user_id, name, host, port, user, pass)
+  ├─ MCP: encrypts password with Fernet → stores in PostgreSQL "Router" table
   ├─ MCP: tests connection → returns board info
-  └─ LLM → User: "Router ditambahkan"
+  └─ Agent → User: "Router ditambahkan"
 
   Subsequently:
   User: "Cek CPU"
-  ├─ LLM → MCP: get_system_info(user_id, router="UmmiNEW")
-  ├─ MCP: loads credentials from data/{user_id}.json (server-side)
-  ├─ MCP: connects to router, queries, returns data
-  └─ LLM → User: "CPU 11%"
+  ├─ Agent → MCP: get_system_info(user_id, router="UmmiNEW")
+  ├─ MCP: loads encrypted credentials from PostgreSQL → decrypts server-side
+  ├─ MCP: connects to router via RouterOS API, queries, returns data
+  └─ Agent → User: "CPU 11%"
 
-  Password goes: User message → LLM → MCP (one time only, during registration)
-  After that: MCP reads from disk, LLM never sees the password again
+  Password goes: User message → Agent → MCP (one time only, during registration)
+  After that: MCP reads from PostgreSQL, Agent/LLM never sees the password again
 ```
 
 ### Tool Classification
 
-| Category | Tools | Confirmation Required |
-|----------|-------|----------------------|
-| **Read** | get_system_info, list_interfaces, list_dhcp_leases, count_active_clients, list_firewall_*, list_arp_table, get_recent_logs, etc. | No |
-| **Write** | add/remove hotspot users, add/remove IP, add/remove DNS, add/remove PPP secrets, add/remove queues, enable/disable interfaces, kick sessions, make DHCP static, etc. | Yes — confirm action + router name |
-| **Admin** | register_router, remove_router, set_default_router | Yes — confirm action |
-| **Dangerous** | run_routeros_query (raw API), run_system_script, reboot_router | Double confirmation — show the command first |
+| Category      | Tools                                                                                                                                                                | Confirmation Required                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Read**      | get*system_info, list_interfaces, list_dhcp_leases, count_active_clients, list_firewall*\*, list_arp_table, get_recent_logs, etc.                                    | No                                           |
+| **Write**     | add/remove hotspot users, add/remove IP, add/remove DNS, add/remove PPP secrets, add/remove queues, enable/disable interfaces, kick sessions, make DHCP static, etc. | Yes — confirm action + router name           |
+| **Admin**     | register_router, remove_router, set_default_router                                                                                                                   | Yes — confirm action                         |
+| **Dangerous** | run_routeros_query (raw API), run_system_script, reboot_router                                                                                                       | Double confirmation — show the command first |
 
 ---
 
@@ -361,12 +456,12 @@ User: "Tambah router: host x.x.x.x port 8728 user admin pass secret"
 
 ### Infrastructure
 
-| Component | Detail |
-|-----------|--------|
-| **GitHub repo** | `codevjs/mikrotik-ai-agent` (private) |
-| **VPS** | `103.67.244.215` |
-| **Deploy path** | `/opt/mikrotik-ai-agent` |
-| **Container runtime** | Docker Compose |
+| Component             | Detail                                |
+| --------------------- | ------------------------------------- |
+| **GitHub repo**       | `codevjs/mikrotik-ai-agent` (private) |
+| **VPS**               | `103.67.244.215`                      |
+| **Deploy path**       | `/opt/mikrotik-ai-agent`              |
+| **Container runtime** | Docker Compose                        |
 
 ### CI/CD — GitHub Actions
 
@@ -405,38 +500,46 @@ jobs:
 
 ### Docker Compose
 
-Single service with resource limits:
+Three services on a shared internal network:
 
-- **Container name**: `mikrotik-agent`
-- **Volumes**: nanobot data (named volume), skills (read-only mount), MCP server (read-only mount), user data (read-write)
-- **Port**: `18790` (Nanobot web UI / Nano-UI)
-- **Resources**: max 1 CPU, 1GB RAM
-- **Restart policy**: `unless-stopped`
+| Service | Container | Resources | Purpose |
+| ------- | --------- | --------- | ------- |
+| `postgres` | `mikrotik-db` | 128MB RAM | PostgreSQL 16 — shared database for dashboard + MCP server |
+| `dashboard` | `mikrotik-dashboard` | 256MB RAM | Next.js admin UI — port 3000 |
+| `mikrotik-agent` | `mikrotik-agent` | 1 CPU, 512MB RAM | Nanobot gateway + MCP server + health API (port 8080) |
+
+- **Volumes**: `pgdata` (PostgreSQL data), `nanobot-data` (agent state), config/skills/MCP (bind mounts)
+- **Restart policy**: `unless-stopped` (all services)
+- **Health check**: PostgreSQL readiness check; dashboard and agent depend on it
 
 ### Container Startup (entrypoint.sh)
 
 1. Symlink skills into Nanobot workspace
-2. Copy `config/config.json` to Nanobot config path
-3. Copy `config/SOUL.md` to Nanobot workspace (personality always in sync with repo)
-4. Start `nanobot gateway`
+2. Copy config: prefer `config.generated.json` (from dashboard auto-provisioning) over `config.json`
+3. Copy `config/SOUL.md` + `config/HEARTBEAT.md` to Nanobot workspace
+4. Start `health_server.py` in background (port 8080 — HTTP API for dashboard)
+5. Start `nanobot gateway` — agent runtime that spawns per-user agents on demand
+6. Watch `config.generated.json` for changes → hot-reload nanobot process (graceful SIGTERM + restart)
 
 ---
 
 ## Tech Stack
 
-| Component | Technology | Why |
-|-----------|-----------|-----|
-| AI Agent | Nanobot (nanobot-ai) | Lightweight, MCP support, multi-channel, session isolation |
-| LLM | `google/gemini-2.5-flash-lite-preview-09-2025` via OpenRouter | Cheap, fast, tool calling support |
-| MCP Server | Python + FastMCP (stdio) | Standard protocol, auto-discovered by Nanobot |
-| MCP Tools | 66 tools | Full RouterOS management coverage |
-| RouterOS Client | librouteros | Mature Python library for RouterOS API v6/v7 |
-| Messaging | Telegram (primary) | Built-in Nanobot channel support |
-| Container | Docker + Docker Compose | Simple single-instance deployment |
-| CI/CD | GitHub Actions + SSH | Auto-deploy on push to main |
-| Data Storage | JSON files (per-user) | Simple, no DB dependency, easy to backup |
-| Credential Encryption | cryptography (Fernet) | Standard symmetric encryption |
-| Personality | config/SOUL.md | Casual Indonesian, short responses |
+| Component             | Technology                                                    | Why                                                             |
+| --------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
+| Agent Runtime         | Nanobot (nanobot-ai)                                          | 1 agent per user, MCP support, multi-channel, session isolation |
+| LLM                   | OpenAI GPT-5.4 Nano via OpenRouter                            | Fast, tool calling support, cost-effective                      |
+| MCP Server            | Python + FastMCP (stdio)                                      | Standard protocol, auto-discovered by Nanobot                   |
+| MCP Tools             | 137 tools                                                     | Full RouterOS management coverage                               |
+| RouterOS Client       | librouteros                                                   | Mature Python library for RouterOS API v6/v7                    |
+| Database              | PostgreSQL 16 + Prisma 7                                      | Shared between dashboard and MCP server, relational integrity   |
+| Dashboard             | Next.js 16 + React 19 + Tailwind + shadcn/ui                 | Admin UI with user/router management, chat, logs                |
+| Auth                  | NextAuth v5                                                   | Session-based dashboard authentication                          |
+| Messaging             | Telegram (primary)                                            | Built-in Nanobot channel support                                |
+| Container             | Docker Compose (3 services)                                   | PostgreSQL + Dashboard + Agent on shared network                |
+| CI/CD                 | GitHub Actions + SSH                                          | Auto-deploy on push to main                                     |
+| Credential Encryption | cryptography (Fernet)                                         | Passwords encrypted at rest in PostgreSQL                       |
+| Personality           | config/SOUL.md                                                | Casual Indonesian, short responses                              |
 
 ---
 
@@ -449,31 +552,51 @@ Mikrotik Ai Agent/
 │       └── deploy.yml                # CI/CD: auto-deploy to VPS on push to main
 │
 ├── config/
-│   ├── config.json                   # Nanobot config (LLM, Telegram, MCP server)
-│   └── SOUL.md                       # Bot personality & communication style
+│   ├── config.json                   # Nanobot config template (LLM, Telegram, MCP)
+│   ├── config.generated.json         # Auto-generated by dashboard (runtime, gitignored)
+│   ├── SOUL.md                       # Bot personality & communication style
+│   └── HEARTBEAT.md                  # Periodic health check tasks
+│
+├── dashboard/                        # Next.js 16 admin web UI
+│   ├── app/                          # Pages: dashboard, users, routers, chat, logs, settings
+│   ├── components/                   # React components (shadcn/ui)
+│   ├── hooks/                        # TanStack Query hooks
+│   ├── lib/                          # Auth (NextAuth), DB (Prisma), services
+│   ├── prisma/
+│   │   └── schema.prisma             # Database schema (User, Router, ActivityLog, etc.)
+│   ├── Dockerfile                    # Multi-stage Node.js 20 build
+│   └── package.json
 │
 ├── mikrotik_mcp/
-│   ├── server.py                     # MCP server — 66 tools + entry point
-│   ├── registry.py                   # Per-user router CRUD + JSON persistence
+│   ├── server.py                     # MCP server — 137 tools + entry point
+│   ├── registry_pg.py                # PostgreSQL registry (production)
+│   ├── registry.py                   # JSON registry (legacy fallback)
+│   ├── crypto.py                     # Fernet encryption for credentials
+│   ├── health_server.py              # HTTP API (port 8080) for dashboard
 │   └── requirements.txt              # Python dependencies
 │
 ├── skills/
 │   └── mikrotik/
-│       └── SKILL.md                  # LLM context: tool reference, rules, examples
+│       └── SKILL.md                  # LLM context: 137-tool reference, rules, examples
 │
-├── data/                             # Per-user router registries (gitignored)
-│   ├── 86340875.json
-│   ├── 12345678.json
-│   └── ...
+├── scripts/
+│   ├── add-user.sh                   # Add Telegram ID to allowFrom
+│   ├── list-users.sh                 # List provisioned users
+│   └── migrate-json-to-pg.py         # One-time JSON→PostgreSQL migration
+│
+├── data/                             # Runtime data (gitignored)
+│   └── .master_key                   # Fernet encryption key (auto-generated)
 │
 ├── docs/
 │   ├── ARCHITECTURE.md               # This file
-│   ├── PHASES.md                     # Implementation phases
-│   └── UI_PROMPT.md                  # Admin dashboard UI prompt (Google Stitch)
+│   ├── API_REFERENCE.md              # All 137 MCP tools documented
+│   ├── ADMIN_GUIDE.md                # Deployment & user management guide
+│   ├── USER_GUIDE.md                 # User onboarding guide
+│   └── PHASES.md                     # Implementation phases
 │
-├── docker-compose.yml                # Single service deployment
+├── docker-compose.yml                # 3 services: postgres + dashboard + agent
 ├── Dockerfile                        # Python 3.11-slim + nanobot-ai + MCP deps
-├── entrypoint.sh                     # Config setup + SOUL.md copy + nanobot start
+├── entrypoint.sh                     # Config setup + health server + nanobot + hot-reload
 ├── .env                              # Instance credentials (gitignored)
 ├── .env.example                      # Template for .env
 ├── .gitignore
@@ -487,10 +610,12 @@ Mikrotik Ai Agent/
 The bot formats all responses using Telegram MarkdownV2 syntax. This is enforced via SKILL.md.
 
 ### Supported formatting:
+
 - `*bold*`, `_italic_`, `` `inline code` ``, ` ```code block``` `
 - Bullet points and numbered lists
 
 ### Tabular data (Telegram does not support Markdown tables):
+
 ```
 📊 *System Info — UmmiNEW*
 
@@ -501,17 +626,18 @@ The bot formats all responses using Telegram MarkdownV2 syntax. This is enforced
 ```
 
 ### Characters that must be escaped in MarkdownV2:
+
 `_`, `*`, `[`, `]`, `(`, `)`, `~`, `` ` ``, `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`
 
 ---
 
 ## Supported RouterOS Versions
 
-| Version | Protocol | Support |
-|---------|----------|---------|
-| v6.x | Binary API (port 8728) | Full (via librouteros) |
-| v7.x | Binary API (port 8728) | Full (via librouteros) |
-| v7.x | REST API (port 443) | Not used — binary API is universal |
+| Version | Protocol               | Support                            |
+| ------- | ---------------------- | ---------------------------------- |
+| v6.x    | Binary API (port 8728) | Full (via librouteros)             |
+| v7.x    | Binary API (port 8728) | Full (via librouteros)             |
+| v7.x    | REST API (port 443)    | Not used — binary API is universal |
 
 ---
 
@@ -520,20 +646,19 @@ The bot formats all responses using Telegram MarkdownV2 syntax. This is enforced
 1. **RouterOS API access required** — Winbox-only access is not sufficient
 2. **Tunnel dependency** — Routers behind NAT need a tunnel service
 3. **LLM tool calling** — Model must support function calling
-4. **Password exposure during registration** — Password passes through LLM once during `register_router`; after that, MCP reads from disk
+4. **Password exposure during registration** — Password passes through LLM once during `register_router`; after that, MCP reads encrypted credentials from PostgreSQL
 5. **No real-time streaming** — Router stats are polled on-demand
 6. **Single LLM instance** — All users share the same model and rate limits
-7. **Session memory is global** — Nanobot's MEMORY.md is shared; user data isolation is handled by the MCP server's per-user JSON files, not by Nanobot's memory system
-8. **Manual user provisioning** — Admin must add Telegram user IDs to allowFrom and redeploy to grant access
+7. **Shared personality & skills** — All agents share the same SOUL.md personality and SKILL.md instructions; per-agent customization is not yet supported
+8. **User provisioning** — Admin provisions users via dashboard UI or scripts; dashboard auto-generates config and agent hot-reloads
 
 ---
 
 ## Future Considerations
 
-- **Admin dashboard**: Web UI for managing users and viewing all routers (see docs/UI_PROMPT.md)
+- **Per-user billing**: Token usage tracking and subscription management (Phase 11 — schema ready)
+- **Mobile app**: Native mobile interface (Phase 12)
 - **Rate limiting**: Per-user tool call limits to prevent abuse
-- **Audit log**: Track who did what on which router
 - **Webhook alerts**: Router-initiated alerts (e.g., "CPU > 90%") pushed to user
-- **WhatsApp support**: Add as second channel
+- **WhatsApp support**: Add as second channel (Nanobot supports it)
 - **Per-user LLM keys**: Users bring their own OpenRouter/API keys for cost sharing
-- **Dynamic user provisioning**: API/admin bot to add users without redeploying
