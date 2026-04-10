@@ -32,11 +32,14 @@ model User {
   updatedAt     DateTime   @updatedAt
   lastActiveAt  DateTime?
 
-  routers      Router[]
-  activityLogs ActivityLog[]
-  subscription Subscription?
-  tokenUsages  TokenUsage[]
-  invoices     Invoice[]
+  routers          Router[]
+  activityLogs     ActivityLog[]
+  subscription     Subscription?
+  tokenUsages      TokenUsage[]
+  invoices         Invoice[]
+  resellers        Reseller[]
+  voucherBatches   VoucherBatch[]
+  resellerBotToken String?
 
   @@index([telegramId])
   @@index([status])
@@ -166,3 +169,75 @@ model Invoice {
   @@index([userId])
   @@index([status])
 }
+
+// ── Reseller Models ──
+
+enum ResellerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SaldoTransactionType {
+  TOP_UP
+  TOP_DOWN
+  VOUCHER_PURCHASE
+}
+
+model Reseller {
+  id         String         @id @default(cuid())
+  name       String
+  phone      String         @default("")
+  telegramId String         @default("")
+  balance    Int            @default(0)
+  status     ResellerStatus @default(ACTIVE)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions   SaldoTransaction[]
+  voucherBatches VoucherBatch[]
+
+  @@index([userId])
+  @@index([telegramId])
+}
+
+model SaldoTransaction {
+  id            String               @id @default(cuid())
+  type          SaldoTransactionType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String               @default("")
+  createdAt     DateTime             @default(now())
+
+  resellerId String
+  reseller   Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  @@index([resellerId])
+  @@index([createdAt])
+}
+
+model VoucherBatch {
+  id           String   @id @default(cuid())
+  routerName   String
+  profile      String
+  count        Int
+  pricePerUnit Int      @default(0)
+  totalCost    Int
+  vouchers     Json
+  source       String   @default("dashboard")
+  createdAt    DateTime @default(now())
+
+  resellerId String?
+  reseller   Reseller? @relation(fields: [resellerId], references: [id], onDelete: SetNull)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([resellerId])
+  @@index([userId])
+  @@index([createdAt])
+}
+

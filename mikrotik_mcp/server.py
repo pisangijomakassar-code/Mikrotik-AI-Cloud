@@ -38,6 +38,20 @@ else:
     registry = RouterRegistry(data_dir=DATA_DIR)
     logger.info("Using JSON file registry")
 
+try:
+    from mikrotik_mcp.voucher_db import VoucherDB as _VoucherDB
+except ModuleNotFoundError:
+    from voucher_db import VoucherDB as _VoucherDB
+
+_voucher_db = None
+def _get_voucher_db():
+    global _voucher_db
+    if _voucher_db is None:
+        db_url = os.environ.get("DATABASE_URL")
+        if db_url:
+            _voucher_db = _VoucherDB(db_url)
+    return _voucher_db
+
 mcp = FastMCP(
     "mikrotik-agent",
     instructions="MikroTik RouterOS management tools for AI agents. Query and manage MikroTik routers via natural language.",
@@ -1827,6 +1841,21 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
                     errors.append(f"Voucher #{i+1} ({uname}): {e}")
 
             registry.update_last_seen(user_id, conn["name"])
+
+            # Persist to PostgreSQL (best-effort)
+            try:
+                vdb = _get_voucher_db()
+                if vdb and vouchers:
+                    vdb.save_batch(
+                        user_id=user_id,
+                        router_name=conn["name"],
+                        profile=profile,
+                        vouchers=vouchers,
+                        source="nanobot",
+                    )
+            except Exception as e:
+                logger.warning("Failed to persist voucher batch to DB: %s", e)
+
             result: dict = {
                 "status": "ok",
                 "count": len(vouchers),
@@ -3894,6 +3923,213 @@ def list_firewall_raw(user_id: str, router: str = "") -> list[dict]:
         ]
     except Exception as e:
         return [{"error": f"Failed to list raw firewall rules: {e}"}]
+
+
+# ─────────────────────────────────────────────
+#  RESELLER TOOLS
+# ─────────────────────────────────────────────
+
+@mcp.tool()
+def reseller_check_saldo(user_id: str, reseller_telegram_id: str) -> dict:
+    """Check a reseller's current saldo/balance.
+
+    Args:
+        user_id: Telegram user ID
+        reseller_telegram_id: Reseller's Telegram ID
+    """
+    err = _validate_user_id(user_id)
+    if err:
+        return {"error": err}
+    try:
+        vdb = _get_voucher_db()
+        if not vdb:
+            return {"error": "Voucher database not available"}
+        reseller = vdb.get_reseller_by_telegram(reseller_telegram_id)
+        if not reseller:
+            return {"error": "Reseller not found"}
+        return {
+            "status": "ok",
+            "reseller_name": reseller["name"],
+            "balance": reseller["balance"],
+        }
+    except Exception as e:
+        return {"error": f"Failed to check reseller saldo: {e}"}
+
+
+@mcp.tool()
+def reseller_generate_voucher(user_id: str, reseller_telegram_id: str, profile: str,
+                               count: int = 1, router: str = "") -> dict:
+    """Generate hotspot vouchers on behalf of a reseller, deducting from their saldo.
+
+    Args:
+        user_id: Telegram user ID
+        reseller_telegram_id: Reseller's Telegram ID
+        profile: Hotspot user profile to assign
+        count: Number of vouchers to generate (max 100)
+        router: Router name. Empty = default router.
+    """
+    err = _validate_user_id(user_id)
+    if err:
+        return {"error": err}
+    if count < 1:
+        return {"error": "Count must be at least 1."}
+    if count > 100:
+        return {"error": "Maximum 100 vouchers per batch."}
+
+    try:
+        vdb = _get_voucher_db()
+        if not vdb:
+            return {"error": "Voucher database not available"}
+        reseller = vdb.get_reseller_by_telegram(reseller_telegram_id)
+        if not reseller:
+            return {"error": "Reseller not found"}
+
+        price_per_unit = 0  # TODO: add pricing config
+        total_cost = count * price_per_unit
+        if total_cost > 0:
+            balance = vdb.check_saldo(reseller["id"])
+            if balance is None or balance < total_cost:
+                return {"error": f"Saldo tidak mencukupi (saldo: {balance}, butuh: {total_cost})"}
+
+        conn = _resolve_connection(user_id, router)
+        if "error" in conn:
+            return conn
+
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            profiles = list(api.path("ip", "hotspot", "user", "profile"))
+            profile_names = [p.get("name", "") for p in profiles]
+            if profile not in profile_names:
+                return {"error": f"Profile '{profile}' not found. Available profiles: {', '.join(profile_names)}"}
+
+            existing = {u.get("name", "") for u in api.path("ip", "hotspot", "user")}
+            charset = string.ascii_lowercase + string.digits
+            resource = api.path("ip", "hotspot", "user")
+            vouchers = []
+            errors = []
+
+            for i in range(count):
+                for _ in range(10):
+                    uname = "".join(random.choices(charset, k=6))
+                    if uname not in existing:
+                        break
+                else:
+                    errors.append(f"Voucher #{i+1}: failed to generate unique username")
+                    continue
+
+                pwd = "".join(random.choices(charset, k=6))
+                params: dict[str, str] = {
+                    "name": uname,
+                    "password": pwd,
+                    "profile": profile,
+                }
+                try:
+                    resource.add(**params)
+                    existing.add(uname)
+                    vouchers.append({"username": uname, "password": pwd})
+                except Exception as e:
+                    errors.append(f"Voucher #{i+1} ({uname}): {e}")
+
+        if not vouchers:
+            return {"error": "No vouchers created", "details": errors}
+
+        # Deduct saldo
+        balance_after = reseller["balance"]
+        if total_cost > 0:
+            tx = vdb.deduct_saldo(
+                reseller["id"], total_cost,
+                description=f"Voucher {profile} x{len(vouchers)}",
+            )
+            balance_after = tx["balanceAfter"]
+
+        # Persist batch
+        try:
+            vdb.save_batch(
+                user_id=user_id,
+                router_name=conn["name"],
+                profile=profile,
+                vouchers=vouchers,
+                source="reseller_bot",
+                reseller_id=reseller["id"],
+                price_per_unit=price_per_unit,
+            )
+        except Exception as e:
+            logger.warning("Failed to persist reseller voucher batch to DB: %s", e)
+
+        registry.update_last_seen(user_id, conn["name"])
+        result: dict = {
+            "status": "ok",
+            "vouchers": vouchers,
+            "count": len(vouchers),
+            "balance_after": balance_after,
+        }
+        if errors:
+            result["errors"] = errors
+        return result
+    except ValueError as e:
+        return {"error": str(e)}
+    except Exception as e:
+        return {"error": f"Failed to generate reseller vouchers: {e}"}
+
+
+@mcp.tool()
+def reseller_request_deposit(user_id: str, reseller_telegram_id: str, amount: int) -> dict:
+    """Request a saldo deposit for a reseller. Notifies the owner.
+
+    Args:
+        user_id: Telegram user ID
+        reseller_telegram_id: Reseller's Telegram ID
+        amount: Deposit amount requested
+    """
+    err = _validate_user_id(user_id)
+    if err:
+        return {"error": err}
+    if amount <= 0:
+        return {"error": "Amount must be positive."}
+    try:
+        vdb = _get_voucher_db()
+        if not vdb:
+            return {"error": "Voucher database not available"}
+        reseller = vdb.get_reseller_by_telegram(reseller_telegram_id)
+        if not reseller:
+            return {"error": "Reseller not found"}
+        owner_tid = vdb.get_owner_telegram_id(reseller["id"])
+        return {
+            "status": "ok",
+            "message": "Deposit request sent",
+            "owner_telegram_id": owner_tid,
+            "amount": amount,
+        }
+    except Exception as e:
+        return {"error": f"Failed to request deposit: {e}"}
+
+
+@mcp.tool()
+def reseller_transaction_history(user_id: str, reseller_telegram_id: str, limit: int = 10) -> dict:
+    """Get recent saldo transaction history for a reseller.
+
+    Args:
+        user_id: Telegram user ID
+        reseller_telegram_id: Reseller's Telegram ID
+        limit: Max number of transactions to return (default 10)
+    """
+    err = _validate_user_id(user_id)
+    if err:
+        return {"error": err}
+    try:
+        vdb = _get_voucher_db()
+        if not vdb:
+            return {"error": "Voucher database not available"}
+        reseller = vdb.get_reseller_by_telegram(reseller_telegram_id)
+        if not reseller:
+            return {"error": "Reseller not found"}
+        transactions = vdb.get_transactions(reseller["id"], limit)
+        return {
+            "status": "ok",
+            "transactions": transactions,
+            "reseller_name": reseller["name"],
+        }
+    except Exception as e:
+        return {"error": f"Failed to get transaction history: {e}"}
 
 
 # ─────────────────────────────────────────────
