@@ -1,6 +1,7 @@
 "use client"
 
 import { useMutation } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 
 interface ChatMessage {
   id: string
@@ -20,16 +21,7 @@ interface ChatResponse {
 }
 
 async function sendMessage(data: SendMessageInput): Promise<ChatResponse> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Failed to send message" }))
-    throw new Error(err.error || "Failed to send message")
-  }
-  return res.json()
+  return apiClient.post("/api/chat", data)
 }
 
 async function uploadImage(file: File): Promise<string> {

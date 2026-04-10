@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 import type { LogFilter, PaginatedResult } from "@/lib/types"
 
 export interface LogEntry {
@@ -29,9 +30,7 @@ async function fetchLogs(
   if (filter?.page) params.set("page", String(filter.page))
   if (filter?.pageSize) params.set("pageSize", String(filter.pageSize))
   const url = `/api/logs${params.toString() ? `?${params}` : ""}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error("Failed to fetch logs")
-  return res.json()
+  return apiClient.get(url)
 }
 
 export function useLogs(filter?: LogFilter) {

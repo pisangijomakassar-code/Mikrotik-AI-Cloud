@@ -1,11 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Receipt, ChevronLeft, ChevronRight } from "lucide-react"
+import { Receipt, ChevronLeft, ChevronRight, PlusCircle, Zap, Copy, Check, Loader2, X } from "lucide-react"
 import { useAllVouchers } from "@/hooks/use-vouchers"
 import { useResellers } from "@/hooks/use-resellers"
+import { useHotspotProfiles } from "@/hooks/use-hotspot"
 import { cn } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
 
 function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`
@@ -35,10 +38,106 @@ function sourceBadge(source: string) {
   }
 }
 
+interface GeneratedVoucher { username: string; password: string }
+
+const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+const rand = (len: number) => Array.from({ length: len }, () => charset[Math.floor(Math.random() * charset.length)]).join("")
+
+function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
+  const { data: profiles, isLoading: profilesLoading } = useHotspotProfiles()
+  const [profile, setProfile] = useState("")
+  const [count, setCount] = useState(1)
+  const [prefix, setPrefix] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [vouchers, setVouchers] = useState<GeneratedVoucher[]>([])
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+
+  const handleGenerate = async () => {
+    if (!profile) { toast.error("Pilih profile terlebih dahulu"); return }
+    const qty = Math.max(1, Math.min(count, 50))
+    setGenerating(true)
+    try {
+      const results: GeneratedVoucher[] = []
+      for (let i = 0; i < qty; i++) {
+        const username = (prefix || "v") + rand(5)
+        const password = rand(6)
+        const res = await fetch("/api/hotspot/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: username, password, profile }),
+        })
+        if (!res.ok) throw new Error("Failed")
+        results.push({ username, password })
+      }
+      setVouchers((prev) => [...results, ...prev])
+      toast.success(`${results.length} voucher berhasil dibuat`)
+    } catch {
+      toast.error("Gagal membuat voucher")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleCopy = (idx: number, v: GeneratedVoucher) => {
+    navigator.clipboard.writeText(`${v.username} / ${v.password}`)
+    setCopiedIdx(idx)
+    setTimeout(() => setCopiedIdx(null), 1500)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
+      <div className="w-full max-w-lg mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between">
+          <h3 className="text-xl font-headline font-bold text-[#dae2fd]">Generate Voucher</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-[#dae2fd] transition-colors"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-4 md:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Profile</label>
+              <Select value={profile} onValueChange={setProfile} disabled={profilesLoading}>
+                <SelectTrigger className="bg-[#2d3449] border-none text-[#dae2fd] text-sm">
+                  <SelectValue placeholder={profilesLoading ? "Loading..." : "Pilih profile"} />
+                </SelectTrigger>
+                <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                  {profiles?.map((p) => (<SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Jumlah</label>
+              <Input type="number" min={1} max={50} value={count} onChange={(e) => setCount(Number(e.target.value))} className="bg-[#2d3449] border-none text-[#dae2fd] text-sm" />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Prefix</label>
+              <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="v" className="bg-[#2d3449] border-none text-[#dae2fd] text-sm" />
+            </div>
+          </div>
+          <button onClick={handleGenerate} disabled={generating || profilesLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold font-headline bg-[#06b6d4] hover:bg-[#4cd7f6] text-[#00424f] disabled:opacity-50 transition-all">
+            {generating ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Zap className="h-4 w-4 shrink-0" />}
+            {generating ? "Generating..." : "Generate Voucher"}
+          </button>
+          {vouchers.length > 0 && (
+            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-hide">
+              {vouchers.map((v, i) => (
+                <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0b1326] border border-white/5">
+                  <span className="font-mono text-sm"><span className="text-[#4cd7f6]">{v.username}</span><span className="text-slate-600 mx-2">/</span><span className="text-emerald-400">{v.password}</span></span>
+                  <button onClick={() => handleCopy(i, v)} className="p-1 rounded hover:bg-white/5 transition-colors">{copiedIdx === i ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-slate-500" />}</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function VoucherHistoryPage() {
   const [sourceFilter, setSourceFilter] = useState("")
   const [resellerFilter, setResellerFilter] = useState("")
   const [page, setPage] = useState(1)
+  const [showGenerate, setShowGenerate] = useState(false)
   const pageSize = 20
 
   const { data: resellers } = useResellers()
@@ -67,7 +166,16 @@ export default function VoucherHistoryPage() {
             All vouchers from dashboard, Nanobot, and reseller bot.
           </p>
         </div>
+        <button
+          onClick={() => setShowGenerate(true)}
+          className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
+        >
+          <PlusCircle className="h-4 w-4 shrink-0" />
+          Generate Voucher
+        </button>
       </div>
+
+      {showGenerate && <GenerateVoucherDialog onClose={() => setShowGenerate(false)} />}
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">

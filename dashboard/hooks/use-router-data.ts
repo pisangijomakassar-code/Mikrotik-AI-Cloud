@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 
 // --- Traffic data (for Network Throughput) ---
 interface InterfaceTraffic {
@@ -22,9 +23,11 @@ export function useRouterTraffic() {
   return useQuery<TrafficData>({
     queryKey: ["router-traffic"],
     queryFn: async () => {
-      const res = await fetch("/api/routers/traffic")
-      if (!res.ok) return { router: "", interfaces: [] }
-      return res.json()
+      try {
+        return await apiClient.get<TrafficData>("/api/routers/traffic")
+      } catch {
+        return { router: "", interfaces: [] }
+      }
     },
     refetchInterval: 30000,
   })
@@ -50,9 +53,11 @@ export function useRouterLogs(routerName?: string, count = 50) {
       const params = new URLSearchParams()
       if (routerName) params.set("router", routerName)
       params.set("count", String(count))
-      const res = await fetch(`/api/routers/logs?${params}`)
-      if (!res.ok) return { router: "", total: 0, logs: [] }
-      return res.json()
+      try {
+        return await apiClient.get<RouterLogsData>(`/api/routers/logs?${params}`)
+      } catch {
+        return { router: "", total: 0, logs: [] }
+      }
     },
     refetchInterval: 10000, // refresh every 10s for "real-time" feel
   })

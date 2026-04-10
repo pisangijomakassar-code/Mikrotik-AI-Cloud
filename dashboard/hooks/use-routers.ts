@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 import type { CreateRouterInput } from "@/lib/types"
 
 export interface RouterData {
@@ -29,9 +30,7 @@ export interface RouterData {
 
 async function fetchRouters(search?: string): Promise<RouterData[]> {
   const params = search ? `?search=${encodeURIComponent(search)}` : ""
-  const res = await fetch(`/api/routers${params}`)
-  if (!res.ok) throw new Error("Failed to fetch routers")
-  return res.json()
+  return apiClient.get(`/api/routers${params}`)
 }
 
 interface RouterHealth {
@@ -49,9 +48,11 @@ interface RouterHealth {
 }
 
 async function fetchHealth(): Promise<RouterHealth[]> {
-  const res = await fetch("/api/routers/health")
-  if (!res.ok) return []
-  return res.json()
+  try {
+    return await apiClient.get("/api/routers/health")
+  } catch {
+    return []
+  }
 }
 
 export function useRouters(search?: string) {
@@ -97,16 +98,7 @@ export function useCreateRouter() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: CreateRouterInput) => {
-      const res = await fetch("/api/routers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to add router" }))
-        throw new Error(err.error || "Failed to add router")
-      }
-      return res.json()
+      return apiClient.post("/api/routers", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routers"] })
@@ -119,9 +111,7 @@ export function useDeleteRouter() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/routers/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete router")
-      return res.json()
+      return apiClient.delete(`/api/routers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routers"] })

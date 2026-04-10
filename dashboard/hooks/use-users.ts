@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 import type { CreateUserInput, UpdateUserInput, UserFilter } from "@/lib/types"
 
 interface User {
@@ -22,9 +23,7 @@ async function fetchUsers(filter?: UserFilter): Promise<User[]> {
   if (filter?.role) params.set("role", filter.role)
   if (filter?.search) params.set("search", filter.search)
   const url = `/api/users${params.toString() ? `?${params}` : ""}`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error("Failed to fetch users")
-  return res.json()
+  return apiClient.get(url)
 }
 
 export function useUsers(filter?: UserFilter) {
@@ -38,16 +37,7 @@ export function useCreateUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: CreateUserInput) => {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to create user" }))
-        throw new Error(err.error || "Failed to create user")
-      }
-      return res.json()
+      return apiClient.post("/api/users", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
@@ -60,16 +50,7 @@ export function useUpdateUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateUserInput }) => {
-      const res = await fetch(`/api/users/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to update user" }))
-        throw new Error(err.error || "Failed to update user")
-      }
-      return res.json()
+      return apiClient.patch(`/api/users/${id}`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
@@ -81,9 +62,7 @@ export function useDeleteUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/users/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete user")
-      return res.json()
+      return apiClient.delete(`/api/users/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })

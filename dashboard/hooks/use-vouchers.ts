@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 
 interface VoucherFilter {
   source?: string
@@ -17,9 +18,7 @@ async function fetchAllVouchers(filter?: VoucherFilter) {
   if (filter?.pageSize) params.set("pageSize", String(filter.pageSize))
 
   const qs = params.toString()
-  const res = await fetch(`/api/vouchers${qs ? `?${qs}` : ""}`)
-  if (!res.ok) throw new Error("Failed to fetch vouchers")
-  return res.json()
+  return apiClient.get(`/api/vouchers${qs ? `?${qs}` : ""}`)
 }
 
 export function useAllVouchers(filter?: VoucherFilter) {

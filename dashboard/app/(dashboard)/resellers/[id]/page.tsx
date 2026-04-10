@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowUpCircle,
   ArrowDownCircle,
-  X,
   Ticket,
   ChevronLeft,
   ChevronRight,
@@ -15,21 +14,15 @@ import {
 } from "lucide-react"
 import {
   useReseller,
-  useTopUpSaldo,
-  useTopDownSaldo,
   useVoucherBatches,
   useTransactions,
-  useGenerateVouchers,
 } from "@/hooks/use-resellers"
-import { useHotspotProfiles } from "@/hooks/use-hotspot"
+import { GenerateVoucherDialog } from "@/components/dialogs/generate-voucher-dialog"
+import { SaldoDialog } from "@/components/dialogs/saldo-dialog"
 import { cn } from "@/lib/utils"
+import { formatRupiah } from "@/lib/formatters"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-function formatRupiah(amount: number): string {
-  return `Rp ${amount.toLocaleString("id-ID")}`
-}
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "-"
@@ -85,10 +78,6 @@ export default function ResellerDetailPage({
   const { id } = use(params)
   const { data: reseller, isLoading } = useReseller(id)
   const { data: voucherBatches, isLoading: batchesLoading } = useVoucherBatches(id)
-  const topUpSaldo = useTopUpSaldo()
-  const topDownSaldo = useTopDownSaldo()
-  const generateVouchers = useGenerateVouchers()
-  const { data: profiles } = useHotspotProfiles()
 
   const [activeTab, setActiveTab] = useState<"vouchers" | "transactions">("vouchers")
   const [txPage, setTxPage] = useState(1)
@@ -96,76 +85,10 @@ export default function ResellerDetailPage({
 
   // Saldo dialog
   const [showSaldoDialog, setShowSaldoDialog] = useState<"topup" | "topdown" | null>(null)
-  const [saldoAmount, setSaldoAmount] = useState("")
-  const [saldoDesc, setSaldoDesc] = useState("")
 
   // Generate vouchers dialog
   const [showVoucherDialog, setShowVoucherDialog] = useState(false)
-  const [vProfile, setVProfile] = useState("")
-  const [vCount, setVCount] = useState("")
-  const [vPrice, setVPrice] = useState("")
-  const [vRouter, setVRouter] = useState("")
 
-  function handleSaldoSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const amount = parseInt(saldoAmount)
-    if (!amount || amount <= 0) {
-      toast.error("Enter a valid amount")
-      return
-    }
-    const mutation = showSaldoDialog === "topup" ? topUpSaldo : topDownSaldo
-    mutation.mutate(
-      {
-        resellerId: id,
-        data: { amount, description: saldoDesc.trim() || undefined },
-      },
-      {
-        onSuccess: () => {
-          toast.success(showSaldoDialog === "topup" ? "Top up successful" : "Top down successful")
-          setShowSaldoDialog(null)
-          setSaldoAmount("")
-          setSaldoDesc("")
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    )
-  }
-
-  function handleGenerateVouchers(e: React.FormEvent) {
-    e.preventDefault()
-    if (!vProfile) { toast.error("Select a profile"); return }
-    const count = parseInt(vCount)
-    const price = parseInt(vPrice)
-    if (!count || count <= 0) { toast.error("Enter a valid count"); return }
-    if (!price || price <= 0) { toast.error("Enter a valid price"); return }
-
-    generateVouchers.mutate(
-      {
-        resellerId: id,
-        data: {
-          profile: vProfile,
-          count,
-          pricePerUnit: price,
-          routerName: vRouter.trim() || "default",
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success("Vouchers generated successfully")
-          setShowVoucherDialog(false)
-          setVProfile("")
-          setVCount("")
-          setVPrice("")
-          setVRouter("")
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    )
-  }
-
-  const totalCost = (parseInt(vCount) || 0) * (parseInt(vPrice) || 0)
-  const currentBalance = reseller?.balance ?? 0
-  const remainingBalance = currentBalance - totalCost
 
   if (isLoading) {
     return (
@@ -264,22 +187,14 @@ export default function ResellerDetailPage({
           </div>
           <div className="flex items-center gap-3 mt-4">
             <button
-              onClick={() => {
-                setShowSaldoDialog("topup")
-                setSaldoAmount("")
-                setSaldoDesc("")
-              }}
+              onClick={() => setShowSaldoDialog("topup")}
               className="flex-1 flex items-center justify-center gap-2 bg-[#4ae176]/10 hover:bg-[#4ae176]/20 text-[#4ae176] rounded-lg py-2.5 font-bold text-sm transition-colors"
             >
               <ArrowUpCircle className="h-4 w-4" />
               Top Up
             </button>
             <button
-              onClick={() => {
-                setShowSaldoDialog("topdown")
-                setSaldoAmount("")
-                setSaldoDesc("")
-              }}
+              onClick={() => setShowSaldoDialog("topdown")}
               className="flex-1 flex items-center justify-center gap-2 bg-[#ffb4ab]/10 hover:bg-[#ffb4ab]/20 text-[#ffb4ab] rounded-lg py-2.5 font-bold text-sm transition-colors"
             >
               <ArrowDownCircle className="h-4 w-4" />
@@ -475,190 +390,24 @@ export default function ResellerDetailPage({
 
       {/* Saldo Dialog */}
       {showSaldoDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-md mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">
-                  {showSaldoDialog === "topup" ? "Top Up Saldo" : "Top Down Saldo"}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {reseller.name} — Current: {formatRupiah(reseller.balance ?? 0)}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowSaldoDialog(null)}
-                className="text-slate-500 hover:text-[#dae2fd] transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <form onSubmit={handleSaldoSubmit}>
-              <div className="p-4 md:p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="100000"
-                    type="number"
-                    min="1"
-                    value={saldoAmount}
-                    onChange={(e) => setSaldoAmount(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Description (optional)</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="e.g. Transfer BCA"
-                    value={saldoDesc}
-                    onChange={(e) => setSaldoDesc(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowSaldoDialog(null)}
-                  className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={topUpSaldo.isPending || topDownSaldo.isPending}
-                  className={cn(
-                    "font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70",
-                    showSaldoDialog === "topup"
-                      ? "bg-gradient-to-br from-[#4ae176] to-[#22c55e] text-[#003640]"
-                      : "bg-gradient-to-br from-[#ffb4ab] to-[#ef4444] text-[#003640]"
-                  )}
-                >
-                  {(topUpSaldo.isPending || topDownSaldo.isPending)
-                    ? "Processing..."
-                    : showSaldoDialog === "topup"
-                      ? "Top Up"
-                      : "Top Down"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <SaldoDialog
+          type={showSaldoDialog}
+          resellerId={id}
+          resellerName={reseller.name}
+          currentBalance={reseller.balance ?? 0}
+          open={!!showSaldoDialog}
+          onOpenChange={(open) => !open && setShowSaldoDialog(null)}
+        />
       )}
 
       {/* Generate Voucher Dialog */}
-      {showVoucherDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Generate Vouchers</h3>
-                <p className="text-sm text-slate-500">Create hotspot vouchers for {reseller.name}</p>
-              </div>
-              <button
-                onClick={() => setShowVoucherDialog(false)}
-                className="text-slate-500 hover:text-[#dae2fd] transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <form onSubmit={handleGenerateVouchers}>
-              <div className="p-4 md:p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile *</label>
-                  <Select value={vProfile || "__default__"} onValueChange={(v) => setVProfile(v === "__default__" ? "" : v)}>
-                    <SelectTrigger className="w-full bg-[#2d3449] border-none text-[#dae2fd] text-sm">
-                      <SelectValue placeholder="Select profile..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
-                      <SelectItem value="__default__">Select profile...</SelectItem>
-                      {profiles?.map((p: { name: string }) => (
-                        <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name (optional, default: default)</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="default"
-                    value={vRouter}
-                    onChange={(e) => setVRouter(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Count *</label>
-                    <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                      placeholder="10"
-                      type="number"
-                      min="1"
-                      value={vCount}
-                      onChange={(e) => setVCount(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Price per Unit (Rp) *</label>
-                    <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                      placeholder="5000"
-                      type="number"
-                      min="1"
-                      value={vPrice}
-                      onChange={(e) => setVPrice(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Cost Calculation */}
-                <div className="bg-[#222a3d]/50 rounded-xl border border-white/5 p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Total Cost</span>
-                    <span className="font-bold text-[#dae2fd]">
-                      {vCount && vPrice ? `${vCount} x ${formatRupiah(parseInt(vPrice) || 0)} = ${formatRupiah(totalCost)}` : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Current Saldo</span>
-                    <span className="font-bold text-[#4cd7f6]">{formatRupiah(currentBalance)}</span>
-                  </div>
-                  <div className="border-t border-white/5 my-1" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Remaining After</span>
-                    <span className={cn(
-                      "font-bold",
-                      remainingBalance >= 0 ? "text-[#4ae176]" : "text-[#ffb4ab]"
-                    )}>
-                      {formatRupiah(remainingBalance)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowVoucherDialog(false)}
-                  className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={generateVouchers.isPending || remainingBalance < 0}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
-                >
-                  {generateVouchers.isPending ? "Generating..." : "Generate Vouchers"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <GenerateVoucherDialog
+        resellerId={id}
+        resellerName={reseller.name}
+        currentBalance={reseller.balance ?? 0}
+        open={showVoucherDialog}
+        onOpenChange={setShowVoucherDialog}
+      />
     </div>
   )
 }

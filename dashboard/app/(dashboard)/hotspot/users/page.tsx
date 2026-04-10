@@ -1,174 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Wifi, PlusCircle, Trash2, X, Search, UserX } from "lucide-react"
-import { useHotspotUsers, useHotspotProfiles, useAddHotspotUser, useRemoveHotspotUser, useEnableHotspotUser, useDisableHotspotUser } from "@/hooks/use-hotspot"
+import { Wifi, PlusCircle, Trash2, Search, UserX } from "lucide-react"
+import { useHotspotUsers, useHotspotProfiles, useRemoveHotspotUser, useEnableHotspotUser, useDisableHotspotUser } from "@/hooks/use-hotspot"
+import { AddHotspotUserDialog } from "@/components/dialogs/add-hotspot-user-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-
-function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [profile, setProfile] = useState("")
-  const [server, setServer] = useState("")
-  const [limitUptime, setLimitUptime] = useState("")
-  const [comment, setComment] = useState("")
-
-  const { data: profiles } = useHotspotProfiles()
-  const addUser = useAddHotspotUser()
-
-  function resetForm() {
-    setUsername("")
-    setPassword("")
-    setProfile("")
-    setServer("")
-    setLimitUptime("")
-    setComment("")
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!username.trim()) {
-      toast.error("Username is required")
-      return
-    }
-    addUser.mutate(
-      {
-        name: username.trim(),
-        password: password || undefined,
-        profile: profile || undefined,
-        server: server || undefined,
-        "limit-uptime": limitUptime || undefined,
-        comment: comment || undefined,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Hotspot user added successfully")
-          resetForm()
-          onClose()
-        },
-        onError: (err) => {
-          toast.error(err.message)
-        },
-      }
-    )
-  }
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
-          <div>
-            <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add Hotspot User</h3>
-            <p className="text-sm text-slate-500">Create a new hotspot user account.</p>
-          </div>
-          <button
-            onClick={() => { onClose(); resetForm() }}
-            className="text-slate-500 hover:text-[#dae2fd] transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 md:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
-                <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                  placeholder="e.g. user01"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
-                <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                  placeholder="User password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile</label>
-                <Select value={profile || "__default__"} onValueChange={(v) => setProfile(v === "__default__" ? "" : v)}>
-                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
-                    <SelectValue placeholder="Default" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
-                    <SelectItem value="__default__">Default</SelectItem>
-                    {profiles?.map((p) => (
-                      <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Server</label>
-                <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                  placeholder="all (default)"
-                  type="text"
-                  value={server}
-                  onChange={(e) => setServer(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Limit Uptime</label>
-                <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                  placeholder="e.g. 1h30m"
-                  type="text"
-                  value={limitUptime}
-                  onChange={(e) => setLimitUptime(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Comment</label>
-                <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                  placeholder="Optional note"
-                  type="text"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => { onClose(); resetForm() }}
-              className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={addUser.isPending}
-              className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
-            >
-              {addUser.isPending ? "Adding..." : "Add User"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
 
 export default function HotspotUsersPage() {
   const [search, setSearch] = useState("")
@@ -357,7 +197,7 @@ export default function HotspotUsersPage() {
         </div>
       </div>
 
-      {showAddDialog && <AddHotspotUserDialog onClose={() => setShowAddDialog(false)} />}
+      <AddHotspotUserDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>
   )
 }

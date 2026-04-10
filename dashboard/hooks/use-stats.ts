@@ -1,12 +1,11 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 import type { DashboardStats } from "@/lib/types"
 
 async function fetchStats(): Promise<DashboardStats> {
-  const res = await fetch("/api/stats")
-  if (!res.ok) throw new Error("Failed to fetch stats")
-  return res.json()
+  return apiClient.get("/api/stats")
 }
 
 export function useStats() {

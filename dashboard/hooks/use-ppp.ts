@@ -1,31 +1,26 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 
 // --- Queries ---
 
 async function fetchPPPSecrets(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/ppp/secrets${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch PPP secrets")
-  const data = await res.json()
-  return data.secrets ?? data
+  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/secrets${qs}`)
+  return (data as { secrets?: unknown[] }).secrets ?? data
 }
 
 async function fetchPPPActive(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/ppp/active${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch PPP active sessions")
-  const data = await res.json()
-  return data.sessions ?? data
+  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/active${qs}`)
+  return (data as { sessions?: unknown[] }).sessions ?? data
 }
 
 async function fetchPPPProfiles(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/ppp/profiles${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch PPP profiles")
-  const data = await res.json()
-  return data.profiles ?? data
+  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/profiles${qs}`)
+  return (data as { profiles?: unknown[] }).profiles ?? data
 }
 
 export function usePPPSecrets(router?: string) {
@@ -56,16 +51,7 @@ export function useAddPPPSecret() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      const res = await fetch("/api/ppp/secrets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to add PPP secret" }))
-        throw new Error(err.error || "Failed to add PPP secret")
-      }
-      return res.json()
+      return apiClient.post("/api/ppp/secrets", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ppp-secrets"] })
@@ -77,14 +63,7 @@ export function useRemovePPPSecret() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (name: string) => {
-      const res = await fetch(`/api/ppp/secrets/${encodeURIComponent(name)}`, {
-        method: "DELETE",
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to remove PPP secret" }))
-        throw new Error(err.error || "Failed to remove PPP secret")
-      }
-      return res.json()
+      return apiClient.delete(`/api/ppp/secrets/${encodeURIComponent(name)}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ppp-secrets"] })
@@ -96,14 +75,7 @@ export function useKickPPP() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/ppp/active/${encodeURIComponent(id)}/kick`, {
-        method: "POST",
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to kick PPP session" }))
-        throw new Error(err.error || "Failed to kick PPP session")
-      }
-      return res.json()
+      return apiClient.post(`/api/ppp/active/${encodeURIComponent(id)}/kick`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ppp-active"] })

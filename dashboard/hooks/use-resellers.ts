@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 import type {
   CreateResellerInput,
   UpdateResellerInput,
@@ -12,24 +13,18 @@ import type {
 // ── Fetch helpers ──
 
 async function fetchResellers() {
-  const res = await fetch("/api/resellers")
-  if (!res.ok) throw new Error("Failed to fetch resellers")
-  return res.json()
+  return apiClient.get("/api/resellers")
 }
 
 async function fetchReseller(id: string) {
-  const res = await fetch(`/api/resellers/${id}`)
-  if (!res.ok) throw new Error("Failed to fetch reseller")
-  return res.json()
+  return apiClient.get(`/api/resellers/${id}`)
 }
 
 async function fetchVoucherBatches(resellerId?: string) {
   const url = resellerId
     ? `/api/resellers/${resellerId}/vouchers`
     : "/api/vouchers"
-  const res = await fetch(url)
-  if (!res.ok) throw new Error("Failed to fetch voucher batches")
-  return res.json()
+  return apiClient.get(url)
 }
 
 async function fetchTransactions(
@@ -37,11 +32,9 @@ async function fetchTransactions(
   page = 1,
   pageSize = 20
 ) {
-  const res = await fetch(
+  return apiClient.get(
     `/api/resellers/${resellerId}/transactions?page=${page}&pageSize=${pageSize}`
   )
-  if (!res.ok) throw new Error("Failed to fetch transactions")
-  return res.json()
 }
 
 // ── Queries ──
@@ -86,16 +79,7 @@ export function useCreateReseller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: CreateResellerInput) => {
-      const res = await fetch("/api/resellers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to create reseller" }))
-        throw new Error(err.error || "Failed to create reseller")
-      }
-      return res.json()
+      return apiClient.post("/api/resellers", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -113,16 +97,7 @@ export function useUpdateReseller() {
       id: string
       data: UpdateResellerInput
     }) => {
-      const res = await fetch(`/api/resellers/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to update reseller" }))
-        throw new Error(err.error || "Failed to update reseller")
-      }
-      return res.json()
+      return apiClient.patch(`/api/resellers/${id}`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -135,12 +110,7 @@ export function useDeleteReseller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/resellers/${id}`, { method: "DELETE" })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to delete reseller" }))
-        throw new Error(err.error || "Failed to delete reseller")
-      }
-      return res.json()
+      return apiClient.delete(`/api/resellers/${id}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -158,16 +128,7 @@ export function useTopUpSaldo() {
       resellerId: string
       data: SaldoOperationInput
     }) => {
-      const res = await fetch(`/api/resellers/${resellerId}/topup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to top up saldo" }))
-        throw new Error(err.error || "Failed to top up saldo")
-      }
-      return res.json()
+      return apiClient.post(`/api/resellers/${resellerId}/topup`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -187,16 +148,7 @@ export function useTopDownSaldo() {
       resellerId: string
       data: SaldoOperationInput
     }) => {
-      const res = await fetch(`/api/resellers/${resellerId}/topdown`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to deduct saldo" }))
-        throw new Error(err.error || "Failed to deduct saldo")
-      }
-      return res.json()
+      return apiClient.post(`/api/resellers/${resellerId}/topdown`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -216,16 +168,7 @@ export function useGenerateVouchers() {
       resellerId: string
       data: GenerateVouchersInput
     }) => {
-      const res = await fetch(`/api/resellers/${resellerId}/vouchers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to generate vouchers" }))
-        throw new Error(err.error || "Failed to generate vouchers")
-      }
-      return res.json()
+      return apiClient.post(`/api/resellers/${resellerId}/vouchers`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["voucher-batches"] })

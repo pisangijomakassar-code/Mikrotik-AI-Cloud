@@ -4,23 +4,22 @@ import { useState } from "react"
 import {
   Store,
   PlusCircle,
-  X,
   Pencil,
   Trash2,
   ArrowUpCircle,
   ArrowDownCircle,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react"
 import {
   useResellers,
-  useCreateReseller,
-  useUpdateReseller,
   useDeleteReseller,
   useTopUpSaldo,
   useTopDownSaldo,
 } from "@/hooks/use-resellers"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { AddResellerDialog } from "@/components/dialogs/add-reseller-dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -42,8 +41,6 @@ function formatDate(dateStr: string | null): string {
 
 export default function ResellersPage() {
   const { data: resellers, isLoading } = useResellers()
-  const createReseller = useCreateReseller()
-  const updateReseller = useUpdateReseller()
   const deleteReseller = useDeleteReseller()
   const topUpSaldo = useTopUpSaldo()
   const topDownSaldo = useTopDownSaldo()
@@ -55,13 +52,7 @@ export default function ResellersPage() {
     reseller: Record<string, unknown>
   } | null>(null)
 
-  // Add form state
-  const [addName, setAddName] = useState("")
-  const [addPhone, setAddPhone] = useState("")
-  const [addTelegramId, setAddTelegramId] = useState("")
-  const [addBalance, setAddBalance] = useState("")
-
-  // Edit form state
+  // Edit dialog state
   const [editReseller, setEditReseller] = useState<Record<string, unknown> | null>(null)
   const [editName, setEditName] = useState("")
   const [editPhone, setEditPhone] = useState("")
@@ -72,37 +63,6 @@ export default function ResellersPage() {
   const [saldoAmount, setSaldoAmount] = useState("")
   const [saldoDesc, setSaldoDesc] = useState("")
 
-  function resetAddForm() {
-    setAddName("")
-    setAddPhone("")
-    setAddTelegramId("")
-    setAddBalance("")
-  }
-
-  function handleAddSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!addName.trim()) {
-      toast.error("Name is required")
-      return
-    }
-    createReseller.mutate(
-      {
-        name: addName.trim(),
-        phone: addPhone.trim() || undefined,
-        telegramId: addTelegramId.trim() || undefined,
-        balance: addBalance ? parseInt(addBalance) : undefined,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Reseller created")
-          resetAddForm()
-          setShowAddDialog(false)
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    )
-  }
-
   function openEditDialog(reseller: Record<string, unknown>) {
     setEditReseller(reseller)
     setEditName(reseller.name as string || "")
@@ -110,30 +70,6 @@ export default function ResellersPage() {
     setEditTelegramId(reseller.telegramId as string || "")
     setEditStatus(reseller.status as string || "ACTIVE")
     setShowEditDialog(true)
-  }
-
-  function handleEditSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!editReseller) return
-    updateReseller.mutate(
-      {
-        id: editReseller.id as string,
-        data: {
-          name: editName.trim() || undefined,
-          phone: editPhone.trim() || undefined,
-          telegramId: editTelegramId.trim() || undefined,
-          status: editStatus as "ACTIVE" | "INACTIVE",
-        },
-      },
-      {
-        onSuccess: () => {
-          toast.success("Reseller updated")
-          setShowEditDialog(false)
-          setEditReseller(null)
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    )
   }
 
   function handleSaldoSubmit(e: React.FormEvent) {
@@ -334,86 +270,7 @@ export default function ResellersPage() {
         </div>
       </div>
 
-      {/* Add Reseller Dialog */}
-      {showAddDialog && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add Reseller</h3>
-                <p className="text-sm text-slate-500">Create a new reseller account.</p>
-              </div>
-              <button
-                onClick={() => { setShowAddDialog(false); resetAddForm() }}
-                className="text-slate-500 hover:text-[#dae2fd] transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <form onSubmit={handleAddSubmit}>
-              <div className="p-4 md:p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name *</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="Reseller name"
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Phone</label>
-                    <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                      placeholder="08xxxxxxxxxx"
-                      value={addPhone}
-                      onChange={(e) => setAddPhone(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
-                    <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                      placeholder="123456789"
-                      value={addTelegramId}
-                      onChange={(e) => setAddTelegramId(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Initial Balance (Rp)</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="0"
-                    type="number"
-                    min="0"
-                    value={addBalance}
-                    onChange={(e) => setAddBalance(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowAddDialog(false); resetAddForm() }}
-                  className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createReseller.isPending}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
-                >
-                  {createReseller.isPending ? "Creating..." : "Add Reseller"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddResellerDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
       {/* Edit Reseller Dialog */}
       {showEditDialog && editReseller && (
@@ -431,7 +288,7 @@ export default function ResellersPage() {
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <form onSubmit={handleEditSubmit}>
+            <form onSubmit={(e) => { e.preventDefault() }}>
               <div className="p-4 md:p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name</label>
@@ -482,10 +339,9 @@ export default function ResellersPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={updateReseller.isPending}
                   className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
-                  {updateReseller.isPending ? "Saving..." : "Save Changes"}
+                  Save Changes
                 </button>
               </div>
             </form>

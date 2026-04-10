@@ -1,6 +1,7 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { apiClient } from "@/lib/api-client"
 
 // --- Types ---
 
@@ -63,33 +64,25 @@ export interface AddHotspotUserInput {
 
 async function fetchHotspotUsers(router?: string): Promise<HotspotUser[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/hotspot/users${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch hotspot users")
-  const data = await res.json()
-  return data.users ?? data
+  const data = await apiClient.get<{ users?: HotspotUser[] } & HotspotUser[]>(`/api/hotspot/users${qs}`)
+  return (data as { users?: HotspotUser[] }).users ?? data
 }
 
 async function fetchHotspotActive(router?: string): Promise<HotspotActiveSession[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/hotspot/active${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch active sessions")
-  const data = await res.json()
-  return data.sessions ?? data
+  const data = await apiClient.get<{ sessions?: HotspotActiveSession[] } & HotspotActiveSession[]>(`/api/hotspot/active${qs}`)
+  return (data as { sessions?: HotspotActiveSession[] }).sessions ?? data
 }
 
 async function fetchHotspotProfiles(router?: string): Promise<HotspotProfile[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/hotspot/profiles${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch hotspot profiles")
-  const data = await res.json()
-  return data.profiles ?? data
+  const data = await apiClient.get<{ profiles?: HotspotProfile[] } & HotspotProfile[]>(`/api/hotspot/profiles${qs}`)
+  return (data as { profiles?: HotspotProfile[] }).profiles ?? data
 }
 
 async function fetchHotspotStats(router?: string): Promise<HotspotStats> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const res = await fetch(`/api/hotspot/stats${qs}`)
-  if (!res.ok) throw new Error("Failed to fetch hotspot stats")
-  return res.json()
+  return apiClient.get(`/api/hotspot/stats${qs}`)
 }
 
 // --- Query hooks ---
@@ -130,16 +123,7 @@ export function useAddHotspotUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: AddHotspotUserInput) => {
-      const res = await fetch("/api/hotspot/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to add hotspot user" }))
-        throw new Error(err.error || "Failed to add hotspot user")
-      }
-      return res.json()
+      return apiClient.post("/api/hotspot/users", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hotspot-users"] })
@@ -152,14 +136,7 @@ export function useRemoveHotspotUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch(`/api/hotspot/users/${encodeURIComponent(username)}`, {
-        method: "DELETE",
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to remove hotspot user" }))
-        throw new Error(err.error || "Failed to remove hotspot user")
-      }
-      return res.json()
+      return apiClient.delete(`/api/hotspot/users/${encodeURIComponent(username)}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hotspot-users"] })
@@ -172,14 +149,7 @@ export function useEnableHotspotUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch(`/api/hotspot/users/${encodeURIComponent(username)}/enable`, {
-        method: "POST",
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to enable hotspot user" }))
-        throw new Error(err.error || "Failed to enable hotspot user")
-      }
-      return res.json()
+      return apiClient.post(`/api/hotspot/users/${encodeURIComponent(username)}/enable`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hotspot-users"] })
@@ -192,14 +162,7 @@ export function useDisableHotspotUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (username: string) => {
-      const res = await fetch(`/api/hotspot/users/${encodeURIComponent(username)}/disable`, {
-        method: "POST",
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Failed to disable hotspot user" }))
-        throw new Error(err.error || "Failed to disable hotspot user")
-      }
-      return res.json()
+      return apiClient.post(`/api/hotspot/users/${encodeURIComponent(username)}/disable`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hotspot-users"] })

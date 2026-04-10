@@ -7,7 +7,6 @@ import { NetworkThroughput } from "@/components/network-throughput"
 import { DashboardHotspotStats } from "@/components/dashboard-hotspot-stats"
 import { DashboardWarnings } from "@/components/dashboard-warnings"
 import { DashboardAIInsight } from "@/components/dashboard-ai-insight"
-import { DashboardVoucherGenerate } from "@/components/dashboard-voucher-generate"
 
 export default function DashboardPage() {
   return (
@@ -23,29 +22,20 @@ export default function DashboardPage() {
         <DashboardHotspotStats />
       </div>
 
-      {/* Row 2.5: Quick Voucher */}
-      <div className="mt-8">
-        <DashboardVoucherGenerate />
-      </div>
-
-      {/* Row 3: Network Throughput + Warnings */}
+      {/* Row 3: Network Throughput + Router Status */}
       <div className="grid grid-cols-12 gap-8 mt-8">
         <div className="col-span-12 lg:col-span-7">
           <NetworkThroughput />
         </div>
         <div className="col-span-12 lg:col-span-5">
-          <DashboardWarnings />
+          <RouterStatusCards />
         </div>
       </div>
 
-      {/* Row 4: Router Status + AI Insight */}
-      <div className="grid grid-cols-12 gap-8 mt-8">
-        <div className="col-span-12 lg:col-span-7">
-          <RouterStatusCards />
-        </div>
-        <div className="col-span-12 lg:col-span-5">
-          <DashboardAIInsight />
-        </div>
+      {/* Row 4: Network Alerts + AI Insight (stacked, same section) */}
+      <div className="mt-8 space-y-6">
+        <DashboardWarnings />
+        <DashboardAIInsight />
       </div>
 
       {/* Row 5: Activity Feed */}

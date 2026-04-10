@@ -163,7 +163,7 @@ export default function ChatPage() {
       {/* Chat */}
       <section className="flex-1 flex flex-col border-r border-white/5 bg-slate-900 overflow-hidden">
         {/* Scrollable chat history only */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide">
           {messages.map((msg, i) => msg.role === "assistant" ? (
             <div key={i} className="flex gap-4 max-w-3xl">
               <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center shrink-0">

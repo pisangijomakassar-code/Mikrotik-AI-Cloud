@@ -136,6 +136,10 @@ h1, h2, h3, h4, h5, h6 {
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #2d3449; border-radius: 10px; }
 
+/* Hidden scrollbar (still scrollable) */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* All interactive elements get pointer cursor */
 button, [role="button"], a, select, input[type="checkbox"], input[type="radio"], input[type="range"] {
   cursor: pointer;
