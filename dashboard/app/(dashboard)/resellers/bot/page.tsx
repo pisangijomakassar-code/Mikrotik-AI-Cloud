@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { BotMessageSquare, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
 
 export default function ResellerBotPage() {
   const [botToken, setBotToken] = useState("")
@@ -124,7 +125,7 @@ export default function ResellerBotPage() {
               Bot Token
             </label>
             <div className="relative">
-              <input
+              <Input
                 className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 pr-12 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                 placeholder="123456789:ABCDefGhIJKlMNOpQRsTUVWxyz"
                 type={showToken ? "text" : "password"}

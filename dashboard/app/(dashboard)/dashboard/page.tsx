@@ -11,20 +11,10 @@ import { DashboardAIInsight } from "@/components/dashboard-ai-insight"
 export default function DashboardPage() {
   return (
     <div>
+      {/* Row 1: Main Stats */}
       <StatsCards />
 
-      <div className="grid grid-cols-12 gap-8 mt-8">
-        <div className="col-span-12 lg:col-span-7 space-y-8">
-          <NetworkThroughput />
-          <RouterStatusCards />
-        </div>
-
-        <div className="col-span-12 lg:col-span-5">
-          <ActivityFeed />
-        </div>
-      </div>
-
-      {/* Hotspot Stats */}
+      {/* Row 2: Hotspot Overview */}
       <div className="mt-8">
         <h3 className="text-xs font-headline font-bold text-slate-400 uppercase tracking-widest mb-4">
           Hotspot Overview
@@ -32,14 +22,29 @@ export default function DashboardPage() {
         <DashboardHotspotStats />
       </div>
 
-      {/* Warnings + AI Insight */}
+      {/* Row 3: Network Throughput + Warnings */}
       <div className="grid grid-cols-12 gap-8 mt-8">
+        <div className="col-span-12 lg:col-span-7">
+          <NetworkThroughput />
+        </div>
         <div className="col-span-12 lg:col-span-5">
           <DashboardWarnings />
         </div>
+      </div>
+
+      {/* Row 4: Router Status + AI Insight */}
+      <div className="grid grid-cols-12 gap-8 mt-8">
         <div className="col-span-12 lg:col-span-7">
+          <RouterStatusCards />
+        </div>
+        <div className="col-span-12 lg:col-span-5">
           <DashboardAIInsight />
         </div>
+      </div>
+
+      {/* Row 5: Activity Feed */}
+      <div className="mt-8">
+        <ActivityFeed />
       </div>
     </div>
   )

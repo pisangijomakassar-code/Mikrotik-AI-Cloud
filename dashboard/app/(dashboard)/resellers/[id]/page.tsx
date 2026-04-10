@@ -24,6 +24,8 @@ import {
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`
@@ -495,7 +497,7 @@ export default function ResellerDetailPage({
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="100000"
                     type="number"
@@ -507,7 +509,7 @@ export default function ResellerDetailPage({
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Description (optional)</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="e.g. Transfer BCA"
                     value={saldoDesc}
@@ -565,21 +567,21 @@ export default function ResellerDetailPage({
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile *</label>
-                  <select
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-                    value={vProfile}
-                    onChange={(e) => setVProfile(e.target.value)}
-                    required
-                  >
-                    <option value="">Select profile...</option>
-                    {profiles?.map((p: { name: string }) => (
-                      <option key={p.name} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
+                  <Select value={vProfile || "__default__"} onValueChange={(v) => setVProfile(v === "__default__" ? "" : v)}>
+                    <SelectTrigger className="w-full bg-[#2d3449] border-none text-[#dae2fd] text-sm">
+                      <SelectValue placeholder="Select profile..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                      <SelectItem value="__default__">Select profile...</SelectItem>
+                      {profiles?.map((p: { name: string }) => (
+                        <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name (optional, default: default)</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="default"
                     value={vRouter}
@@ -589,7 +591,7 @@ export default function ResellerDetailPage({
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Count *</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="10"
                       type="number"
@@ -601,7 +603,7 @@ export default function ResellerDetailPage({
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Price per Unit (Rp) *</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="5000"
                       type="number"

@@ -5,6 +5,7 @@ import { Wifi, PlusCircle, Trash2, X, Search, UserX } from "lucide-react"
 import { useHotspotUsers, useHotspotProfiles, useAddHotspotUser, useRemoveHotspotUser, useEnableHotspotUser, useDisableHotspotUser } from "@/hooks/use-hotspot"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -100,16 +101,17 @@ function AddHotspotUserDialog({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile</label>
-                <select
-                  value={profile}
-                  onChange={(e) => setProfile(e.target.value)}
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-                >
-                  <option value="">Default</option>
-                  {profiles?.map((p) => (
-                    <option key={p.name} value={p.name}>{p.name}</option>
-                  ))}
-                </select>
+                <Select value={profile || "__default__"} onValueChange={(v) => setProfile(v === "__default__" ? "" : v)}>
+                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                    <SelectItem value="__default__">Default</SelectItem>
+                    {profiles?.map((p) => (
+                      <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Server</label>
@@ -231,7 +233,7 @@ export default function HotspotUsersPage() {
       <div className="flex items-center gap-3 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
+          <Input
             type="text"
             placeholder="Search by username..."
             value={search}
@@ -239,16 +241,17 @@ export default function HotspotUsersPage() {
             className="w-full bg-[#131b2e] border border-white/5 rounded-lg text-sm pl-10 pr-4 py-2.5 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
           />
         </div>
-        <select
-          value={profileFilter}
-          onChange={(e) => setProfileFilter(e.target.value)}
-          className="bg-[#131b2e] border border-white/5 rounded-lg text-sm px-4 py-2.5 text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-        >
-          <option value="">All Profiles</option>
-          {profiles?.map((p) => (
-            <option key={p.name} value={p.name}>{p.name}</option>
-          ))}
-        </select>
+        <Select value={profileFilter || "__all__"} onValueChange={(v) => setProfileFilter(v === "__all__" ? "" : v)}>
+          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-sm text-[#dae2fd] w-[180px]">
+            <SelectValue placeholder="All Profiles" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+            <SelectItem value="__all__">All Profiles</SelectItem>
+            {profiles?.map((p) => (
+              <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}

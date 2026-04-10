@@ -5,6 +5,7 @@ import { Network, PlusCircle, Trash2, X, Search, UserX } from "lucide-react"
 import { usePPPSecrets, usePPPProfiles, useAddPPPSecret, useRemovePPPSecret } from "@/hooks/use-ppp"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
@@ -107,31 +108,33 @@ function AddPPPSecretDialog({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Service</label>
-                <select
-                  value={service}
-                  onChange={(e) => setService(e.target.value)}
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-                >
-                  <option value="any">Any</option>
-                  <option value="pppoe">PPPoE</option>
-                  <option value="pptp">PPTP</option>
-                  <option value="l2tp">L2TP</option>
-                  <option value="ovpn">OVPN</option>
-                  <option value="sstp">SSTP</option>
-                </select>
+                <Select value={service} onValueChange={setService}>
+                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
+                    <SelectValue placeholder="Any" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                    <SelectItem value="any">Any</SelectItem>
+                    <SelectItem value="pppoe">PPPoE</SelectItem>
+                    <SelectItem value="pptp">PPTP</SelectItem>
+                    <SelectItem value="l2tp">L2TP</SelectItem>
+                    <SelectItem value="ovpn">OVPN</SelectItem>
+                    <SelectItem value="sstp">SSTP</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile</label>
-                <select
-                  value={profile}
-                  onChange={(e) => setProfile(e.target.value)}
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-                >
-                  <option value="">Default</option>
-                  {profiles?.map((p: { name: string }) => (
-                    <option key={p.name} value={p.name}>{p.name}</option>
-                  ))}
-                </select>
+                <Select value={profile || "__default__"} onValueChange={(v) => setProfile(v === "__default__" ? "" : v)}>
+                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                    <SelectItem value="__default__">Default</SelectItem>
+                    {profiles?.map((p: { name: string }) => (
+                      <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-6">
@@ -235,7 +238,7 @@ export default function PPPSecretsPage() {
       <div className="flex items-center gap-3 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <input
+          <Input
             type="text"
             placeholder="Search by name..."
             value={search}

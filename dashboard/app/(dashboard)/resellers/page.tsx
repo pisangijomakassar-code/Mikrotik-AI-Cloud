@@ -24,6 +24,8 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import Link from "next/link"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`
@@ -352,7 +354,7 @@ export default function ResellersPage() {
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name *</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="Reseller name"
                     value={addName}
@@ -363,7 +365,7 @@ export default function ResellersPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Phone</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="08xxxxxxxxxx"
                       value={addPhone}
@@ -372,7 +374,7 @@ export default function ResellersPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       placeholder="123456789"
                       value={addTelegramId}
@@ -382,7 +384,7 @@ export default function ResellersPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Initial Balance (Rp)</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="0"
                     type="number"
@@ -433,7 +435,7 @@ export default function ResellersPage() {
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -442,7 +444,7 @@ export default function ResellersPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Phone</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
@@ -450,7 +452,7 @@ export default function ResellersPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
-                    <input
+                    <Input
                       className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                       value={editTelegramId}
                       onChange={(e) => setEditTelegramId(e.target.value)}
@@ -459,14 +461,15 @@ export default function ResellersPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Status</label>
-                  <select
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </select>
+                  <Select value={editStatus || "__default__"} onValueChange={(v) => setEditStatus(v === "__default__" ? "" : v)}>
+                    <SelectTrigger className="w-full bg-[#2d3449] border-none text-[#dae2fd] text-sm">
+                      <SelectValue placeholder="Select status..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
@@ -514,7 +517,7 @@ export default function ResellersPage() {
               <div className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="100000"
                     type="number"
@@ -526,7 +529,7 @@ export default function ResellersPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Description (optional)</label>
-                  <input
+                  <Input
                     className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
                     placeholder="e.g. Transfer BCA"
                     value={saldoDesc}

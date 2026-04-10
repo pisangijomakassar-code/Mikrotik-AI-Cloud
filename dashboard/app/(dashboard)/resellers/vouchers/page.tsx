@@ -5,6 +5,7 @@ import { Receipt, ChevronLeft, ChevronRight } from "lucide-react"
 import { useAllVouchers } from "@/hooks/use-vouchers"
 import { useResellers } from "@/hooks/use-resellers"
 import { cn } from "@/lib/utils"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString("id-ID")}`
@@ -70,27 +71,29 @@ export default function VoucherHistoryPage() {
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        <select
-          className="bg-[#131b2e] border border-white/5 rounded-lg text-sm px-4 py-2.5 text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-          value={sourceFilter}
-          onChange={(e) => { setSourceFilter(e.target.value); setPage(1) }}
-        >
-          <option value="">All Sources</option>
-          <option value="dashboard">Dashboard</option>
-          <option value="nanobot">Nanobot</option>
-          <option value="reseller_bot">Reseller Bot</option>
-        </select>
-        <select
-          className="bg-[#131b2e] border border-white/5 rounded-lg text-sm px-4 py-2.5 text-[#dae2fd] outline-none focus:ring-1 focus:ring-[#4cd7f6]"
-          value={resellerFilter}
-          onChange={(e) => { setResellerFilter(e.target.value); setPage(1) }}
-        >
-          <option value="">All Resellers</option>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {resellers?.map((r: any) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
+        <Select value={sourceFilter || "__all__"} onValueChange={(v) => { setSourceFilter(v === "__all__" ? "" : v); setPage(1) }}>
+          <SelectTrigger className="bg-[#131b2e] border border-white/5 text-[#dae2fd] text-sm">
+            <SelectValue placeholder="All Sources" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+            <SelectItem value="__all__">All Sources</SelectItem>
+            <SelectItem value="dashboard">Dashboard</SelectItem>
+            <SelectItem value="nanobot">Nanobot</SelectItem>
+            <SelectItem value="reseller_bot">Reseller Bot</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={resellerFilter || "__all__"} onValueChange={(v) => { setResellerFilter(v === "__all__" ? "" : v); setPage(1) }}>
+          <SelectTrigger className="bg-[#131b2e] border border-white/5 text-[#dae2fd] text-sm">
+            <SelectValue placeholder="All Resellers" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+            <SelectItem value="__all__">All Resellers</SelectItem>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {resellers?.map((r: any) => (
+              <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {(sourceFilter || resellerFilter) && (
           <button
             onClick={() => { setSourceFilter(""); setResellerFilter(""); setPage(1) }}
