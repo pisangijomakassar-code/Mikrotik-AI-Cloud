@@ -14,17 +14,12 @@ export function DashboardWarnings() {
   if (isLoading) {
     return (
       <div
-        className="rounded-2xl p-6"
-        style={{
-          background: "rgba(15, 23, 42, 0.6)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.05)",
-        }}
+        className="rounded-2xl p-6 card-glass"
       >
         <div className="space-y-3 animate-pulse">
-          <div className="h-5 w-32 rounded bg-[#222a3d]" />
-          <div className="h-4 w-64 rounded bg-[#222a3d]" />
-          <div className="h-4 w-48 rounded bg-[#222a3d]" />
+          <div className="h-5 w-32 rounded bg-muted" />
+          <div className="h-4 w-64 rounded bg-muted" />
+          <div className="h-4 w-48 rounded bg-muted" />
         </div>
       </div>
     )
@@ -63,16 +58,11 @@ export function DashboardWarnings() {
 
   return (
     <div
-      className="rounded-2xl p-6"
-      style={{
-        background: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
+      className="rounded-2xl p-6 card-glass"
     >
       <div className="flex items-center gap-2 mb-4">
         <ShieldAlert className="h-5 w-5 text-amber-400" />
-        <h3 className="text-sm font-headline font-bold text-[#dae2fd] uppercase tracking-widest">
+        <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">
           Network Alerts
         </h3>
       </div>
@@ -110,7 +100,7 @@ export function DashboardWarnings() {
                     : "text-amber-400"
                 }`}
               />
-              <span className="text-sm text-[#dae2fd]">{warning.message}</span>
+              <span className="text-sm text-foreground">{warning.message}</span>
               <span
                 className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-lg border flex-shrink-0 ${
                   warning.level === "critical"

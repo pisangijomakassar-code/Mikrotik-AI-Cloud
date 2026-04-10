@@ -95,14 +95,14 @@ export function Sidebar() {
         <div className="fixed inset-0 z-[55] bg-black/50 lg:hidden" onClick={close} />
       )}
     <aside className={cn(
-      "flex flex-col fixed left-0 top-0 h-full h-screen w-64 border-r border-cyan-900/20 bg-slate-950 shadow-[0_0_32px_rgba(76,215,246,0.08)] z-[60] transition-transform duration-300",
+      "flex flex-col fixed left-0 top-0 h-full h-screen w-64 border-r border-primary/20 bg-card shadow-[0_0_32px_rgba(76,215,246,0.08)] z-[60] transition-transform duration-300",
       isOpen ? "translate-x-0" : "-translate-x-full",
       "lg:translate-x-0"
     )}>
       {/* Mobile close button */}
       <button
         onClick={close}
-        className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white lg:hidden"
+        className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-foreground lg:hidden"
       >
         <X className="h-5 w-5" />
       </button>
@@ -117,7 +117,7 @@ export function Sidebar() {
             <h1 className="text-xl font-bold bg-gradient-to-br from-cyan-400 to-cyan-600 bg-clip-text text-transparent font-headline">
               MikroTik AI
             </h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-medium">
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">
               AI-Driven Network
             </p>
           </div>
@@ -129,7 +129,7 @@ export function Sidebar() {
         {visibleGroups.map((group, idx) => (
           <div key={group.label}>
             {idx > 0 && (
-              <div className="border-t border-white/5 my-2" />
+              <div className="border-t border-border my-2" />
             )}
             <CollapsibleGroup
               group={group}

@@ -1,6 +1,10 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/db"
 import { getRouters, createRouter } from "@/lib/services/router.service"
+import { createCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
+import { createSstpTunnel } from "@/lib/services/sstp-tunnel.service"
+import { TUNNEL_SERVICES } from "@/lib/types"
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -48,6 +52,88 @@ export async function POST(request: NextRequest) {
     }
 
     const router = await createRouter(body)
+
+    // ── Tunnel provisioning (optional) ────────────────────────────────────────
+    const { connectionMethod, tunnelMethod, routerLanIp, enabledPorts } = body
+
+    if (connectionMethod === "TUNNEL") {
+      try {
+        if (tunnelMethod === "CLOUDFLARE") {
+          // Determine which ports to expose; default to api + winbox
+          const requestedServices: string[] =
+            Array.isArray(enabledPorts) && enabledPorts.length > 0
+              ? enabledPorts
+              : ["api", "winbox"]
+
+          const ports = requestedServices
+            .map((sn: string) => TUNNEL_SERVICES.find((s) => s.serviceName === sn))
+            .filter(Boolean)
+            .map((s) => ({ serviceName: s!.serviceName, remotePort: s!.remotePort }))
+
+          const { tunnelId, token, ports: cfPorts } = await createCloudflareTunnel(
+            router.id,
+            routerLanIp ?? "192.168.88.1",
+            ports
+          )
+
+          await prisma.tunnel.create({
+            data: {
+              method: "CLOUDFLARE",
+              cloudflareTunnelId: tunnelId,
+              cloudflareTunnelToken: token,
+              routerLanIp: routerLanIp ?? "192.168.88.1",
+              routerId: router.id,
+              ports: {
+                create: cfPorts.map((p) => ({
+                  serviceName: p.serviceName,
+                  remotePort:
+                    TUNNEL_SERVICES.find((s) => s.serviceName === p.serviceName)
+                      ?.remotePort ?? 0,
+                  hostname: p.hostname,
+                  enabled: true,
+                })),
+              },
+            },
+          })
+        } else if (tunnelMethod === "SSTP") {
+          const { username, password, vpnIp } = await createSstpTunnel(
+            router.id,
+            prisma
+          )
+
+          await prisma.tunnel.create({
+            data: {
+              method: "SSTP",
+              vpnUsername: username,
+              vpnPassword: password,
+              vpnAssignedIp: vpnIp,
+              routerLanIp: routerLanIp ?? "192.168.88.1",
+              routerId: router.id,
+              ports: {
+                // All services are reachable over the VPN tunnel
+                create: TUNNEL_SERVICES.map((s) => ({
+                  serviceName: s.serviceName,
+                  remotePort: s.remotePort,
+                  enabled: true,
+                })),
+              },
+            },
+          })
+        }
+
+        // Mark router as TUNNEL connection
+        await prisma.router.update({
+          where: { id: router.id },
+          data: { connectionMethod: "TUNNEL" },
+        })
+      } catch (tunnelError) {
+        // Tunnel creation failed — clean up the router record to avoid orphans
+        console.error("Tunnel provisioning failed, rolling back router:", tunnelError)
+        await prisma.router.delete({ where: { id: router.id } }).catch(() => {})
+        throw tunnelError
+      }
+    }
+
     return Response.json(router, { status: 201 })
   } catch (error: unknown) {
     console.error("Failed to create router:", error)

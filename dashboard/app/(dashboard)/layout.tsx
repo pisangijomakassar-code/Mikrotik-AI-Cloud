@@ -23,10 +23,10 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0b1326]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#4cd7f6] border-t-transparent" />
-          <p className="text-sm text-slate-400">Loading...</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -38,7 +38,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-    <div className="min-h-screen bg-[#0b1326] text-[#dae2fd]">
+    <div className="min-h-screen bg-background text-foreground">
       <Sidebar />
       <TopNavBar />
       <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">

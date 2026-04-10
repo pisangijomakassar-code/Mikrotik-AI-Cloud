@@ -90,13 +90,9 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <div
       className={cn(
-        "w-full p-6 transition-colors",
-        isDragOver && "bg-cyan-500/5"
+        "w-full p-6 transition-colors bg-linear-to-t from-background via-background to-transparent",
+        isDragOver && "bg-primary/5"
       )}
-      style={{
-        background:
-          "linear-gradient(to top, rgb(15, 23, 42), rgb(15, 23, 42), transparent)",
-      }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -108,7 +104,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             <img
               src={imagePreview}
               alt="Preview"
-              className="h-16 w-16 rounded-lg border border-white/10 object-cover"
+              className="h-16 w-16 rounded-lg border border-border object-cover"
             />
             <button
               type="button"
@@ -118,7 +114,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
               <X className="h-3 w-3" />
             </button>
           </div>
-          <span className="text-xs text-slate-500">{imageFile?.name}</span>
+          <span className="text-xs text-muted-foreground">{imageFile?.name}</span>
         </div>
       )}
 
@@ -131,7 +127,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             variant="outline"
             onClick={() => handleQuickAction(action.label)}
             disabled={disabled}
-            className="shrink-0 whitespace-nowrap rounded-full border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
+            className="shrink-0 whitespace-nowrap rounded-full border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
           >
             {action.label}
           </Button>
@@ -140,21 +136,14 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
       {/* Glass Card Floating Input */}
       <div className="relative mx-auto max-w-4xl">
-        <div
-          className="flex items-center rounded-2xl p-2 shadow-2xl"
-          style={{
-            background: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-          }}
-        >
+        <div className="card-glass flex items-center rounded-2xl p-2 shadow-2xl border border-border/20">
           {/* Mic button */}
           <Button
             type="button"
             variant="ghost"
             size="icon"
             disabled={disabled}
-            className="h-10 w-10 shrink-0 rounded-lg text-slate-400 hover:text-cyan-400"
+            className="h-10 w-10 shrink-0 rounded-lg text-muted-foreground hover:text-primary"
             title="Voice input"
           >
             <Mic className="h-5 w-5" />
@@ -169,7 +158,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..."
             disabled={disabled}
-            className="flex-1 border-none bg-transparent px-4 text-sm text-slate-100 placeholder-slate-500 shadow-none ring-0 focus-visible:border-none focus-visible:ring-0"
+            className="flex-1 border-none bg-transparent px-4 text-sm text-foreground placeholder-muted-foreground shadow-none ring-0 focus-visible:border-none focus-visible:ring-0"
           />
 
           <div className="flex items-center gap-2 pr-2">
@@ -180,7 +169,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
               size="icon"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="h-9 w-9 rounded-lg text-slate-400 hover:text-slate-200"
+              className="h-9 w-9 rounded-lg text-muted-foreground hover:text-foreground"
               title="Attach file"
             >
               <Paperclip className="h-5 w-5" />
@@ -212,7 +201,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
       {/* Drag overlay hint */}
       {isDragOver && (
-        <div className="mt-2 text-center text-xs text-cyan-400">
+        <div className="mt-2 text-center text-xs text-primary">
           Drop image here
         </div>
       )}

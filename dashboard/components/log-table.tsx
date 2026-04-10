@@ -13,10 +13,10 @@ function getTopicStyle(topics: string) {
   if (topics.includes("warning"))
     return { icon: <AlertTriangle className="h-3 w-3" />, color: "text-amber-400", bg: "bg-amber-400/10" }
   if (topics.includes("firewall"))
-    return { icon: <Shield className="h-3 w-3" />, color: "text-[#4cd7f6]", bg: "bg-[#4cd7f6]/10" }
+    return { icon: <Shield className="h-3 w-3" />, color: "text-primary", bg: "bg-primary/10" }
   if (topics.includes("wireless") || topics.includes("dhcp"))
     return { icon: <Wifi className="h-3 w-3" />, color: "text-[#4ae176]", bg: "bg-[#4ae176]/10" }
-  return { icon: <Info className="h-3 w-3" />, color: "text-slate-400", bg: "bg-slate-400/10" }
+  return { icon: <Info className="h-3 w-3" />, color: "text-muted-foreground", bg: "bg-muted/40" }
 }
 
 export function LogTable() {
@@ -41,27 +41,27 @@ export function LogTable() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-xs text-slate-400 hover:text-[#4cd7f6] hover:border-[#4cd7f6]/30 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-all"
           >
             <RefreshCw className={cn("h-3.5 w-3.5 shrink-0", isFetching && "animate-spin")} />
             Refresh
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-xs text-slate-400 hover:text-[#4cd7f6] hover:border-[#4cd7f6]/30 transition-all">
+          <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-all">
             <Download className="h-3.5 w-3.5 shrink-0" />
             Export
           </button>
         </div>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground/70">
           {data?.router ? `${data.router}` : "All routers"} · {data?.total ?? 0} entries
         </p>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Select value={selectedRouter || "default"} onValueChange={(val) => setSelectedRouter(val === "default" ? "" : val)}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border text-xs rounded-lg">
               <SelectValue placeholder="All Routers" />
             </SelectTrigger>
-            <SelectContent className="bg-[#131b2e] border-white/10">
+            <SelectContent className="bg-card border-border">
               <SelectItem value="default">Default Router</SelectItem>
               {routers?.map((r) => (
                 <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
@@ -70,10 +70,10 @@ export function LogTable() {
           </Select>
 
           <Select value={topicFilter || "all"} onValueChange={(val) => setTopicFilter(val === "all" ? "" : val)}>
-            <SelectTrigger className="w-[calc(50%-6px)] sm:w-[160px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+            <SelectTrigger className="w-[calc(50%-6px)] sm:w-[160px] bg-card border-border text-xs rounded-lg">
               <SelectValue placeholder="All Topics" />
             </SelectTrigger>
-            <SelectContent className="bg-[#131b2e] border-white/10">
+            <SelectContent className="bg-card border-border">
               <SelectItem value="all">All Topics</SelectItem>
               <SelectItem value="system">System</SelectItem>
               <SelectItem value="firewall">Firewall</SelectItem>
@@ -86,10 +86,10 @@ export function LogTable() {
           </Select>
 
           <Select value={String(count)} onValueChange={(val) => setCount(Number(val))}>
-            <SelectTrigger className="w-[calc(50%-6px)] sm:w-[120px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+            <SelectTrigger className="w-[calc(50%-6px)] sm:w-[120px] bg-card border-border text-xs rounded-lg">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[#131b2e] border-white/10">
+            <SelectContent className="bg-card border-border">
               <SelectItem value="50">Last 50</SelectItem>
               <SelectItem value="100">Last 100</SelectItem>
               <SelectItem value="200">Last 200</SelectItem>
@@ -98,46 +98,46 @@ export function LogTable() {
           </Select>
         </div>
 
-        <span className="text-[10px] text-slate-500 sm:ml-auto">
+        <span className="text-[10px] text-muted-foreground/70 sm:ml-auto">
           Showing {filteredLogs.length} of {logs.length} entries · Auto-refresh 10s
         </span>
       </div>
 
       {/* Log Table */}
-      <div className="bg-[#131b2e] rounded-2xl border border-white/5 overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50">
-                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 w-32">Time</th>
-                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 w-40 hidden md:table-cell">Topics</th>
-                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Message</th>
+              <tr className="bg-muted/50">
+                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border w-32">Time</th>
+                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border w-40 hidden md:table-cell">Topics</th>
+                <th className="px-3 md:px-6 py-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Message</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <tr key={i}>
-                    <td className="px-3 md:px-6 py-3"><div className="h-3 w-16 animate-pulse rounded bg-[#222a3d]" /></td>
-                    <td className="px-3 md:px-6 py-3 hidden md:table-cell"><div className="h-3 w-20 animate-pulse rounded bg-[#222a3d]" /></td>
-                    <td className="px-3 md:px-6 py-3"><div className="h-3 w-64 animate-pulse rounded bg-[#222a3d]" /></td>
+                    <td className="px-3 md:px-6 py-3"><div className="h-3 w-16 animate-pulse rounded bg-muted" /></td>
+                    <td className="px-3 md:px-6 py-3 hidden md:table-cell"><div className="h-3 w-20 animate-pulse rounded bg-muted" /></td>
+                    <td className="px-3 md:px-6 py-3"><div className="h-3 w-64 animate-pulse rounded bg-muted" /></td>
                   </tr>
                 ))
               ) : !filteredLogs.length ? (
                 <tr>
                   <td colSpan={3} className="px-3 md:px-6 py-12 text-center">
-                    <Info className="mx-auto h-8 w-8 text-slate-600 mb-3" />
-                    <p className="text-sm text-slate-400">No logs available</p>
-                    <p className="text-[10px] text-slate-600">Add a router to see real-time logs</p>
+                    <Info className="mx-auto h-8 w-8 text-muted-foreground/70 mb-3" />
+                    <p className="text-sm text-muted-foreground">No logs available</p>
+                    <p className="text-[10px] text-muted-foreground/70">Add a router to see real-time logs</p>
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map((log, i) => {
                   const style = getTopicStyle(log.topics)
                   return (
-                    <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={i} className="hover:bg-muted/30 transition-colors">
                       <td className="px-3 md:px-6 py-3">
-                        <span className="text-xs font-mono text-slate-500">{log.time}</span>
+                        <span className="text-xs font-mono text-muted-foreground/70">{log.time}</span>
                       </td>
                       <td className="px-3 md:px-6 py-3 hidden md:table-cell">
                         <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold", style.color, style.bg)}>
@@ -146,7 +146,7 @@ export function LogTable() {
                         </span>
                       </td>
                       <td className="px-3 md:px-6 py-3">
-                        <span className="text-xs text-[#dae2fd]">{log.message}</span>
+                        <span className="text-xs text-foreground">{log.message}</span>
                       </td>
                     </tr>
                   )

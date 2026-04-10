@@ -79,16 +79,16 @@ export function GenerateVoucherDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
+      <div className="w-full max-w-xl mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-border flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Generate Vouchers</h3>
-            <p className="text-sm text-slate-500">Create hotspot vouchers for {resellerName}</p>
+            <h3 className="text-2xl font-headline font-bold text-foreground">Generate Vouchers</h3>
+            <p className="text-sm text-muted-foreground/70">Create hotspot vouchers for {resellerName}</p>
           </div>
           <button
             onClick={() => onOpenChange(false)}
-            className="text-slate-500 hover:text-[#dae2fd] transition-colors"
+            className="text-muted-foreground/70 hover:text-foreground transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -96,15 +96,15 @@ export function GenerateVoucherDialog({
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="p-4 md:p-8 space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile *</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Profile *</label>
               <Select
                 value={watchedProfile || "__default__"}
                 onValueChange={(v) => setValue("profile", v === "__default__" ? "" : v, { shouldValidate: true })}
               >
-                <SelectTrigger className="w-full bg-[#2d3449] border-none text-[#dae2fd] text-sm">
+                <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
                   <SelectValue placeholder="Select profile..." />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                <SelectContent className="bg-muted border-border text-foreground">
                   <SelectItem value="__default__">Select profile...</SelectItem>
                   {profiles?.map((p: { name: string }) => (
                     <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
@@ -114,18 +114,18 @@ export function GenerateVoucherDialog({
               {errors.profile && <p className="text-xs text-[#ffb4ab] ml-1">{errors.profile.message}</p>}
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Router Name (optional, default: default)</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Router Name (optional, default: default)</label>
               <Input
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="default"
                 {...register("routerName")}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Count *</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Count *</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="10"
                   type="number"
                   min="1"
@@ -134,9 +134,9 @@ export function GenerateVoucherDialog({
                 {errors.count && <p className="text-xs text-[#ffb4ab] ml-1">{errors.count.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Price per Unit (Rp) *</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Price per Unit (Rp) *</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="5000"
                   type="number"
                   min="1"
@@ -147,20 +147,20 @@ export function GenerateVoucherDialog({
             </div>
 
             {/* Cost Calculation */}
-            <div className="bg-[#222a3d]/50 rounded-xl border border-white/5 p-4 space-y-2">
+            <div className="bg-muted/50 rounded-xl border border-border p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Total Cost</span>
-                <span className="font-bold text-[#dae2fd]">
+                <span className="text-muted-foreground">Total Cost</span>
+                <span className="font-bold text-foreground">
                   {watchedCount && watchedPrice ? `${watchedCount} x ${formatRupiah(parseInt(watchedPrice) || 0)} = ${formatRupiah(totalCost)}` : "-"}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Current Saldo</span>
-                <span className="font-bold text-[#4cd7f6]">{formatRupiah(currentBalance)}</span>
+                <span className="text-muted-foreground">Current Saldo</span>
+                <span className="font-bold text-primary">{formatRupiah(currentBalance)}</span>
               </div>
-              <div className="border-t border-white/5 my-1" />
+              <div className="border-t border-border my-1" />
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Remaining After</span>
+                <span className="text-muted-foreground">Remaining After</span>
                 <span className={cn(
                   "font-bold",
                   remainingBalance >= 0 ? "text-[#4ae176]" : "text-[#ffb4ab]"
@@ -170,18 +170,18 @@ export function GenerateVoucherDialog({
               </div>
             </div>
           </div>
-          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+          <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
+              className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={generateVouchers.isPending || remainingBalance < 0}
-              className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
               {generateVouchers.isPending ? "Generating..." : "Generate Vouchers"}
             </button>

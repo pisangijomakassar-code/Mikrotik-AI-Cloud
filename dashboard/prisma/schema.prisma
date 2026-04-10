@@ -7,6 +7,23 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TunnelMethod {
+  CLOUDFLARE
+  SSTP
+}
+
+enum TunnelStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ConnectionMethod {
+  DIRECT
+  TUNNEL
+}
+
 enum UserRole {
   ADMIN
   USER
@@ -58,6 +75,8 @@ model Router {
   isDefault       Boolean   @default(false)
   addedAt         DateTime  @default(now())
   lastSeen        DateTime?
+  connectionMethod ConnectionMethod @default(DIRECT)
+  tunnel           Tunnel?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -66,6 +85,49 @@ model Router {
 
   @@unique([userId, name])
   @@index([userId])
+}
+
+model Tunnel {
+  id                    String       @id @default(cuid())
+  method                TunnelMethod
+  status                TunnelStatus @default(PENDING)
+
+  // Cloudflare-specific
+  cloudflareTunnelId    String?      @unique
+  cloudflareTunnelToken String?      // encrypted, Fernet same as router passwords
+
+  // SSTP-specific
+  vpnUsername           String?
+  vpnPassword           String?      // encrypted
+  vpnAssignedIp         String?      // e.g. 10.10.0.5
+
+  // Common
+  routerLanIp           String       @default("192.168.88.1")
+  lastConnectedAt       DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  routerId String @unique
+  router   Router @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  ports    TunnelPort[]
+
+  @@index([status])
+  @@index([method])
+}
+
+model TunnelPort {
+  id          String  @id @default(cuid())
+  serviceName String  // "api" | "winbox" | "ssh" | "webfig" | "api-ssl"
+  remotePort  Int     // port on router: 8728, 8291, 22, 80, 8729
+  localPort   Int?    // server-side proxy port (Cloudflare only, e.g. 19001)
+  hostname    String? // CF tunnel hostname for this port (Cloudflare only)
+  enabled     Boolean @default(true)
+
+  tunnelId String
+  tunnel   Tunnel @relation(fields: [tunnelId], references: [id], onDelete: Cascade)
+
+  @@unique([tunnelId, serviceName])
+  @@index([tunnelId])
 }
 
 model ActivityLog {

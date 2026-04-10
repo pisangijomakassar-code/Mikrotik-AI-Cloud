@@ -63,31 +63,31 @@ export default function LoginPage() {
           <div className="relative mb-6">
             {/* Node Pulse Effect */}
             <div className="absolute inset-0 scale-150 opacity-20 bg-[#4cd7f6] rounded-full blur-xl" />
-            <div className="relative w-20 h-20 bg-[#2d3449] rounded-full flex items-center justify-center border border-white/10 shadow-2xl">
-              <Router className="h-9 w-9 text-[#4cd7f6]" />
-              <div className="absolute -top-1 -right-1 bg-[#2d3449] p-1.5 rounded-full border border-[#4ae176]/30 shadow-[0_0_15px_rgba(74,225,118,0.3)]">
+            <div className="relative w-20 h-20 bg-muted rounded-full flex items-center justify-center border border-border shadow-2xl">
+              <Router className="h-9 w-9 text-primary" />
+              <div className="absolute -top-1 -right-1 bg-muted p-1.5 rounded-full border border-[#4ae176]/30 shadow-[0_0_15px_rgba(74,225,118,0.3)]">
                 <Sparkles className="h-4 w-4 text-[#4ae176]" />
               </div>
             </div>
           </div>
-          <h1 className="font-headline text-3xl font-bold tracking-tight text-[#dae2fd] mb-2">MikroTik AI Agent</h1>
-          <p className="text-[#bcc9cd] font-medium tracking-wide">Manage your routers with AI</p>
+          <h1 className="font-headline text-3xl font-bold tracking-tight text-foreground mb-2">MikroTik AI Agent</h1>
+          <p className="text-muted-foreground font-medium tracking-wide">Manage your routers with AI</p>
         </div>
 
         {/* Login Card */}
-        <div className="glass-panel rounded-[0.75rem] p-8 shadow-2xl border border-white/5">
+        <div className="glass-panel rounded-[0.75rem] p-8 shadow-2xl border border-border">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Input Group: Email */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-[#4cd7f6]/70 ml-1" htmlFor="email">
+              <label className="text-xs font-bold uppercase tracking-widest text-primary/70 ml-1" htmlFor="email">
                 Network Identity
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <AtSign className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
+                  <AtSign className="h-[18px] w-[18px] text-muted-foreground group-focus-within:text-primary transition-colors" />
                 </div>
                 <Input
-                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
+                  className="w-full bg-muted/50 border border-transparent focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-lg py-3.5 pl-12 pr-4 text-foreground placeholder:text-muted-foreground/50 transition-all font-mono-tech text-sm outline-none"
                   id="email"
                   type="email"
                   placeholder="administrator@network.local"
@@ -102,7 +102,7 @@ export default function LoginPage() {
             {/* Input Group: Password */}
             <div className="space-y-2">
               <div className="flex justify-between items-center px-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-[#4cd7f6]/70" htmlFor="password">
+                <label className="text-xs font-bold uppercase tracking-widest text-primary/70" htmlFor="password">
                   Access Key
                 </label>
                 <span className="text-[10px] uppercase font-bold text-[#4ae176] tracking-tighter cursor-pointer hover:text-[#4ae176]/80 transition-colors">
@@ -111,10 +111,10 @@ export default function LoginPage() {
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-[18px] w-[18px] text-[#869397] group-focus-within:text-[#4cd7f6] transition-colors" />
+                  <Lock className="h-[18px] w-[18px] text-muted-foreground group-focus-within:text-primary transition-colors" />
                 </div>
                 <Input
-                  className="w-full bg-[#2d3449]/50 border border-transparent focus:border-[#4cd7f6]/50 focus:ring-4 focus:ring-[#4cd7f6]/10 rounded-lg py-3.5 pl-12 pr-4 text-[#dae2fd] placeholder:text-[#869397]/50 transition-all font-mono-tech text-sm outline-none"
+                  className="w-full bg-muted/50 border border-transparent focus:border-primary/50 focus:ring-4 focus:ring-primary/10 rounded-lg py-3.5 pl-12 pr-4 text-foreground placeholder:text-muted-foreground/50 transition-all font-mono-tech text-sm outline-none"
                   id="password"
                   type="password"
                   placeholder="••••••••••••"
@@ -128,7 +128,7 @@ export default function LoginPage() {
 
             {/* Action Button */}
             <button
-              className="w-full group relative overflow-hidden bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold py-4 rounded-lg shadow-lg shadow-[#4cd7f6]/20 hover:shadow-[#4cd7f6]/40 transition-all active:scale-[0.98] disabled:opacity-70"
+              className="w-full group relative overflow-hidden bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold py-4 rounded-lg shadow-lg shadow-[#4cd7f6]/20 hover:shadow-[#4cd7f6]/40 transition-all active:scale-[0.98] disabled:opacity-70"
               type="submit"
               disabled={isLoading}
             >
@@ -150,15 +150,15 @@ export default function LoginPage() {
 
             {/* Divider */}
             <div className="flex items-center gap-4 py-2">
-              <div className="h-px flex-1 bg-white/5" />
-              <span className="text-[10px] font-bold text-[#869397]/40 uppercase tracking-[0.2em]">Secure Session</span>
-              <div className="h-px flex-1 bg-white/5" />
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Secure Session</span>
+              <div className="h-px flex-1 bg-border" />
             </div>
 
             {/* Secondary Link */}
-            <p className="text-center text-sm text-[#bcc9cd]">
+            <p className="text-center text-sm text-muted-foreground">
               Need infrastructure access?{" "}
-              <Link href="/register" className="text-[#4cd7f6] font-bold hover:underline decoration-[#4cd7f6]/30 underline-offset-4">
+              <Link href="/register" className="text-primary font-bold hover:underline decoration-primary/30 underline-offset-4">
                 Register Router
               </Link>
             </p>
@@ -166,12 +166,12 @@ export default function LoginPage() {
         </div>
 
         {/* AI Status Indicator Footer */}
-        <div className="mt-8 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-[#869397]/60">
+        <div className="mt-8 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-[#4ae176] rounded-full animate-pulse shadow-[0_0_8px_rgba(74,225,118,0.8)]" />
             <span>AI Core Online</span>
           </div>
-          <div className="w-1 h-1 bg-white/10 rounded-full" />
+          <div className="w-1 h-1 bg-border rounded-full" />
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-3 w-3" />
             <span>v2.4.0 Encrypted</span>
@@ -181,7 +181,7 @@ export default function LoginPage() {
 
       {/* Illustrative Detail */}
       <div className="fixed bottom-0 right-0 p-12 opacity-10 hidden xl:block">
-        <Router className="h-80 w-80 text-[#4cd7f6]" />
+        <Router className="h-80 w-80 text-primary" />
       </div>
     </div>
   )

@@ -35,17 +35,17 @@ export function ConfirmDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
-      <AlertDialogContent className="border-0 bg-[#131b2e] shadow-2xl shadow-cyan-900/10">
+      <AlertDialogContent className="border-0 bg-card shadow-2xl shadow-cyan-900/10">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-[#dae2fd] font-headline">
+          <AlertDialogTitle className="text-foreground font-headline">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-slate-400">
+          <AlertDialogDescription className="text-muted-foreground">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="rounded-lg border-white/10 bg-[#222a3d] text-slate-300 hover:bg-[#2d3449] hover:text-[#dae2fd]">
+          <AlertDialogCancel className="rounded-lg border-border bg-muted text-muted-foreground hover:bg-muted hover:text-foreground">
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
@@ -54,7 +54,7 @@ export function ConfirmDialog({
               "rounded-lg font-semibold",
               variant === "destructive"
                 ? "bg-[#93000a]/80 text-[#ffb4ab] hover:bg-[#93000a]"
-                : "bg-[#06b6d4] text-[#003640] hover:bg-[#4cd7f6]"
+                : "bg-[#06b6d4] text-primary-foreground hover:bg-[#4cd7f6]"
             )}
           >
             {confirmText}

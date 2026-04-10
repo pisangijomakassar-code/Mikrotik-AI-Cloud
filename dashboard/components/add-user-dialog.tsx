@@ -59,7 +59,7 @@ export function AddUserDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
+        className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
       >
         <UserPlus className="h-5 w-5" />
         Add User
@@ -67,17 +67,17 @@ export function AddUserDialog() {
 
       {/* Modal Overlay */}
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-          <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
+          <div className="w-full max-w-xl mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
             {/* Header */}
-            <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="p-4 md:p-8 border-b border-border flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Provision New User</h3>
-                <p className="text-sm text-slate-500">Configure credentials for AI network control.</p>
+                <h3 className="text-2xl font-headline font-bold text-foreground">Provision New User</h3>
+                <p className="text-sm text-muted-foreground/70">Configure credentials for AI network control.</p>
               </div>
               <button
                 onClick={() => { setOpen(false); resetForm() }}
-                className="text-slate-500 hover:text-[#dae2fd] transition-colors"
+                className="text-muted-foreground/70 hover:text-foreground transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -88,9 +88,9 @@ export function AddUserDialog() {
               <div className="p-4 md:p-8 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Full Name</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Full Name</label>
                     <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                       placeholder="e.g. Pak Budi"
                       type="text"
                       value={name}
@@ -99,9 +99,9 @@ export function AddUserDialog() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram ID</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Telegram ID</label>
                     <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                       placeholder="Numeric ID"
                       type="text"
                       value={telegramId}
@@ -112,9 +112,9 @@ export function AddUserDialog() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Email</label>
                     <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                       placeholder="user@example.com"
                       type="email"
                       value={email}
@@ -122,9 +122,9 @@ export function AddUserDialog() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Password</label>
                     <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                      className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                       placeholder="Dashboard login password"
                       type="password"
                       value={password}
@@ -133,10 +133,10 @@ export function AddUserDialog() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Telegram Bot Token</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Telegram Bot Token</label>
                   <div className="relative">
                     <Input
-                      className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none pr-10"
+                      className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none pr-10"
                       placeholder="BotFather generated token"
                       type={showToken ? "text" : "password"}
                       value={botToken}
@@ -144,7 +144,7 @@ export function AddUserDialog() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#4cd7f6] transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-primary transition-colors"
                       onClick={() => setShowToken(!showToken)}
                     >
                       {showToken ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -155,43 +155,43 @@ export function AddUserDialog() {
                   </p>
                 </div>
                 {/* AI Permissions */}
-                <div className="bg-[#4cd7f6]/5 rounded-2xl p-6 border border-[#4cd7f6]/10">
+                <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-[#4cd7f6] flex items-center gap-2">
+                    <span className="text-xs font-bold text-primary flex items-center gap-2">
                       <Shield className="h-4 w-4" /> AI Permissions Level
                     </span>
-                    <div className="px-3 py-1 bg-[#4cd7f6] text-[#003640] text-[10px] font-bold rounded-lg">Standard Tier</div>
+                    <div className="px-3 py-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-lg">Standard Tier</div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className="w-5 h-5 rounded border border-white/20 flex items-center justify-center group-hover:border-[#4cd7f6] transition-colors">
-                        <Check className="h-3 w-3 text-[#4cd7f6]" />
+                      <div className="w-5 h-5 rounded border border-border flex items-center justify-center group-hover:border-primary transition-colors">
+                        <Check className="h-3 w-3 text-primary" />
                       </div>
-                      <span className="text-xs text-slate-300">Allow Route Changes</span>
+                      <span className="text-xs text-muted-foreground">Allow Route Changes</span>
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className="w-5 h-5 rounded border border-white/20 flex items-center justify-center group-hover:border-[#4cd7f6] transition-colors">
-                        <Check className="h-3 w-3 text-[#4cd7f6]" />
+                      <div className="w-5 h-5 rounded border border-border flex items-center justify-center group-hover:border-primary transition-colors">
+                        <Check className="h-3 w-3 text-primary" />
                       </div>
-                      <span className="text-xs text-slate-300">View Network Telemetry</span>
+                      <span className="text-xs text-muted-foreground">View Network Telemetry</span>
                     </label>
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+              <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
                 <button
                   type="button"
                   onClick={() => { setOpen(false); resetForm() }}
-                  className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
+                  className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
                 >
                   Discard
                 </button>
                 <button
                   type="submit"
                   disabled={createUser.isPending}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                  className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
                   {createUser.isPending ? "Creating..." : "Authorize User"}
                 </button>

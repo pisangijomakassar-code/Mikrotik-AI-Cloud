@@ -76,8 +76,10 @@ services:
       - ./mikrotik_mcp:/app/mikrotik_mcp:ro
       - ./data:/app/data
       - ./config:/app/config:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # For SoftEther VPN user management via docker exec
     networks:
       - internal
+      - vpn
     restart: unless-stopped
     depends_on:
       postgres:
@@ -91,10 +93,39 @@ services:
           cpus: "0.25"
           memory: 256M
 
+  sstp-vpn:
+    image: siomiz/softethervpn
+    container_name: mikrotik-vpn
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "443:443"    # SSTP
+    environment:
+      SPW: ${SSTP_ADMIN_PASSWORD}    # Server password
+      HPW: ${SSTP_ADMIN_PASSWORD}    # Hub password
+    volumes:
+      - vpn-data:/usr/vpnserver
+    networks:
+      - internal
+      - vpn
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
 volumes:
   nanobot-data:
   pgdata:
+  vpn-data:
 
 networks:
   internal:
     driver: bridge
+  vpn:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24

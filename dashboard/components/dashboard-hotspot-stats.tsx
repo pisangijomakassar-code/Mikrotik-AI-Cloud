@@ -12,16 +12,11 @@ export function DashboardHotspotStats() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="p-4 rounded-xl"
-            style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.05)",
-            }}
+            className="p-4 rounded-xl card-glass"
           >
             <div className="space-y-2 animate-pulse">
-              <div className="h-3 w-16 rounded bg-[#222a3d]" />
-              <div className="h-6 w-10 rounded bg-[#222a3d]" />
+              <div className="h-3 w-16 rounded bg-muted" />
+              <div className="h-6 w-10 rounded bg-muted" />
             </div>
           </div>
         ))}
@@ -65,12 +60,7 @@ export function DashboardHotspotStats() {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="p-4 rounded-xl relative overflow-hidden group"
-          style={{
-            background: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.05)",
-          }}
+          className="p-4 rounded-xl relative overflow-hidden group card-glass"
         >
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
             <card.icon className="h-7 w-7" />
@@ -79,11 +69,11 @@ export function DashboardHotspotStats() {
             <div className={`p-1.5 rounded-lg ${card.bgGlow}`}>
               <card.icon className={`h-3.5 w-3.5 ${card.color}`} />
             </div>
-            <p className="text-[10px] font-headline text-slate-400 uppercase tracking-widest">
+            <p className="text-[10px] font-headline text-muted-foreground uppercase tracking-widest">
               {card.label}
             </p>
           </div>
-          <h3 className="text-2xl font-bold font-headline text-[#dae2fd] ml-1">
+          <h3 className="text-2xl font-bold font-headline text-foreground ml-1">
             {card.value}
           </h3>
         </div>

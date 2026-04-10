@@ -7,7 +7,9 @@ Runs on port 8080.
 import json
 import os
 import random
+import shutil
 import string
+import subprocess
 import sys
 import threading
 import time
@@ -31,6 +33,76 @@ def _get_voucher_db():
         if db_url:
             _voucher_db = _VoucherDB(db_url)
     return _voucher_db
+
+
+# ── SoftEther VPN management (via docker exec into sstp-vpn container) ────────
+
+_SOFTETHER_CONTAINER = "mikrotik-vpn"
+_SOFTETHER_HUB = os.environ.get("SSTP_VPN_HUB", "DEFAULT")
+_SOFTETHER_PORT = "5555"
+
+
+def _vpncmd(*args):
+    """
+    Run a single vpncmd command non-interactively inside the SoftEther container.
+    Uses `docker exec` to reach the vpncmd binary in the sstp-vpn container.
+    Returns (returncode, combined_output_str).
+    """
+    password = os.environ.get("SSTP_ADMIN_PASSWORD", "")
+    docker = shutil.which("docker")
+    if not docker:
+        return 1, "docker CLI not found — ensure /var/run/docker.sock is mounted"
+
+    cmd = [
+        docker, "exec", _SOFTETHER_CONTAINER,
+        "/usr/vpnserver/vpncmd",
+        f"/SERVER:localhost:{_SOFTETHER_PORT}",
+        f"/PASSWORD:{password}",
+        f"/HUB:{_SOFTETHER_HUB}",
+        "/CMD",
+        *args,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        return result.returncode, result.stdout + result.stderr
+    except subprocess.TimeoutExpired:
+        return 1, "vpncmd timed out"
+    except Exception as e:
+        return 1, str(e)
+
+
+def _vpn_user_create(username, password):
+    """Create a SoftEther VPN user and set its password. Returns (ok, error_msg)."""
+    code, out = _vpncmd("UserCreate", username,
+                         "/GROUP:none", "/REALNAME:None", "/NOTE:None")
+    if code != 0 and "already exists" not in out.lower():
+        return False, f"UserCreate failed: {out[:300]}"
+
+    code, out = _vpncmd("UserPasswordSet", username, f"/PASSWORD:{password}")
+    if code != 0:
+        return False, f"UserPasswordSet failed: {out[:300]}"
+
+    return True, ""
+
+
+def _vpn_user_delete(username):
+    """Delete a SoftEther VPN user. Returns (ok, error_msg)."""
+    code, out = _vpncmd("UserDelete", username)
+    # Treat "not found" as success (idempotent delete)
+    if code != 0 and "not found" not in out.lower() and "does not exist" not in out.lower():
+        return False, f"UserDelete failed: {out[:300]}"
+    return True, ""
+
+
+def _vpn_user_connected(username):
+    """Check if a VPN user has an active session. Returns bool."""
+    code, out = _vpncmd("SessionList")
+    if code != 0:
+        return False
+    return username.lower() in out.lower()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _send_json(handler, data, status=200):
@@ -150,6 +222,16 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_ppp_profiles(user_id, router_name)
             return
 
+        # VPN user session status (SSTP tunnel health)
+        if path == "/vpn-user/status":
+            username = params.get("username", [None])[0]
+            if not username:
+                _send_json(self, {"error": "username required"}, 400)
+                return
+            connected = _vpn_user_connected(username)
+            _send_json(self, {"connected": connected, "username": username})
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -197,6 +279,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                 # POST /ppp-active/{user_id}/{id}/kick
                 self._handle_ppp_kick(parts[0], parts[1])
                 return
+
+        # VPN user management (SSTP tunnel — create or delete SoftEther user)
+        if path == "/vpn-user":
+            self._handle_vpn_user()
+            return
 
         # AI insight
         if path.startswith("/ai-insight/"):
@@ -1025,6 +1112,42 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {
                 "choices": [{"message": {"role": "assistant", "content": f"Chat error: {str(e)}"}}],
             })
+
+    def _handle_vpn_user(self):
+        """POST /vpn-user — create or delete a SoftEther VPN user."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length)) if length else {}
+        except (json.JSONDecodeError, ValueError):
+            _send_json(self, {"error": "invalid JSON"}, 400)
+            return
+
+        action = body.get("action", "")
+        if action == "create":
+            username = body.get("username", "").strip()
+            password = body.get("password", "").strip()
+            if not username or not password:
+                _send_json(self, {"error": "username and password required"}, 400)
+                return
+            ok, err = _vpn_user_create(username, password)
+            if not ok:
+                _send_json(self, {"error": err}, 500)
+            else:
+                _send_json(self, {"ok": True, "username": username})
+
+        elif action == "delete":
+            username = body.get("username", "").strip()
+            if not username:
+                _send_json(self, {"error": "username required"}, 400)
+                return
+            ok, err = _vpn_user_delete(username)
+            if not ok:
+                _send_json(self, {"error": err}, 500)
+            else:
+                _send_json(self, {"ok": True})
+
+        else:
+            _send_json(self, {"error": f"unknown action: {action!r}"}, 400)
 
     def log_message(self, format, *args):
         pass  # Suppress request logs

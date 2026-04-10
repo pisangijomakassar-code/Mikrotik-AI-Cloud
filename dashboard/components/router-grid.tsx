@@ -4,6 +4,9 @@ import { useState } from "react"
 import { Router, Users, ChevronLeft, ChevronRight, Sparkles, Pencil, Trash2 } from "lucide-react"
 import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { TunnelStatusBadge } from "@/components/tunnel-status-badge"
+import { TunnelManageDialog } from "@/components/tunnel-manage-dialog"
+import type { TunnelStatus, TunnelMethod } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -32,10 +35,10 @@ export function RouterGrid() {
       {/* Filters - simple style matching log page */}
       <div className="flex items-center gap-3 mb-8">
         <Select value={statusFilter || "all"} onValueChange={(val) => setStatusFilter(val === "all" ? "" : val)}>
-          <SelectTrigger className="w-[160px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+          <SelectTrigger className="w-[160px] bg-card border-border text-xs rounded-lg">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border-white/10">
+          <SelectContent className="bg-card border-border">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="online">Online</SelectItem>
             <SelectItem value="offline">Offline</SelectItem>
@@ -43,15 +46,15 @@ export function RouterGrid() {
         </Select>
 
         <Select value={ownerFilter || "all"} onValueChange={(val) => setOwnerFilter(val === "all" ? "" : val)}>
-          <SelectTrigger className="w-[160px] bg-[#131b2e] border-white/5 text-xs rounded-lg">
+          <SelectTrigger className="w-[160px] bg-card border-border text-xs rounded-lg">
             <SelectValue placeholder="All Owners" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border-white/10">
+          <SelectContent className="bg-card border-border">
             <SelectItem value="all">All Owners</SelectItem>
           </SelectContent>
         </Select>
 
-        <span className="text-[10px] text-slate-500 ml-auto flex items-center gap-2">
+        <span className="text-[10px] text-muted-foreground/70 ml-auto flex items-center gap-2">
           <span className="relative flex items-center gap-1.5">
             <span className="w-2 h-2 bg-[#4ae176] rounded-full animate-pulse" />
             {onlineCount} Online
@@ -61,27 +64,27 @@ export function RouterGrid() {
       </div>
 
       {/* Router Table */}
-      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
+      <div className="bg-card rounded-3xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Node Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Owner</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Endpoint</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">System</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-center">Resources</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Active</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Action</th>
+              <tr className="bg-muted/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Node Name</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Owner</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Endpoint</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">System</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border text-center">Resources</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Active</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-6 py-5">
-                        <div className="h-4 w-20 animate-pulse rounded-lg bg-[#222a3d]" />
+                        <div className="h-4 w-20 animate-pulse rounded-lg bg-muted" />
                       </td>
                     ))}
                   </tr>
@@ -89,9 +92,9 @@ export function RouterGrid() {
               ) : !filteredRouters.length ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
-                    <Router className="mx-auto h-10 w-10 text-slate-500/50" />
-                    <p className="mt-3 text-sm text-slate-400">No routers found</p>
-                    <p className="text-xs text-slate-500">Add a router to get started</p>
+                    <Router className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                    <p className="mt-3 text-sm text-muted-foreground">No routers found</p>
+                    <p className="text-xs text-muted-foreground/70">Add a router to get started</p>
                   </td>
                 </tr>
               ) : (
@@ -104,7 +107,7 @@ export function RouterGrid() {
                     <tr
                       key={router.id}
                       className={cn(
-                        "hover:bg-white/5 transition-colors group",
+                        "hover:bg-muted/40 transition-colors group",
                         isOffline && "opacity-60"
                       )}
                     >
@@ -112,13 +115,13 @@ export function RouterGrid() {
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className={cn(
-                            "w-10 h-10 rounded-xl bg-[#2d3449] flex items-center justify-center border border-white/5",
-                            isOffline ? "text-slate-500" : "text-[#4cd7f6]"
+                            "w-10 h-10 rounded-xl bg-muted flex items-center justify-center border border-border",
+                            isOffline ? "text-muted-foreground/70" : "text-primary"
                           )}>
                             <Router className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-[#dae2fd]">{router.name}</p>
+                            <p className="text-sm font-bold text-foreground">{router.name}</p>
                             <div className="flex items-center gap-1.5">
                               <span className={cn(
                                 "w-1.5 h-1.5 rounded-full",
@@ -131,13 +134,22 @@ export function RouterGrid() {
                                 {status === "online" ? "Online" : "Offline"}
                               </span>
                             </div>
+                            {(router as { connectionMethod?: string }).connectionMethod === "TUNNEL" && (
+                              <div className="mt-1">
+                                <TunnelStatusBadge
+                                  status={(router as { tunnel?: { status: TunnelStatus } }).tunnel?.status ?? null}
+                                  method={(router as { tunnel?: { method: TunnelMethod } }).tunnel?.method}
+                                  showMethod
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
 
                       {/* Owner */}
                       <td className="px-6 py-5">
-                        <span className="text-xs font-medium text-slate-400">{router.user?.name || "Internal Ops"}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{router.user?.name || "Internal Ops"}</span>
                       </td>
 
                       {/* Endpoint */}
@@ -145,8 +157,8 @@ export function RouterGrid() {
                         <span className={cn(
                           "font-mono-tech text-xs px-2 py-1 rounded-lg",
                           isOffline
-                            ? "text-slate-500 bg-slate-900/50"
-                            : "text-[#4cd7f6] bg-[#06b6d4]/10"
+                            ? "text-muted-foreground/70 bg-muted/50"
+                            : "text-primary bg-[#06b6d4]/10"
                         )}>
                           {router.host}:{router.port}
                         </span>
@@ -156,15 +168,15 @@ export function RouterGrid() {
                       <td className="px-6 py-5">
                         {health && !isOffline ? (
                           <div>
-                            <p className="text-xs text-[#dae2fd]">{health.board || "--"}</p>
-                            <p className="text-[10px] text-slate-500 font-mono-tech">
+                            <p className="text-xs text-foreground">{health.board || "--"}</p>
+                            <p className="text-[10px] text-muted-foreground/70 font-mono-tech">
                               {health.version ? `v${health.version} stable` : "--"}
                             </p>
                           </div>
                         ) : (
                           <div>
-                            <p className="text-xs text-[#dae2fd]">--</p>
-                            <p className="text-[10px] text-slate-500 font-mono-tech">--</p>
+                            <p className="text-xs text-foreground">--</p>
+                            <p className="text-[10px] text-muted-foreground/70 font-mono-tech">--</p>
                           </div>
                         )}
                       </td>
@@ -173,24 +185,24 @@ export function RouterGrid() {
                       <td className="px-6 py-5 min-w-[200px]">
                         {health && !isOffline ? (
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>CPU</span>
                               <span className="font-mono-tech">{health.cpuLoad}%</span>
                             </div>
-                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all",
-                                  health.cpuLoad > 80 ? "bg-[#ffb4ab]" : health.cpuLoad > 50 ? "bg-amber-400" : "bg-[#4cd7f6]"
+                                  health.cpuLoad > 80 ? "bg-[#ffb4ab]" : health.cpuLoad > 50 ? "bg-amber-400" : "bg-primary"
                                 )}
                                 style={{ width: `${health.cpuLoad}%` }}
                               />
                             </div>
-                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>MEM</span>
                               <span className="font-mono-tech">{health.memoryPercent}%</span>
                             </div>
-                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
                                 className={cn(
                                   "h-full rounded-full transition-all",
@@ -202,16 +214,16 @@ export function RouterGrid() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>CPU</span>
                               <span className="font-mono-tech">--</span>
                             </div>
-                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden" />
-                            <div className="flex items-center justify-between text-[10px] text-slate-400">
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden" />
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>MEM</span>
                               <span className="font-mono-tech">--</span>
                             </div>
-                            <div className="w-full h-1.5 bg-[#2d3449] rounded-full overflow-hidden" />
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden" />
                           </div>
                         )}
                       </td>
@@ -219,8 +231,8 @@ export function RouterGrid() {
                       {/* Active */}
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-slate-500" />
-                          <span className="text-sm font-bold text-[#dae2fd]">
+                          <Users className="h-4 w-4 text-muted-foreground/70" />
+                          <span className="text-sm font-bold text-foreground">
                             {health?.activeClients ?? 0}
                           </span>
                         </div>
@@ -229,15 +241,23 @@ export function RouterGrid() {
                       {/* Action */}
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {(router as { connectionMethod?: string }).connectionMethod === "TUNNEL" && (
+                            <TunnelManageDialog
+                              routerId={router.id}
+                              routerName={router.name}
+                              tunnelMethod={((router as { tunnel?: { method: TunnelMethod } }).tunnel?.method) ?? "CLOUDFLARE"}
+                              tunnelStatus={(router as { tunnel?: { status: TunnelStatus } }).tunnel?.status ?? null}
+                            />
+                          )}
                           <button
-                            className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
+                            className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-primary transition-colors flex items-center justify-center"
                             onClick={() => toast.info("Edit router coming soon")}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
                           <ConfirmDialog
                             trigger={
-                              <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                              <button className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             }
@@ -263,17 +283,17 @@ export function RouterGrid() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
-          <span className="text-xs text-slate-500">Showing {filteredRouters.length} of {totalCount} managed nodes</span>
+        <div className="px-6 py-4 bg-muted/50 flex items-center justify-between border-t border-border">
+          <span className="text-xs text-muted-foreground/70">Showing {filteredRouters.length} of {totalCount} managed nodes</span>
           <div className="flex items-center gap-2">
-            <button className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30" disabled>
-              <ChevronLeft className="h-4 w-4 text-slate-400" />
+            <button className="p-1 hover:bg-muted rounded-lg disabled:opacity-30" disabled>
+              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
             </button>
             <div className="flex items-center gap-1">
-              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded-lg">1</button>
+              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground rounded-lg">1</button>
             </div>
-            <button className="p-1 hover:bg-[#2d3449] rounded-lg">
-              <ChevronRight className="h-4 w-4 text-slate-400" />
+            <button className="p-1 hover:bg-muted rounded-lg">
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -285,7 +305,7 @@ export function RouterGrid() {
           <div className="absolute top-0 right-0 p-4">
             <Sparkles className="h-5 w-5 text-[#4ae176] animate-pulse" />
           </div>
-          <h3 className="font-headline font-bold text-[#dae2fd] mb-4 flex items-center gap-2">
+          <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
             AI Agent Insights
           </h3>
           <div className="space-y-4">
@@ -304,15 +324,15 @@ export function RouterGrid() {
             </div>
           </div>
         </div>
-        <div className="bg-[#222a3d] p-6 rounded-3xl border border-white/5 flex flex-col justify-between">
+        <div className="bg-muted p-6 rounded-3xl border border-border flex flex-col justify-between">
           <div>
-            <h3 className="font-headline font-bold text-[#dae2fd] text-lg">System Health</h3>
-            <p className="text-xs text-slate-500 mt-1">Average response time: 24ms</p>
+            <h3 className="font-headline font-bold text-foreground text-lg">System Health</h3>
+            <p className="text-xs text-muted-foreground/70 mt-1">Average response time: 24ms</p>
           </div>
           <div className="mt-6 flex justify-center">
             <div className="relative w-32 h-32 flex items-center justify-center">
               <svg className="w-full h-full -rotate-90">
-                <circle cx="64" cy="64" fill="none" r="56" stroke="#222a3d" strokeWidth="8" />
+                <circle cx="64" cy="64" fill="none" r="56" stroke="var(--muted)" strokeWidth="8" />
                 <circle
                   cx="64"
                   cy="64"
@@ -325,8 +345,8 @@ export function RouterGrid() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-headline font-bold text-[#dae2fd]">{healthPct}%</span>
-                <span className="text-[8px] uppercase tracking-widest text-slate-500">Uptime</span>
+                <span className="text-2xl font-headline font-bold text-foreground">{healthPct}%</span>
+                <span className="text-[8px] uppercase tracking-widest text-muted-foreground/70">Uptime</span>
               </div>
             </div>
           </div>

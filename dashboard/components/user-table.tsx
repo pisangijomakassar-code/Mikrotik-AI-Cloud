@@ -72,7 +72,7 @@ export function UserTable() {
     <div className="space-y-6">
       {/* Filters Section */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-lg border border-white/5">
+        <div className="flex items-center gap-4 bg-card p-1.5 rounded-lg border border-border">
           {[
             { key: "all", label: "All Users" },
             { key: "active", label: "Active" },
@@ -85,8 +85,8 @@ export function UserTable() {
               className={cn(
                 "px-5 py-1.5 font-bold text-xs rounded-lg transition-colors",
                 activeTab === tab.key
-                  ? "bg-[#222a3d] text-[#4cd7f6]"
-                  : "text-slate-500 hover:text-slate-300"
+                  ? "bg-muted text-primary"
+                  : "text-muted-foreground/70 hover:text-muted-foreground"
               )}
             >
               {tab.label}
@@ -97,8 +97,8 @@ export function UserTable() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-sm transition-colors",
-              showFilters ? "text-[#4cd7f6] border-[#4cd7f6]/30" : "text-slate-400 hover:bg-[#222a3d]"
+              "flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg text-sm transition-colors",
+              showFilters ? "text-primary border-primary/30" : "text-muted-foreground hover:bg-muted"
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
@@ -106,7 +106,7 @@ export function UserTable() {
           </button>
           <button
             onClick={() => toast.info("Export coming soon")}
-            className="flex items-center justify-center w-10 h-10 bg-[#131b2e] border border-white/5 rounded-lg text-slate-400 hover:text-[#4cd7f6] transition-colors"
+            className="flex items-center justify-center w-10 h-10 bg-card border border-border rounded-lg text-muted-foreground hover:text-primary transition-colors"
           >
             <Download className="h-5 w-5" />
           </button>
@@ -115,22 +115,22 @@ export function UserTable() {
 
       {/* Expanded filters */}
       {showFilters && (
-        <div className="flex items-center gap-3 bg-[#131b2e] p-3 rounded-lg border border-white/5">
+        <div className="flex items-center gap-3 bg-card p-3 rounded-lg border border-border">
           <Input
             type="text"
             placeholder="Search by name, email, or Telegram ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
+            className="flex-1 bg-muted border-none rounded-lg text-sm px-4 py-2 text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-1 focus:ring-primary"
           />
           <Select
             value={roleFilter || "__all__"}
             onValueChange={(value) => setRoleFilter(value === "__all__" ? "" : value)}
           >
-            <SelectTrigger className="bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] outline-none w-auto h-auto">
+            <SelectTrigger className="bg-muted border-none rounded-lg text-sm px-4 py-2 text-foreground outline-none w-auto h-auto">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[#222a3d] border-white/10">
+            <SelectContent className="bg-muted border-border">
               <SelectItem value="__all__">All Roles</SelectItem>
               <SelectItem value="ADMIN">Admin</SelectItem>
               <SelectItem value="USER">User</SelectItem>
@@ -138,7 +138,7 @@ export function UserTable() {
           </Select>
           <button
             onClick={() => { setSearch(""); setRoleFilter(""); setActiveTab("all"); setShowFilters(false) }}
-            className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-3"
+            className="text-xs text-muted-foreground/70 hover:text-primary transition-colors px-3"
           >
             Reset
           </button>
@@ -146,58 +146,58 @@ export function UserTable() {
       )}
 
       {/* Table */}
-      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
+      <div className="bg-card rounded-3xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">User ID (Telegram)</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Telegram Bot Token</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Routers Count</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Created Date</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+              <tr className="bg-muted/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">User ID (Telegram)</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Name</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Telegram Bot Token</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Routers Count</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Status</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border">Created Date</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest border-b border-border text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-6 py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                        <div className="h-4 w-20 animate-pulse rounded bg-muted" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : !users?.length ? (
                 <tr>
-                  <td colSpan={7} className="px-8 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-8 py-12 text-center text-muted-foreground">
                     No users found
                   </td>
                 </tr>
               ) : (
                 users.map((user) => (
-                  <tr key={user.id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-6 py-5 font-mono-tech text-cyan-400 text-sm">
+                  <tr key={user.id} className="hover:bg-muted/40 transition-colors group">
+                    <td className="px-6 py-5 font-mono-tech text-primary text-sm">
                       {user.telegramId}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#2d3449] flex items-center justify-center text-xs font-bold text-[#4cd7f6] border border-white/5">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-xs font-bold text-primary border border-border">
                           {getInitials(user.name)}
                         </div>
-                        <span className="text-sm font-bold text-[#dae2fd]">{user.name}</span>
+                        <span className="text-sm font-bold text-foreground">{user.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="font-mono-tech text-xs px-2 py-1 rounded-lg text-slate-500 bg-slate-900/50">
+                      <span className="font-mono-tech text-xs px-2 py-1 rounded-lg text-muted-foreground/70 bg-muted/50">
                         {maskToken(user.botToken)}
                       </span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-sm font-bold text-[#dae2fd]">
+                      <span className="text-sm font-bold text-foreground">
                         {user._count?.routers ?? 0}
                       </span>
                     </td>
@@ -211,27 +211,27 @@ export function UserTable() {
                         </div>
                       ) : (
                         <div
-                          className="w-10 h-5 bg-slate-800 rounded-full relative p-1 cursor-pointer"
+                          className="w-10 h-5 bg-muted/80 rounded-full relative p-1 cursor-pointer"
                           onClick={() => handleStatusToggle(user.id, user.status)}
                         >
-                          <div className="absolute left-1 top-1 w-3 h-3 bg-slate-600 rounded-full" />
+                          <div className="absolute left-1 top-1 w-3 h-3 bg-muted-foreground/70 rounded-full" />
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-5 text-sm text-slate-400">
+                    <td className="px-6 py-5 text-sm text-muted-foreground">
                       {formatDate(user.createdAt)}
                     </td>
                     <td className="px-6 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
+                          className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-primary transition-colors flex items-center justify-center"
                           onClick={() => toast.info("Edit user coming soon")}
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <ConfirmDialog
                           trigger={
-                            <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                            <button className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           }
@@ -251,19 +251,19 @@ export function UserTable() {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
-          <span className="text-xs text-slate-500">
+        <div className="px-6 py-4 bg-muted/50 flex items-center justify-between border-t border-border">
+          <span className="text-xs text-muted-foreground/70">
             Showing {users?.length ?? 0} of {users?.length ?? 0} users
           </span>
           <div className="flex items-center gap-2">
-            <button className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30" disabled>
-              <ChevronLeft className="h-4 w-4 text-slate-400" />
+            <button className="p-1 hover:bg-muted rounded-lg disabled:opacity-30" disabled>
+              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
             </button>
             <div className="flex items-center gap-1">
-              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-[#4cd7f6] text-[#003640] rounded-lg">1</button>
+              <button className="w-6 h-6 flex items-center justify-center text-xs font-bold bg-primary text-primary-foreground rounded-lg">1</button>
             </div>
-            <button className="p-1 hover:bg-[#2d3449] rounded-lg">
-              <ChevronRight className="h-4 w-4 text-slate-400" />
+            <button className="p-1 hover:bg-muted rounded-lg">
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
         </div>

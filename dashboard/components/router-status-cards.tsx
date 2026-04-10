@@ -13,16 +13,11 @@ export function RouterStatusCards() {
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="p-5 rounded-xl animate-pulse"
-            style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
+            className="p-5 rounded-xl animate-pulse card-glass"
           >
-            <div className="h-4 w-20 rounded bg-[#222a3d] mb-3" />
-            <div className="h-6 w-12 rounded bg-[#222a3d] mb-2" />
-            <div className="h-3 w-24 rounded bg-[#222a3d]" />
+            <div className="h-4 w-20 rounded bg-muted mb-3" />
+            <div className="h-6 w-12 rounded bg-muted mb-2" />
+            <div className="h-3 w-24 rounded bg-muted" />
           </div>
         ))}
       </div>
@@ -32,16 +27,11 @@ export function RouterStatusCards() {
   if (!routers?.length) {
     return (
       <div
-        className="rounded-xl p-8 flex flex-col items-center justify-center gap-3"
-        style={{
-          background: "rgba(15, 23, 42, 0.6)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-        }}
+        className="rounded-xl p-8 flex flex-col items-center justify-center gap-3 card-glass"
       >
-        <Router className="h-8 w-8 text-slate-600" />
-        <p className="text-sm text-slate-400">No routers configured</p>
-        <p className="text-[10px] text-slate-600">
+        <Router className="h-8 w-8 text-muted-foreground/70" />
+        <p className="text-sm text-muted-foreground">No routers configured</p>
+        <p className="text-[10px] text-muted-foreground/70">
           Add a router to see live status here
         </p>
       </div>
@@ -59,18 +49,13 @@ export function RouterStatusCards() {
         return (
           <div
             key={router.id}
-            className="p-5 rounded-xl"
-            style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
+            className="p-5 rounded-xl card-glass"
           >
             {/* Router name + status */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Router className="h-4 w-4 text-[#4cd7f6]" />
-                <span className="text-sm font-bold text-[#dae2fd] truncate max-w-[140px]">
+                <Router className="h-4 w-4 text-primary" />
+                <span className="text-sm font-bold text-foreground truncate max-w-[140px]">
                   {router.name}
                 </span>
               </div>
@@ -91,16 +76,16 @@ export function RouterStatusCards() {
               {/* CPU */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Cpu className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  <Cpu className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  <span className="text-[10px] text-muted-foreground/70 uppercase font-bold">
                     CPU
                   </span>
                 </div>
-                <span className="text-xs font-mono-tech text-[#dae2fd]">
+                <span className="text-xs font-mono-tech text-foreground">
                   {cpuLoad}%
                 </span>
               </div>
-              <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
@@ -108,7 +93,7 @@ export function RouterStatusCards() {
                       ? "bg-[#ffb4ab]"
                       : cpuLoad > 50
                         ? "bg-amber-400"
-                        : "bg-[#4cd7f6]"
+                        : "bg-primary"
                   )}
                   style={{ width: `${Math.min(cpuLoad, 100)}%` }}
                 />
@@ -117,16 +102,16 @@ export function RouterStatusCards() {
               {/* Memory */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <HardDrive className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  <HardDrive className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  <span className="text-[10px] text-muted-foreground/70 uppercase font-bold">
                     Memory
                   </span>
                 </div>
-                <span className="text-xs font-mono-tech text-[#dae2fd]">
+                <span className="text-xs font-mono-tech text-foreground">
                   {memPercent}%
                 </span>
               </div>
-              <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
@@ -143,12 +128,12 @@ export function RouterStatusCards() {
               {/* Active Clients */}
               <div className="flex items-center justify-between pt-1">
                 <div className="flex items-center gap-2">
-                  <Wifi className="h-3.5 w-3.5 text-slate-500" />
-                  <span className="text-[10px] text-slate-500 uppercase font-bold">
+                  <Wifi className="h-3.5 w-3.5 text-muted-foreground/70" />
+                  <span className="text-[10px] text-muted-foreground/70 uppercase font-bold">
                     Clients
                   </span>
                 </div>
-                <span className="text-xs font-mono-tech text-[#4cd7f6] font-bold">
+                <span className="text-xs font-mono-tech text-primary font-bold">
                   {clients}
                 </span>
               </div>

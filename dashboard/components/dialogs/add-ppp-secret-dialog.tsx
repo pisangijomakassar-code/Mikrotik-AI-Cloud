@@ -65,16 +65,16 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-xl mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
+      <div className="w-full max-w-xl mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-border flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">Add PPP Secret</h3>
-            <p className="text-sm text-slate-500">Create a new PPP user account.</p>
+            <h3 className="text-2xl font-headline font-bold text-foreground">Add PPP Secret</h3>
+            <p className="text-sm text-muted-foreground/70">Create a new PPP user account.</p>
           </div>
           <button
             onClick={handleClose}
-            className="text-slate-500 hover:text-[#dae2fd] transition-colors"
+            className="text-muted-foreground/70 hover:text-foreground transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -84,9 +84,9 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
           <div className="p-4 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Name</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Name</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="e.g. pppoe-user01"
                   type="text"
                   {...register("name")}
@@ -96,9 +96,9 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
                 )}
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Password</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Password</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="User password"
                   type="password"
                   {...register("password")}
@@ -110,12 +110,12 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Service</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Service</label>
                 <Select value={service} onValueChange={(v) => setValue("service", v)}>
-                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
+                  <SelectTrigger className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm text-foreground">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                  <SelectContent className="bg-muted border-border text-foreground">
                     <SelectItem value="any">Any</SelectItem>
                     <SelectItem value="pppoe">PPPoE</SelectItem>
                     <SelectItem value="pptp">PPTP</SelectItem>
@@ -126,12 +126,12 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Profile</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Profile</label>
                 <Select value={profile || "__default__"} onValueChange={(v) => setValue("profile", v === "__default__" ? "" : v)}>
-                  <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd]">
+                  <SelectTrigger className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm text-foreground">
                     <SelectValue placeholder="Default" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                  <SelectContent className="bg-muted border-border text-foreground">
                     <SelectItem value="__default__">Default</SelectItem>
                     {(profiles as { name: string }[] | undefined)?.map((p) => (
                       <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
@@ -142,18 +142,18 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Local Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Local Address</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="e.g. 10.0.0.1"
                   type="text"
                   {...register("localAddress")}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Remote Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Remote Address</label>
                 <Input
-                  className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                   placeholder="e.g. 10.0.0.100"
                   type="text"
                   {...register("remoteAddress")}
@@ -161,9 +161,9 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Comment</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Comment</label>
               <Input
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="Optional note"
                 type="text"
                 {...register("comment")}
@@ -171,18 +171,18 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
             </div>
           </div>
 
-          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+          <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
+              className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={addSecret.isPending}
-              className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
               {addSecret.isPending ? "Adding..." : "Add Secret"}
             </button>

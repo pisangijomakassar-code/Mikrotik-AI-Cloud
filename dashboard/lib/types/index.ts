@@ -184,3 +184,43 @@ export interface PPPProfile {
   remoteAddress: string;
   rateLimit: string;
 }
+
+// ── Tunnel Types ──
+
+export type TunnelMethod = 'CLOUDFLARE' | 'SSTP'
+export type TunnelStatus = 'PENDING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR'
+export type ConnectionMethod = 'DIRECT' | 'TUNNEL'
+export type TunnelServiceName = 'api' | 'winbox' | 'ssh' | 'webfig' | 'api-ssl'
+
+export interface TunnelPort {
+  id: string
+  serviceName: TunnelServiceName
+  remotePort: number
+  localPort: number | null
+  hostname: string | null
+  enabled: boolean
+  tunnelId: string
+}
+
+export interface Tunnel {
+  id: string
+  method: TunnelMethod
+  status: TunnelStatus
+  cloudflareTunnelId: string | null
+  tunnelHostname: string | null
+  vpnAssignedIp: string | null
+  routerLanIp: string
+  lastConnectedAt: string | null
+  createdAt: string
+  updatedAt: string
+  routerId: string
+  ports: TunnelPort[]
+}
+
+export const TUNNEL_SERVICES: { serviceName: TunnelServiceName; remotePort: number; label: string; defaultEnabled: boolean }[] = [
+  { serviceName: 'api',     remotePort: 8728, label: 'API (8728)',     defaultEnabled: true },
+  { serviceName: 'winbox',  remotePort: 8291, label: 'Winbox (8291)', defaultEnabled: true },
+  { serviceName: 'ssh',     remotePort: 22,   label: 'SSH (22)',       defaultEnabled: false },
+  { serviceName: 'webfig',  remotePort: 80,   label: 'WebFig (80)',    defaultEnabled: false },
+  { serviceName: 'api-ssl', remotePort: 8729, label: 'API-SSL (8729)', defaultEnabled: false },
+]

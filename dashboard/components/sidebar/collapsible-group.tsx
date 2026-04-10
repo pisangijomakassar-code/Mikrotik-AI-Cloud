@@ -44,13 +44,13 @@ export function CollapsibleGroup({
     <div>
       {/* Group header */}
       {isAlwaysOpen ? (
-        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600 px-4 mb-1">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-4 mb-1">
           {group.label}
         </div>
       ) : (
         <button
           onClick={onToggle}
-          className="flex items-center w-full text-[10px] font-bold uppercase tracking-widest text-slate-600 px-4 mb-1 hover:text-slate-400 transition-colors duration-200 cursor-pointer"
+          className="flex items-center w-full text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-4 mb-1 hover:text-muted-foreground transition-colors duration-200 cursor-pointer"
         >
           <ChevronRight
             className={cn(
@@ -81,8 +81,8 @@ export function CollapsibleGroup({
               className={cn(
                 "flex items-center gap-3 px-4 py-3 transition-all duration-300",
                 isActive
-                  ? "text-cyan-400 border-r-2 border-cyan-400 bg-cyan-950/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
+                  ? "text-primary border-r-2 border-primary bg-primary/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
             >
               <item.icon className="h-5 w-5" />

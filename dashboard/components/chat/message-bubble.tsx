@@ -20,7 +20,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
         elements.push(
           <pre
             key={`code-${codeKey++}`}
-            className="my-2 overflow-x-auto rounded-lg bg-slate-950/50 p-3 font-mono text-xs leading-relaxed text-emerald-300 border border-white/5"
+            className="my-2 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed text-emerald-600 dark:text-emerald-300 border border-border"
           >
             <code>{codeLines.join("\n")}</code>
           </pre>
@@ -42,7 +42,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
       const content = line.replace(/^\s*[-*]\s/, "")
       elements.push(
         <div key={i} className="flex gap-2 pl-2">
-          <span className="text-cyan-400">-</span>
+          <span className="text-primary">-</span>
           <span>{formatInline(content)}</span>
         </div>
       )
@@ -65,7 +65,7 @@ function formatMarkdown(text: string): React.ReactNode[] {
     elements.push(
       <pre
         key={`code-${codeKey}`}
-        className="my-2 overflow-x-auto rounded-lg bg-slate-950/50 p-3 font-mono text-xs leading-relaxed text-emerald-300 border border-white/5"
+        className="my-2 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed text-emerald-600 dark:text-emerald-300 border border-border"
       >
         <code>{codeLines.join("\n")}</code>
       </pre>
@@ -89,7 +89,7 @@ function formatInline(text: string): React.ReactNode[] {
 
     if (match[2]) {
       parts.push(
-        <strong key={key++} className="font-semibold text-slate-100">
+        <strong key={key++} className="font-semibold text-foreground">
           {match[2]}
         </strong>
       )
@@ -97,7 +97,7 @@ function formatInline(text: string): React.ReactNode[] {
       parts.push(
         <code
           key={key++}
-          className="rounded bg-slate-950/50 px-1.5 py-0.5 font-mono text-xs text-cyan-400 border border-white/5"
+          className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-primary border border-border"
         >
           {match[3]}
         </code>
@@ -140,14 +140,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           className={cn(
             "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border",
             isUser
-              ? "border-white/10 bg-slate-800"
-              : "border-cyan-500/50 bg-cyan-500/20"
+              ? "border-border bg-muted"
+              : "border-primary/50 bg-primary/20"
           )}
         >
           {isUser ? (
-            <User className="h-4 w-4 text-slate-400" />
+            <User className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <Bot className="h-4 w-4 text-cyan-400" />
+            <Bot className="h-4 w-4 text-primary" />
           )}
         </div>
 
@@ -156,17 +156,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           className={cn(
             "rounded-2xl p-4 text-sm",
             isUser
-              ? "rounded-tr-none border border-cyan-500/30 bg-cyan-600/20 text-slate-100"
-              : "rounded-tl-none border border-white/10 text-slate-200"
+              ? "rounded-tr-none border border-primary/30 bg-primary/10 text-foreground"
+              : "card-glass rounded-tl-none border border-border text-foreground"
           )}
-          style={
-            isUser
-              ? undefined
-              : {
-                  background: "rgba(15, 23, 42, 0.6)",
-                  backdropFilter: "blur(12px)",
-                }
-          }
         >
           {message.imageUrl && (
             <button
@@ -197,7 +189,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <span
             className={cn(
               "mt-2 block font-mono text-[10px]",
-              isUser ? "text-right text-cyan-500/60" : "text-slate-500"
+              isUser ? "text-right text-primary/60" : "text-muted-foreground"
             )}
           >
             {time}

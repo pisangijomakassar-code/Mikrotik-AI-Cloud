@@ -60,25 +60,18 @@ export function NetworkContextPanel() {
   const isOnline = router?.status === "online"
 
   return (
-    <aside className="hidden w-80 flex-col border-l border-white/5 lg:flex" style={{ background: "rgba(2, 6, 23, 0.5)" }}>
+    <aside className="card-glass hidden w-80 flex-col border-l border-border lg:flex">
       <ScrollArea className="flex-1">
         <div className="space-y-6 p-6">
           {/* Header */}
-          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 font-label">
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/70 font-label">
             Network Context
           </h3>
 
           {/* Active Router Card */}
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: "rgba(15, 23, 42, 0.6)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(6, 182, 212, 0.2)",
-            }}
-          >
+          <div className="card-glass rounded-xl p-4 border border-primary/20">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs text-slate-400">Primary Router</span>
+              <span className="text-xs text-muted-foreground">Primary Router</span>
               <Badge
                 variant="outline"
                 className={
@@ -90,7 +83,7 @@ export function NetworkContextPanel() {
                 {loading ? "..." : isOnline ? "Online" : "Offline"}
               </Badge>
             </div>
-            <div className="mb-1 text-sm font-bold text-slate-100">
+            <div className="mb-1 text-sm font-bold text-foreground">
               {router?.name || "No router connected"}
             </div>
             {router?.version && (
@@ -103,11 +96,11 @@ export function NetworkContextPanel() {
             {isOnline && (
               <div className="mt-4 space-y-3">
                 <div>
-                  <div className="mb-1 flex justify-between text-[10px] text-slate-400">
+                  <div className="mb-1 flex justify-between text-[10px] text-muted-foreground">
                     <span>CPU Usage</span>
                     <span>{cpuLoad}%</span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-cyan-500 transition-all duration-500"
                       style={{ width: `${cpuLoad}%` }}
@@ -115,11 +108,11 @@ export function NetworkContextPanel() {
                   </div>
                 </div>
                 <div>
-                  <div className="mb-1 flex justify-between text-[10px] text-slate-400">
+                  <div className="mb-1 flex justify-between text-[10px] text-muted-foreground">
                     <span>RAM Usage</span>
                     <span>{memoryPercent}%</span>
                   </div>
-                  <div className="h-1 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-cyan-500 transition-all duration-500"
                       style={{ width: `${memoryPercent}%` }}
@@ -132,20 +125,20 @@ export function NetworkContextPanel() {
 
           {/* Health Check */}
           <div>
-            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500">
+            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground/70">
               <Heart className="h-3.5 w-3.5" />
               Health Check
             </h4>
             <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-3">
-                <span className="text-xs text-slate-300">Uptime</span>
-                <span className="font-mono text-xs text-slate-400">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
+                <span className="text-xs text-muted-foreground">Uptime</span>
+                <span className="font-mono text-xs text-muted-foreground">
                   {router?.uptime || "--"}
                 </span>
               </div>
-              <div className="flex items-center justify-between rounded-lg border border-white/5 bg-white/5 p-3">
-                <span className="text-xs text-slate-300">Active Clients</span>
-                <span className="font-mono text-xs text-cyan-400">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3">
+                <span className="text-xs text-muted-foreground">Active Clients</span>
+                <span className="font-mono text-xs text-primary">
                   {router?.activeClients ?? "--"}
                 </span>
               </div>
@@ -154,7 +147,7 @@ export function NetworkContextPanel() {
 
           {/* Quick Actions */}
           <div>
-            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500">
+            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground/70">
               <Terminal className="h-3.5 w-3.5" />
               Quick Actions
             </h4>
@@ -162,7 +155,7 @@ export function NetworkContextPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full justify-start gap-2 rounded-lg border-white/10 bg-white/5 text-xs text-slate-300 hover:border-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
+                className="w-full justify-start gap-2 rounded-lg border-border bg-muted/40 text-xs text-muted-foreground hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                 onClick={fetchHealth}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -173,7 +166,7 @@ export function NetworkContextPanel() {
 
           {/* Active Alerts */}
           <div>
-            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500">
+            <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground/70">
               <AlertTriangle className="h-3.5 w-3.5" />
               Active Alerts
             </h4>
@@ -183,7 +176,7 @@ export function NetworkContextPanel() {
                   <div className="mb-1 text-[11px] font-bold text-amber-500">
                     Router Unreachable
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-muted-foreground">
                     Cannot connect to primary router. Check network connectivity.
                   </div>
                 </div>
@@ -192,7 +185,7 @@ export function NetworkContextPanel() {
                   <div className="mb-1 text-[11px] font-bold text-cyan-500">
                     System Normal
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-muted-foreground">
                     All systems operating within normal parameters.
                   </div>
                 </div>

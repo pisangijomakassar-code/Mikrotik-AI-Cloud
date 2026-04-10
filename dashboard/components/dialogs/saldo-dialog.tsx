@@ -69,20 +69,20 @@ export function SaldoDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-md mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
+      <div className="w-full max-w-md mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-8 border-b border-border flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-headline font-bold text-[#dae2fd]">
+            <h3 className="text-2xl font-headline font-bold text-foreground">
               {type === "topup" ? "Top Up Saldo" : "Top Down Saldo"}
             </h3>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground/70">
               {resellerName} — Current: {formatRupiah(currentBalance)}
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="text-slate-500 hover:text-[#dae2fd] transition-colors"
+            className="text-muted-foreground/70 hover:text-foreground transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -90,9 +90,9 @@ export function SaldoDialog({
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="p-4 md:p-8 space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Amount (Rp) *</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Amount (Rp) *</label>
               <Input
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="100000"
                 type="number"
                 min="1"
@@ -103,19 +103,19 @@ export function SaldoDialog({
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Description (optional)</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Description (optional)</label>
               <Input
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="e.g. Transfer BCA"
                 {...register("description")}
               />
             </div>
           </div>
-          <div className="p-4 md:p-8 bg-[#222a3d]/50 flex items-center justify-end gap-4">
+          <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2.5 text-slate-400 hover:text-[#dae2fd] font-headline font-bold transition-colors"
+              className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
             >
               Cancel
             </button>
@@ -125,8 +125,8 @@ export function SaldoDialog({
               className={cn(
                 "font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70",
                 type === "topup"
-                  ? "bg-gradient-to-br from-[#4ae176] to-[#22c55e] text-[#003640]"
-                  : "bg-gradient-to-br from-[#ffb4ab] to-[#ef4444] text-[#003640]"
+                  ? "bg-linear-to-br from-[#4ae176] to-[#22c55e] text-[#003640]"
+                  : "bg-linear-to-br from-[#ffb4ab] to-[#ef4444] text-[#003640]"
               )}
             >
               {(topUpSaldo.isPending || topDownSaldo.isPending)

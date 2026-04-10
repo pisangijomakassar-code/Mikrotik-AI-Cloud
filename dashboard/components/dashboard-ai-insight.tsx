@@ -22,11 +22,11 @@ export function DashboardAIInsight() {
       // Bold text between ** **
       const parts = line.split(/(\*\*[^*]+\*\*)/g)
       return (
-        <p key={i} className={line.trim() === "" ? "h-3" : "text-sm text-slate-300 leading-relaxed"}>
+        <p key={i} className={line.trim() === "" ? "h-3" : "text-sm text-muted-foreground leading-relaxed"}>
           {parts.map((part, j) => {
             if (part.startsWith("**") && part.endsWith("**")) {
               return (
-                <span key={j} className="font-bold text-[#dae2fd]">
+                <span key={j} className="font-bold text-foreground">
                   {part.slice(2, -2)}
                 </span>
               )
@@ -40,17 +40,12 @@ export function DashboardAIInsight() {
 
   return (
     <div
-      className="rounded-2xl p-6"
-      style={{
-        background: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
+      className="rounded-2xl p-6 card-glass"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-[#4cd7f6]" />
-          <h3 className="text-sm font-headline font-bold text-[#dae2fd] uppercase tracking-widest">
+          <Brain className="h-5 w-5 text-primary" />
+          <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">
             AI Network Insight
           </h3>
         </div>
@@ -71,10 +66,10 @@ export function DashboardAIInsight() {
 
       {isPending && (
         <div className="space-y-3 animate-pulse py-4">
-          <div className="h-4 w-full rounded bg-[#222a3d]" />
-          <div className="h-4 w-5/6 rounded bg-[#222a3d]" />
-          <div className="h-4 w-4/6 rounded bg-[#222a3d]" />
-          <div className="h-4 w-3/4 rounded bg-[#222a3d]" />
+          <div className="h-4 w-full rounded bg-muted" />
+          <div className="h-4 w-5/6 rounded bg-muted" />
+          <div className="h-4 w-4/6 rounded bg-muted" />
+          <div className="h-4 w-3/4 rounded bg-muted" />
         </div>
       )}
 
@@ -88,13 +83,13 @@ export function DashboardAIInsight() {
 
       {!isPending && data && (
         <div className="space-y-1 py-2">
-          <div className="p-4 rounded-xl bg-[#131b2e] border border-white/5">
+          <div className="p-4 rounded-xl bg-card border border-border">
             <div className="space-y-1">
               {renderInsight(data.insight || data.response || JSON.stringify(data))}
             </div>
           </div>
           {lastUpdated && (
-            <p className="text-[10px] text-slate-500 font-mono-tech pt-2">
+            <p className="text-[10px] text-muted-foreground/70 font-mono-tech pt-2">
               Last updated: {lastUpdated.toLocaleTimeString("id-ID", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -106,9 +101,9 @@ export function DashboardAIInsight() {
       )}
 
       {!isPending && !data && !error && (
-        <div className="py-6 flex flex-col items-center justify-center gap-2 text-slate-600">
+        <div className="py-6 flex flex-col items-center justify-center gap-2 text-muted-foreground/70">
           <Sparkles className="h-8 w-8" />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground/70">
             Click &quot;Generate Insight&quot; to get AI-powered analysis of your network
           </p>
         </div>

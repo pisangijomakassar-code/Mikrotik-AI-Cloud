@@ -122,15 +122,35 @@ class RouterRegistryPG:
         }
 
     def _all_routers(self, cur, internal_user_id: str) -> list[dict]:
-        """Fetch all Router rows for a user."""
+        """Fetch all Router rows for a user, including tunnel info."""
         cur.execute(
             """
-            SELECT id, name, host, port, username, "passwordEnc",
-                   label, "routerosVersion", board, "isDefault",
-                   "addedAt", "lastSeen"
-            FROM "Router"
-            WHERE "userId" = %s
-            ORDER BY "addedAt"
+            SELECT
+                r.id,
+                r.name,
+                r.host,
+                r.port,
+                r.username,
+                r."passwordEnc",
+                r.label,
+                r."routerosVersion",
+                r.board,
+                r."isDefault",
+                r."addedAt",
+                r."lastSeen",
+                r."connectionMethod"  as connection_method,
+                t.method              as tunnel_method,
+                t.status              as tunnel_status,
+                t."vpnAssignedIp"     as tunnel_vpn_ip,
+                tp."localPort"        as tunnel_api_local_port
+            FROM "Router" r
+            LEFT JOIN "Tunnel" t   ON t."routerId" = r.id
+            LEFT JOIN "TunnelPort" tp
+                   ON tp."tunnelId" = t.id
+                  AND tp."serviceName" = 'api'
+                  AND tp.enabled = true
+            WHERE r."userId" = %s
+            ORDER BY r."isDefault" DESC, r."addedAt" ASC
             """,
             (internal_user_id,),
         )
@@ -151,6 +171,11 @@ class RouterRegistryPG:
                     "is_default": row[9],
                     "added_at": row[10].isoformat() + "Z" if row[10] else None,
                     "last_seen": row[11].isoformat() + "Z" if row[11] else None,
+                    "connection_method": row[12],
+                    "tunnel_method": row[13],
+                    "tunnel_status": row[14],
+                    "tunnel_vpn_ip": row[15],
+                    "tunnel_api_local_port": row[16],
                 }
             )
         return result
@@ -172,10 +197,38 @@ class RouterRegistryPG:
 
     def _router_to_connection(self, r: dict) -> dict:
         """Return dict with decrypted password, ready for connection."""
+        host = r["host"]
+        port = r["port"]
+
+        # Tunnel-based routing
+        connection_method = r.get("connection_method", "DIRECT")
+        if connection_method == "TUNNEL":
+            tunnel_method = r.get("tunnel_method")
+            if tunnel_method == "CLOUDFLARE":
+                local_port = r.get("tunnel_api_local_port")
+                if local_port:
+                    host = "127.0.0.1"
+                    port = local_port
+                else:
+                    logger.warning(
+                        "Router %s has CLOUDFLARE tunnel but no localPort assigned yet",
+                        r.get("name"),
+                    )
+            elif tunnel_method == "SSTP":
+                vpn_ip = r.get("tunnel_vpn_ip")
+                if vpn_ip:
+                    host = vpn_ip
+                    port = 8728
+                else:
+                    logger.warning(
+                        "Router %s has SSTP tunnel but no vpnAssignedIp yet",
+                        r.get("name"),
+                    )
+
         return {
             "name": r["name"],
-            "host": r["host"],
-            "port": r["port"],
+            "host": host,
+            "port": port,
             "username": r["username"],
             "password": self.crypto.decrypt(r["passwordEnc"]),
             "label": r["label"],

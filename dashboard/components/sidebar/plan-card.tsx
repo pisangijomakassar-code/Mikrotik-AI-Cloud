@@ -44,16 +44,16 @@ export function PlanCard() {
   return (
     <div className="p-6">
       <Link href="/plan" className="block">
-        <div className="p-4 rounded-xl bg-[#131b2e] border border-white/5 hover:border-[#4cd7f6]/20 transition-colors">
+        <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors">
           <div className="flex items-center gap-3 mb-3">
-            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "ENTERPRISE" ? "text-[#4ae176]" : planInfo?.plan === "PRO" ? "text-[#4cd7f6]" : "text-slate-400")} />
-            <span className="text-xs font-headline font-bold text-[#dae2fd]">
+            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "ENTERPRISE" ? "text-[#4ae176]" : planInfo?.plan === "PRO" ? "text-[#4cd7f6]" : "text-muted-foreground")} />
+            <span className="text-xs font-headline font-bold text-foreground">
               {planInfo ? `AI AGENT ${planInfo.plan}` : "AI AGENT"}
             </span>
           </div>
           {planInfo ? (
             <>
-              <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
@@ -64,14 +64,14 @@ export function PlanCard() {
                   style={{ width: `${Math.min((planInfo.tokensUsed / planInfo.tokenLimit) * 100, 100)}%` }}
                 />
               </div>
-              <p className="text-[10px] mt-2 text-slate-400">
+              <p className="text-[10px] mt-2 text-muted-foreground">
                 Tokens: {formatTokens(planInfo.tokensUsed)} / {formatTokens(planInfo.tokenLimit)}
               </p>
             </>
           ) : (
             <>
-              <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden animate-pulse" />
-              <p className="text-[10px] mt-2 text-slate-500">Loading...</p>
+              <div className="h-1.5 w-full bg-background rounded-full overflow-hidden animate-pulse" />
+              <p className="text-[10px] mt-2 text-muted-foreground/70">Loading...</p>
             </>
           )}
         </div>
