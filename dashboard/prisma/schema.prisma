@@ -25,7 +25,6 @@ model User {
   name          String
   telegramId    String     @unique
   botToken      String?
-  agentUrl      String?
   role          UserRole   @default(USER)
   status        UserStatus @default(ACTIVE)
   isProvisioned Boolean    @default(false)

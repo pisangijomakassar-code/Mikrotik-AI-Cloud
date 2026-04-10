@@ -13,7 +13,6 @@ export function AddUserDialog() {
   const [password, setPassword] = useState("")
   const [telegramId, setTelegramId] = useState("")
   const [botToken, setBotToken] = useState("")
-  const [agentUrl, setAgentUrl] = useState("")
   const [showToken, setShowToken] = useState(false)
 
   const createUser = useCreateUser()
@@ -24,7 +23,6 @@ export function AddUserDialog() {
     setPassword("")
     setTelegramId("")
     setBotToken("")
-    setAgentUrl("")
     setShowToken(false)
   }
 
@@ -41,7 +39,6 @@ export function AddUserDialog() {
         password: password || undefined,
         telegramId: telegramId.trim(),
         botToken: botToken.trim() || undefined,
-        agentUrl: agentUrl.trim() || undefined,
         role: "USER",
       },
       {
@@ -157,20 +154,6 @@ export function AddUserDialog() {
                     <Info className="h-3 w-3" /> Encrypted at rest using AES-256
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Agent URL</label>
-                  <Input
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
-                    placeholder="http://mikrotik-agent:8900"
-                    type="url"
-                    value={agentUrl}
-                    onChange={(e) => setAgentUrl(e.target.value)}
-                  />
-                  <p className="text-[10px] text-slate-500 italic flex items-center gap-1 mt-1">
-                    <Info className="h-3 w-3" /> Nanobot agent endpoint for this user&apos;s AI assistant
-                  </p>
-                </div>
-
                 {/* AI Permissions */}
                 <div className="bg-[#4cd7f6]/5 rounded-2xl p-6 border border-[#4cd7f6]/10">
                   <div className="flex items-center justify-between mb-4">

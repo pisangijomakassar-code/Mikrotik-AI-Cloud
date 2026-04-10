@@ -10,7 +10,6 @@ export interface CreateUserInput {
   name: string;
   telegramId: string;
   botToken?: string;
-  agentUrl?: string;
   role?: UserRole;
   status?: UserStatus;
 }
@@ -21,7 +20,6 @@ export interface UpdateUserInput {
   name?: string;
   telegramId?: string;
   botToken?: string;
-  agentUrl?: string;
   role?: UserRole;
   status?: UserStatus;
 }

@@ -56,7 +56,6 @@ export async function createUser(data: CreateUserInput) {
       name: data.name,
       telegramId: data.telegramId,
       botToken: data.botToken || null,
-      agentUrl: data.agentUrl || null,
       role: data.role || "USER",
       status: data.status || "ACTIVE",
     },
@@ -82,7 +81,6 @@ export async function updateUser(id: string, data: UpdateUserInput) {
   if (data.name !== undefined) updateData.name = data.name
   if (data.telegramId !== undefined) updateData.telegramId = data.telegramId
   if (data.botToken !== undefined) updateData.botToken = data.botToken || null
-  if (data.agentUrl !== undefined) updateData.agentUrl = data.agentUrl || null
   if (data.role !== undefined) updateData.role = data.role
   if (data.status !== undefined) updateData.status = data.status
   if (data.password) {

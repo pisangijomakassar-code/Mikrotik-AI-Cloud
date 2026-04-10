@@ -13,7 +13,6 @@ interface ProfileData {
   botToken: string | null
   role: "ADMIN" | "USER"
   status: string
-  agentUrl: string | null
   createdAt: string
   lastActiveAt: string | null
   _count: { routers: number }

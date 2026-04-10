@@ -42,7 +42,6 @@ interface AgentUser {
   name: string
   telegramId: string
   botToken: string | null
-  agentUrl: string | null
   status: string
 }
 
@@ -236,7 +235,6 @@ export default function SettingsPage() {
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">User</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Telegram ID</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bot Token</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Agent URL</th>
                 <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
               </tr>
             </thead>
@@ -253,14 +251,7 @@ export default function SettingsPage() {
                     )}
                   </td>
                   <td className="px-6 py-3">
-                    {agent.agentUrl ? (
-                      <span className="text-xs font-mono text-[#4cd7f6]">{agent.agentUrl}</span>
-                    ) : (
-                      <span className="text-xs text-[#ffb4ab]">Not set</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3">
-                    {agent.botToken && agent.agentUrl ? (
+                    {agent.botToken ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#4ae176]">
                         <CheckCircle className="h-3 w-3" /> Configured
                       </span>

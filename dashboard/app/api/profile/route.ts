@@ -17,7 +17,6 @@ export async function GET() {
       botToken: true,
       role: true,
       status: true,
-      agentUrl: true,
       createdAt: true,
       lastActiveAt: true,
       _count: { select: { routers: true } },

@@ -9,7 +9,6 @@ interface User {
   email: string | null
   telegramId: string
   botToken: string | null
-  agentUrl: string | null
   role: "ADMIN" | "USER"
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
   lastActive: string | null
