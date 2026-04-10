@@ -124,7 +124,7 @@ export default function DocsPage() {
                 <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
               </div>
             ) : contents[doc.slug] ? (
-              <article className="bg-[#131b2e] rounded-xl border border-white/5 p-8 md:p-12 overflow-auto max-h-[calc(100vh-320px)]">
+              <article className="pt-4 pb-16">
                 <div className="prose prose-invert prose-cyan max-w-none
                   prose-headings:font-headline prose-headings:text-[#dae2fd]
                   prose-h1:text-3xl prose-h1:border-b prose-h1:border-white/5 prose-h1:pb-4 prose-h1:mb-8

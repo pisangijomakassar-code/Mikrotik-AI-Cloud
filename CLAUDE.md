@@ -41,7 +41,7 @@ npx prisma generate            # regenerate client after schema changes
 - Registry selection at startup: if `DATABASE_URL` is set → `registry_pg.py` (PostgreSQL), else → `registry.py` (JSON files)
 - `crypto.py` — Fernet encryption for router credentials (master key at `data/.master_key`)
 - `health_server.py` — HTTP API on port 8080 for dashboard to query router data, also proxies LLM chat
-- RouterOS connection via `librouteros` (binary API, port 8728)
+- RouterOS connection via `librouteros` v4 (binary API, port 8728) — see `docs/LIBROUTEROS_V4_REFERENCE.md`
 
 ### Dashboard (Next.js 16, `dashboard/`)
 - App Router with React 19, TypeScript strict, Tailwind + shadcn/ui
@@ -72,6 +72,10 @@ npx prisma generate            # regenerate client after schema changes
 - Write/destructive MCP tools must require confirmation (enforced via SKILL.md instructions to the LLM)
 - Bot responses: casual Indonesian, 1-3 lines, never expose tool names or internal IDs
 - Prisma tables use PascalCase with quoted identifiers (e.g., `"Router"`, `"User"`) — the MCP server's SQL must match
+- **MCP tools MUST follow librouteros v4 API patterns** — read `docs/LIBROUTEROS_V4_REFERENCE.md` before writing/editing `server.py`. Key rules:
+  - `select()` = field selection (like SQL SELECT), `where()` = filtering (like SQL WHERE)
+  - Path creation: `api.path('ip', 'hotspot', 'user')` (separate args)
+  - Find by name: `resource.select().where(Key('name') == value)` — NEVER pass conditions to `select()`
 
 ## CI/CD
 

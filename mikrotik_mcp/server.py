@@ -19,6 +19,7 @@ from contextlib import contextmanager
 from typing import Any
 
 import librouteros
+from librouteros.query import Key
 from mcp.server.fastmcp import FastMCP
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -90,19 +91,10 @@ def _query_path(path: str, host: str, port: int, username: str, password: str, w
     """Generic helper: query a RouterOS API path and return rows as dicts."""
     with connect_router(host, port, username, password) as api:
         resource = api.path(path)
-        rows = list(resource)
         if where:
-            return [r for r in rows if all(r.get(k) == v for k, v in where.items())]
-        return rows
-
-
-def _find_items(resource, key: str, value: str) -> list[dict]:
-    """Find items in a RouterOS resource by key match (local filter).
-
-    librouteros 4.x select() returns empty on many paths, so we list all
-    items and filter locally instead.
-    """
-    return [item for item in resource if item.get(key) == value]
+            conditions = tuple(Key(k) == v for k, v in where.items())
+            return list(resource.select().where(*conditions))
+        return list(resource)
 
 
 def _format_bytes(n: int | str) -> str:
@@ -337,16 +329,6 @@ def get_interface_traffic(user_id: str, interface_name: str, router: str = "") -
     if "error" in conn:
         return conn
     host, port, username, password = conn["host"], conn["port"], conn["username"], conn["password"]
-    with connect_router(host, port, username, password) as api:
-        monitor = api.path("/interface/monitor-traffic")
-        result = list(monitor.select(
-            librouteros.query.Key("interface") == interface_name,
-            librouteros.query.Key(".proplist") == "name,rx-bits-per-second,tx-bits-per-second",
-        ))
-        if result:
-            registry.update_last_seen(user_id, conn["name"])
-            return result[0]
-    # Fallback: get from /interface
     ifaces = _query_path("/interface", host, port, username, password)
     for r in ifaces:
         if r.get("name") == interface_name:
@@ -660,8 +642,8 @@ def remove_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            users = _find_items(resource, "name", username)
+            resource = api.path("ip", "hotspot", "user")
+            users = list(resource.select().where(Key("name") == username))
             if not users:
                 return {"error": f"User '{username}' not found. Check the exact username spelling."}
             resource.remove(users[0][".id"])
@@ -685,8 +667,8 @@ def enable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            users = _find_items(resource, "name", username)
+            resource = api.path("ip", "hotspot", "user")
+            users = list(resource.select().where(Key("name") == username))
             if not users:
                 return {"error": f"User '{username}' not found."}
             resource.update(**{".id": users[0][".id"], "disabled": "false"})
@@ -710,8 +692,8 @@ def disable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            users = _find_items(resource, "name", username)
+            resource = api.path("ip", "hotspot", "user")
+            users = list(resource.select().where(Key("name") == username))
             if not users:
                 return {"error": f"User '{username}' not found."}
             resource.update(**{".id": users[0][".id"], "disabled": "true"})
@@ -738,8 +720,8 @@ def update_hotspot_user(user_id: str, username: str, new_password: str = "", new
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            users = _find_items(resource, "name", username)
+            resource = api.path("ip", "hotspot", "user")
+            users = list(resource.select().where(Key("name") == username))
             if not users:
                 return {"error": f"User '{username}' not found."}
             update_params: dict = {".id": users[0][".id"]}
@@ -780,12 +762,12 @@ def search_hotspot_user(user_id: str, username: str, router: str = "") -> list[d
         return [conn]
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            all_users = list(resource)
-            # Try exact match first
-            users = [u for u in all_users if u.get("name") == username]
+            resource = api.path("ip", "hotspot", "user")
+            # Try exact match first (server-side filter)
+            users = list(resource.select().where(Key("name") == username))
             if not users:
-                # Fallback: partial/case-insensitive match
+                # Fallback: partial/case-insensitive match (local scan)
+                all_users = list(resource)
                 users = [u for u in all_users if username.lower() in u.get("name", "").lower()]
             registry.update_last_seen(user_id, conn["name"])
             return [
@@ -1063,12 +1045,10 @@ def enable_interface(user_id: str, name: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            ifaces = list(api.path("/interface").select(
-                librouteros.query.Key("name") == name
-            ))
+            ifaces = list(api.path("interface").select().where(Key("name") == name))
             if not ifaces:
                 return {"error": f"Interface '{name}' not found"}
-            api.path("/interface").update(**{".id": ifaces[0][".id"], "disabled": "false"})
+            api.path("interface").update(**{".id": ifaces[0][".id"], "disabled": "false"})
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Interface '{name}' enabled"}
     except Exception as e:
@@ -1089,12 +1069,10 @@ def disable_interface(user_id: str, name: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            ifaces = list(api.path("/interface").select(
-                librouteros.query.Key("name") == name
-            ))
+            ifaces = list(api.path("interface").select().where(Key("name") == name))
             if not ifaces:
                 return {"error": f"Interface '{name}' not found"}
-            api.path("/interface").update(**{".id": ifaces[0][".id"], "disabled": "true"})
+            api.path("interface").update(**{".id": ifaces[0][".id"], "disabled": "true"})
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Interface '{name}' disabled"}
     except Exception as e:
@@ -1377,9 +1355,7 @@ def make_dhcp_static(user_id: str, lease_id: str, router: str = "") -> dict:
                 return {"status": "ok", "message": f"Lease '{lease_id}' converted to static"}
             except Exception:
                 # Fallback: read lease details, remove dynamic, add static
-                leases = list(api.path("/ip/dhcp-server/lease").select(
-                    librouteros.query.Key(".id") == lease_id
-                ))
+                leases = list(api.path("ip", "dhcp-server", "lease").select().where(Key(".id") == lease_id))
                 if not leases:
                     return {"error": f"Lease '{lease_id}' not found"}
                 lease = leases[0]
@@ -1722,8 +1698,8 @@ def get_hotspot_user_detail(user_id: str, username: str, router: str = "") -> di
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            users = _find_items(resource, "name", username)
+            resource = api.path("ip", "hotspot", "user")
+            users = list(resource.select().where(Key("name") == username))
             if not users:
                 return {"error": f"Hotspot user '{username}' not found."}
             registry.update_last_seen(user_id, conn["name"])
@@ -1763,8 +1739,8 @@ def bulk_enable_hotspot_users(user_id: str, usernames: str, router: str = "") ->
         return {"error": "No usernames provided. Pass a comma-separated list."}
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            all_users = {u.get("name"): u for u in resource}
+            resource = api.path("ip", "hotspot", "user")
+            all_users = {u["name"]: u for u in resource.select(Key("name"), Key(".id"))}
             enabled = []
             errors = []
             for uname in name_list:
@@ -1803,8 +1779,8 @@ def bulk_disable_hotspot_users(user_id: str, usernames: str, router: str = "") -
         return {"error": "No usernames provided. Pass a comma-separated list."}
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            all_users = {u.get("name"): u for u in resource}
+            resource = api.path("ip", "hotspot", "user")
+            all_users = {u["name"]: u for u in resource.select(Key("name"), Key(".id"))}
             disabled = []
             errors = []
             for uname in name_list:
@@ -1843,8 +1819,8 @@ def bulk_remove_hotspot_users(user_id: str, usernames: str, router: str = "") ->
         return {"error": "No usernames provided. Pass a comma-separated list."}
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user")
-            all_users = {u.get("name"): u for u in resource}
+            resource = api.path("ip", "hotspot", "user")
+            all_users = {u["name"]: u for u in resource.select(Key("name"), Key(".id"))}
             removed = []
             errors = []
             for uname in name_list:
@@ -2035,11 +2011,10 @@ def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user/profile")
-            all_profiles = list(resource)
-            profiles = [p for p in all_profiles if p.get("name") == name]
+            resource = api.path("ip", "hotspot", "user", "profile")
+            profiles = list(resource.select().where(Key("name") == name))
             if not profiles:
-                available = [p.get("name", "") for p in all_profiles]
+                available = [p.get("name", "") for p in resource]
                 return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
 
             update_params: dict[str, str] = {".id": profiles[0][".id"]}
@@ -2083,15 +2058,14 @@ def remove_hotspot_user_profile(user_id: str, name: str, router: str = "") -> di
         return {"error": "Cannot remove the 'default' profile."}
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            resource = api.path("/ip/hotspot/user/profile")
-            all_profiles = list(resource)
-            profiles = [p for p in all_profiles if p.get("name") == name]
+            resource = api.path("ip", "hotspot", "user", "profile")
+            profiles = list(resource.select().where(Key("name") == name))
             if not profiles:
-                available = [p.get("name", "") for p in all_profiles]
+                available = [p.get("name", "") for p in resource]
                 return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
 
             # Check if any users are assigned to this profile
-            users = _find_items(api.path("/ip/hotspot/user"), "profile", name)
+            users = list(api.path("ip", "hotspot", "user").select(Key("name")).where(Key("profile") == name))
             if users:
                 return {"error": f"Cannot remove profile '{name}': {len(users)} user(s) still assigned to it. "
                         f"Reassign or remove those users first."}
@@ -2182,12 +2156,10 @@ def remove_ppp_secret(user_id: str, name: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            secrets = list(api.path("/ppp/secret").select(
-                librouteros.query.Key("name") == name
-            ))
+            secrets = list(api.path("ppp", "secret").select().where(Key("name") == name))
             if not secrets:
                 return {"error": f"PPP secret '{name}' not found"}
-            api.path("/ppp/secret").remove(secrets[0][".id"])
+            api.path("ppp", "secret").remove(secrets[0][".id"])
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"PPP secret '{name}' removed"}
     except Exception as e:
@@ -2281,9 +2253,7 @@ def run_system_script(user_id: str, script_name: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            scripts = list(api.path("/system/script").select(
-                librouteros.query.Key("name") == script_name
-            ))
+            scripts = list(api.path("system", "script").select().where(Key("name") == script_name))
             if not scripts:
                 return {"error": f"Script '{script_name}' not found"}
             script_id = scripts[0][".id"]
@@ -3310,12 +3280,10 @@ def remove_scheduler(user_id: str, name: str, router: str = "") -> dict:
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            entries = list(api.path("/system/scheduler").select(
-                librouteros.query.Key("name") == name
-            ))
+            entries = list(api.path("system", "scheduler").select().where(Key("name") == name))
             if not entries:
                 return {"error": f"Scheduler '{name}' not found. Use list_system_scheduler to see available entries."}
-            api.path("/system/scheduler").remove(entries[0][".id"])
+            api.path("system", "scheduler").remove(entries[0][".id"])
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Scheduler '{name}' removed"}
     except Exception as e:
