@@ -205,6 +205,88 @@ class HealthHandler(BaseHTTPRequestHandler):
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/v1/chat/completions":
+            self._handle_chat_completions()
+            return
+
+        self.send_response(404)
+        self.end_headers()
+
+    def _handle_chat_completions(self):
+        """Proxy chat to OpenRouter API directly. Provides OpenAI-compatible endpoint for dashboard chat."""
+        import urllib.request
+        import urllib.error
+
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+
+            messages = body.get("messages", [])
+            session_id = body.get("session_id", "dashboard")
+            user_context = body.get("user_context", {})
+
+            # Get user's telegram ID for MCP tool context
+            telegram_id = user_context.get("telegram_id", "")
+
+            # Build system prompt with MikroTik context
+            system_msg = {
+                "role": "system",
+                "content": (
+                    "You are a MikroTik network assistant. You help users manage their MikroTik routers. "
+                    "Keep responses short and casual. Use Indonesian if the user writes in Indonesian. "
+                    f"The user's Telegram ID is {telegram_id}. "
+                    "You can provide general MikroTik advice but cannot execute router commands from this interface. "
+                    "For router management actions, suggest the user use the Telegram bot."
+                )
+            }
+
+            all_messages = [system_msg] + messages
+
+            # Call OpenRouter directly
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            model = os.environ.get("CHAT_MODEL", "openai/gpt-5.4-nano")
+
+            if not api_key:
+                _send_json(self, {
+                    "choices": [{"message": {"role": "assistant", "content": "API key not configured. Contact admin."}}],
+                    "model": model,
+                })
+                return
+
+            payload = json.dumps({
+                "model": model,
+                "messages": all_messages,
+                "max_tokens": 1024,
+            }).encode()
+
+            req = urllib.request.Request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                    "X-Title": "MikroTik AI Agent Dashboard",
+                },
+            )
+
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read())
+                _send_json(self, result)
+
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode() if e.fp else str(e)
+            _send_json(self, {
+                "choices": [{"message": {"role": "assistant", "content": f"LLM error: {error_body[:200]}"}}],
+            })
+        except Exception as e:
+            _send_json(self, {
+                "choices": [{"message": {"role": "assistant", "content": f"Chat error: {str(e)}"}}],
+            })
+
     def log_message(self, format, *args):
         pass  # Suppress request logs
 
