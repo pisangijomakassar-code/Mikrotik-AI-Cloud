@@ -7,6 +7,7 @@ import { NetworkThroughput } from "@/components/network-throughput"
 import { DashboardHotspotStats } from "@/components/dashboard-hotspot-stats"
 import { DashboardWarnings } from "@/components/dashboard-warnings"
 import { DashboardAIInsight } from "@/components/dashboard-ai-insight"
+import { DashboardVoucherGenerate } from "@/components/dashboard-voucher-generate"
 
 export default function DashboardPage() {
   return (
@@ -20,6 +21,11 @@ export default function DashboardPage() {
           Hotspot Overview
         </h3>
         <DashboardHotspotStats />
+      </div>
+
+      {/* Row 2.5: Quick Voucher */}
+      <div className="mt-8">
+        <DashboardVoucherGenerate />
       </div>
 
       {/* Row 3: Network Throughput + Warnings */}

@@ -5,6 +5,7 @@ import { Bot, User, Send, Paperclip, Heart, Shield, FileText, Cpu, Wifi, Plus, M
 import { useRouters } from "@/hooks/use-routers"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -158,11 +159,11 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="fixed top-16 left-64 right-0 bottom-0 flex">
+    <div className="fixed top-16 left-0 md:left-64 right-0 bottom-0 flex flex-col md:flex-row">
       {/* Chat */}
       <section className="flex-1 flex flex-col border-r border-white/5 bg-slate-900 overflow-hidden">
         {/* Scrollable chat history only */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 custom-scrollbar">
           {messages.map((msg, i) => msg.role === "assistant" ? (
             <div key={i} className="flex gap-4 max-w-3xl">
               <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center shrink-0">
@@ -218,7 +219,7 @@ export default function ChatPage() {
         </div>
 
         {/* Fixed bottom input - not scrollable */}
-        <div className="shrink-0 p-6 border-t border-white/5 bg-slate-900">
+        <div className="shrink-0 p-3 md:p-6 border-t border-white/5 bg-slate-900">
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             {[
               { icon: Heart, label: "Diagnose connection", prompt: "Diagnose connection issues" },
@@ -234,7 +235,7 @@ export default function ChatPage() {
           </div>
           <div className="relative max-w-4xl mx-auto">
             <div className="flex items-center p-2 rounded-2xl shadow-2xl" style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)" }}>
-              <input className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-4 pl-5" placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() }}} disabled={isLoading} />
+              <Input className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none text-sm text-slate-100 placeholder-slate-500 px-4 pl-5 shadow-none" placeholder="Ask AI to configure OSPF, check routes, or monitor traffic..." value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() }}} disabled={isLoading} />
               <div className="flex items-center gap-2 pr-2">
                 <label className="p-2 text-slate-400 hover:text-slate-200 transition-colors">
                   <Paperclip className="h-5 w-5" />

@@ -121,7 +121,7 @@ export default function PlanPage() {
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Plan & Billing</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <CreditCard className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <CreditCard className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Manage your subscription and monitor usage.
           </p>
         </div>

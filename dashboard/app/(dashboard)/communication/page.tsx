@@ -16,6 +16,9 @@ import {
 import { useSendTelegram } from "@/hooks/use-telegram"
 import { useResellers } from "@/hooks/use-resellers"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type RecipientMode = "single" | "broadcast"
 
@@ -202,24 +205,28 @@ export default function CommunicationPage() {
               {mode === "single" ? (
                 <div className="space-y-3">
                   {/* Reseller dropdown */}
-                  <select
+                  <Select
                     value={selectedResellerId}
-                    onChange={(e) => {
-                      setSelectedResellerId(e.target.value)
-                      if (e.target.value) setCustomChatId("")
+                    onValueChange={(value) => {
+                      setSelectedResellerId(value === "__none__" ? "" : value)
+                      if (value && value !== "__none__") setCustomChatId("")
                     }}
-                    className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 appearance-none cursor-pointer"
                   >
-                    <option value="">-- Select a reseller --</option>
-                    {resellersLoading && (
-                      <option disabled>Loading...</option>
-                    )}
-                    {resellerList.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.telegramId})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 cursor-pointer h-auto">
+                      <SelectValue placeholder="-- Select a reseller --" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#2d3449] border-white/10">
+                      <SelectItem value="__none__" className="text-slate-400">-- Select a reseller --</SelectItem>
+                      {resellersLoading && (
+                        <SelectItem value="__loading__" disabled>Loading...</SelectItem>
+                      )}
+                      {resellerList.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name} ({r.telegramId})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Divider */}
                   <div className="flex items-center gap-3">
@@ -231,7 +238,7 @@ export default function CommunicationPage() {
                   </div>
 
                   {/* Custom Chat ID */}
-                  <input
+                  <Input
                     type="text"
                     value={customChatId}
                     onChange={(e) => {
@@ -302,7 +309,7 @@ export default function CommunicationPage() {
               <label className="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-widest mb-3 block">
                 Message
               </label>
-              <textarea
+              <Textarea
                 value={message}
                 onChange={(e) => {
                   if (e.target.value.length <= MAX_CHARS) {

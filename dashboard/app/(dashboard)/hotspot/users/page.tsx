@@ -214,7 +214,7 @@ export default function HotspotUsersPage() {
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Hotspot Users</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Wifi className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <Wifi className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Manage hotspot user accounts and access control.
           </p>
         </div>

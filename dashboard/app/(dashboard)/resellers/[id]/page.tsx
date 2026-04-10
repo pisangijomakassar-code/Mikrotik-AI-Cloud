@@ -203,7 +203,7 @@ export default function ResellerDetailPage({
             {reseller.name}
           </h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Store className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <Store className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Reseller detail and management
           </p>
         </div>

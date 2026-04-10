@@ -6,6 +6,8 @@ import { useUsers, useUpdateUser, useDeleteUser } from "@/hooks/use-users"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 function getInitials(name: string): string {
   return name
@@ -114,22 +116,26 @@ export function UserTable() {
       {/* Expanded filters */}
       {showFilters && (
         <div className="flex items-center gap-3 bg-[#131b2e] p-3 rounded-lg border border-white/5">
-          <input
+          <Input
             type="text"
             placeholder="Search by name, email, or Telegram ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
           />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] outline-none"
+          <Select
+            value={roleFilter || "__all__"}
+            onValueChange={(value) => setRoleFilter(value === "__all__" ? "" : value)}
           >
-            <option value="">All Roles</option>
-            <option value="ADMIN">Admin</option>
-            <option value="USER">User</option>
-          </select>
+            <SelectTrigger className="bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2 text-[#dae2fd] outline-none w-auto h-auto">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-[#222a3d] border-white/10">
+              <SelectItem value="__all__">All Roles</SelectItem>
+              <SelectItem value="ADMIN">Admin</SelectItem>
+              <SelectItem value="USER">User</SelectItem>
+            </SelectContent>
+          </Select>
           <button
             onClick={() => { setSearch(""); setRoleFilter(""); setActiveTab("all"); setShowFilters(false) }}
             className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-3"

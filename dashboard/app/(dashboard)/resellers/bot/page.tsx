@@ -92,7 +92,7 @@ export default function ResellerBotPage() {
             Reseller Bot
           </h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <BotMessageSquare className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <BotMessageSquare className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Configure a Telegram bot for reseller self-service.
           </p>
         </div>

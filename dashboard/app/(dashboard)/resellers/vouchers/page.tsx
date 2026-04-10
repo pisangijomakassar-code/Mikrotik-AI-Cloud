@@ -63,7 +63,7 @@ export default function VoucherHistoryPage() {
             Voucher History
           </h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Receipt className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <Receipt className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             All vouchers from dashboard, Nanobot, and reseller bot.
           </p>
         </div>

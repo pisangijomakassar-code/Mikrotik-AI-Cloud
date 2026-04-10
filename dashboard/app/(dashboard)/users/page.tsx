@@ -28,7 +28,7 @@ export default function UsersPage() {
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">User Management</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <CloudCheck className="h-[18px] w-[18px] text-[#4ae176]" />
+            <CloudCheck className="h-[18px] w-[18px] text-[#4ae176] shrink-0" />
             Manage individual AI agent access and telegram bot configurations.
           </p>
         </div>

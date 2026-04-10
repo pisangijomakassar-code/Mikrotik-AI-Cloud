@@ -133,7 +133,7 @@ export default function SettingsPage() {
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Settings</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <SlidersHorizontal className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <SlidersHorizontal className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Nanobot agent configuration and system management.
           </p>
         </div>

@@ -214,7 +214,7 @@ function CollapsibleGroup({
       >
         {filteredItems.map((item) => {
           const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + "/")
+            pathname === item.href || (pathname?.startsWith(item.href + "/") && !filteredItems.some((o) => o.href !== item.href && o.href.length > item.href.length && pathname?.startsWith(o.href)))
           return (
             <Link
               key={item.href}

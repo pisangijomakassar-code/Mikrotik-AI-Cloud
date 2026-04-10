@@ -182,7 +182,7 @@ export default function ResellersPage() {
             Reseller Management
           </h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Store className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <Store className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Manage resellers and their saldo balances.
           </p>
         </div>

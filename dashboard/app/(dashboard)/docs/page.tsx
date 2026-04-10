@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm"
 import { BookOpen, FileCode, ShieldCheck, Loader2, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
 
 const ALL_DOCS = [
   { slug: "user-guide", label: "User Guide", icon: BookOpen, adminOnly: false },
@@ -61,7 +62,7 @@ export default function DocsPage() {
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Documentation</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
-            <BookOpen className="h-[18px] w-[18px] text-[#4cd7f6]" />
+            <BookOpen className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
             Guides, API reference, and administration docs for MikroTik AI Agent.
           </p>
         </div>
@@ -70,7 +71,7 @@ export default function DocsPage() {
       {/* Search */}
       <div className="relative mb-8 max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-        <input
+        <Input
           type="text"
           placeholder="Search documentation..."
           value={search}
