@@ -43,22 +43,20 @@ export async function POST(request: Request) {
       )
     }
 
-    // Lookup user's agent config for per-user agent routing
+    // Lookup user for per-user session isolation
     const user = await prisma.user.findUnique({
       where: { id: session.user.id as string },
-      select: { botToken: true, telegramId: true, name: true, agentUrl: true },
+      select: { telegramId: true, name: true },
     })
 
-    if (!user?.botToken || !user?.agentUrl) {
+    if (!user) {
       return Response.json({
-        reply:
-          "Your AI agent is not configured yet. Please contact the administrator to set up your bot token and agent URL.",
+        reply: "User not found. Please contact the administrator.",
       })
     }
 
-    // Nanobot API only accepts a single user message per request.
+    // Build the single message (nanobot API accepts 1 user message per request).
     // Context is maintained server-side via session_id.
-    // Build the single message (text or multimodal).
     let userContent: string | Array<{ type: string; text?: string; image_url?: { url: string } }> = message
     if (image) {
       userContent = [
@@ -67,21 +65,20 @@ export async function POST(request: Request) {
       ]
     }
 
-    const sessionId = `dashboard-${session.user.id}`
+    // Session isolated per user — nanobot maintains context per session_id
+    const sessionId = `dashboard-${user.telegramId}`
 
-    // Route to user's dedicated nanobot agent
-    const agentUrl = user.agentUrl
+    // Single nanobot instance, agents separated by session_id + telegramId
+    const nanobotUrl = process.env.NANOBOT_API_URL || "http://mikrotik-agent:8900"
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 60000) // 60s for tool calls
 
     try {
-      const apiResponse = await fetch(`${agentUrl}/v1/chat/completions`, {
+      const apiResponse = await fetch(`${nanobotUrl}/v1/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Bot-Token": user.botToken,
-          "X-Telegram-Id": user.telegramId,
         },
         body: JSON.stringify({
           messages: [{ role: "user", content: userContent }],
