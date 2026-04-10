@@ -114,7 +114,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 |------|-----------|-------------|
 | `list_dns_settings` | `user_id, router?` | DNS configuration |
 | `list_dns_static` | `user_id, router?` | Static DNS entries |
-| `add_dns_static` | `user_id, name, address, router?` | Add static DNS. **CONFIRM.** |
+| `add_dns_static` | `user_id, name, address, comment?, ttl?, disabled?, router?` | Add static DNS. **CONFIRM.** |
 | `remove_dns_static` | `user_id, entry_id, router?` | Remove static DNS. **CONFIRM.** |
 
 ### DHCP
@@ -134,12 +134,12 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_firewall_filter` | `user_id, router?` | Firewall filter rules |
-| `add_firewall_filter` | `user_id, chain, action, src_address?, dst_address?, protocol?, dst_port?, comment?, router?` | Add filter rule. **CONFIRM.** |
+| `add_firewall_filter` | `user_id, chain, action, protocol?, src_address?, dst_address?, dst_port?, src_port?, in_interface?, out_interface?, connection_state?, src_address_list?, dst_address_list?, log?, log_prefix?, jump_target?, disabled?, comment?, router?` | Add filter rule with full matching options. **CONFIRM.** |
 | `remove_firewall_filter` | `user_id, rule_id, router?` | Remove filter rule. **CONFIRM.** |
 | `enable_firewall_rule` | `user_id, rule_id, router?` | Enable disabled firewall rule. **CONFIRM.** |
 | `disable_firewall_rule` | `user_id, rule_id, router?` | Disable firewall rule without deleting. **CONFIRM.** |
 | `list_firewall_nat` | `user_id, router?` | NAT rules |
-| `add_nat_rule` | `user_id, chain, action, src_address?, dst_address?, to_addresses?, to_ports?, protocol?, dst_port?, comment?, router?` | Add NAT rule. **CONFIRM.** |
+| `add_nat_rule` | `user_id, chain, action, protocol?, src_address?, dst_address?, dst_port?, src_port?, in_interface?, out_interface?, to_addresses?, to_ports?, log?, log_prefix?, disabled?, comment?, router?` | Add NAT rule with full matching options. **CONFIRM.** |
 | `remove_nat_rule` | `user_id, rule_id, router?` | Remove NAT rule. **CONFIRM.** |
 | `list_firewall_mangle` | `user_id, router?` | Mangle rules |
 | `list_firewall_address_lists` | `user_id, router?` | Address lists |
@@ -157,13 +157,13 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_hotspot_users` | `user_id, router?` | All hotspot user accounts (warning: can be 1000+) |
 | `count_hotspot_users` | `user_id, router?` | Count total/enabled/disabled hotspot users (use this instead of listing all) |
 | `search_hotspot_user` | `user_id, username, router?` | Search for specific user by name (exact + partial match) |
-| `add_hotspot_user` | `user_id, username, password, profile?, router?` | Create hotspot user. **CONFIRM.** |
+| `add_hotspot_user` | `user_id, username, password, profile?, server?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, address?, mac_address?, email?, router?` | Create hotspot user with optional limits, server, and bindings. **CONFIRM.** |
 | `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM.** |
 | `enable_hotspot_user` | `user_id, username, router?` | Enable/reactivate suspended user. **CONFIRM.** |
 | `disable_hotspot_user` | `user_id, username, router?` | Suspend user without deleting. **CONFIRM.** |
-| `update_hotspot_user` | `user_id, username, new_password?, new_profile?, new_name?, router?` | Update user password/profile/name. **CONFIRM.** |
+| `update_hotspot_user` | `user_id, username, new_password?, new_profile?, new_name?, server?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, address?, mac_address?, email?, disabled?, router?` | Update any hotspot user field. **CONFIRM.** |
 | `list_hotspot_user_profiles` | `user_id, router?` | Hotspot user profiles with rate limits (e.g. 5rb, Free) |
-| `add_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, router?` | Create new rate limit profile. **CONFIRM.** |
+| `add_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, keepalive_timeout?, idle_timeout?, address_list?, transparent_proxy?, open_status_page?, router?` | Create new rate limit profile. **CONFIRM.** |
 | `list_hotspot_server_profiles` | `user_id, router?` | Hotspot server profiles (login page, DNS, etc) |
 | `list_hotspot_servers` | `user_id, router?` | Hotspot server instances |
 | `list_hotspot_ip_bindings` | `user_id, router?` | IP bindings (bypass/block) |
@@ -174,7 +174,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|
-| `generate_hotspot_vouchers` | `user_id, count, profile, prefix?, password_length?, username_length?, limit_uptime?, limit_bytes_total?, comment?, router?` | Bulk generate voucher users (max 100). **CONFIRM.** |
+| `generate_hotspot_vouchers` | `user_id, count, profile, prefix?, password_length?, username_length?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, server?, router?` | Bulk generate voucher users (max 100). **CONFIRM.** |
 | `get_hotspot_voucher_stats` | `user_id, router?` | Dashboard stats: total/enabled/disabled, breakdown by profile |
 | `get_hotspot_user_detail` | `user_id, username, router?` | Full user detail with usage stats (bytes, uptime, limits) |
 | `bulk_enable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Enable multiple users at once. **CONFIRM.** |
@@ -182,7 +182,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `bulk_remove_hotspot_users` | `user_id, usernames (comma-separated), router?` | Remove multiple users. **DOUBLE CONFIRM.** |
 | `remove_disabled_hotspot_users` | `user_id, router?` | Remove ALL disabled users (cleanup). **DOUBLE CONFIRM.** |
 | `remove_expired_hotspot_users` | `user_id, router?` | Remove users that exceeded uptime/data limits. **DOUBLE CONFIRM.** |
-| `update_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, keepalive_timeout?, router?` | Update existing profile settings. **CONFIRM.** |
+| `update_hotspot_user_profile` | `user_id, name, rate_limit?, shared_users?, session_timeout?, keepalive_timeout?, idle_timeout?, address_list?, transparent_proxy?, open_status_page?, router?` | Update existing profile settings. **CONFIRM.** |
 | `remove_hotspot_user_profile` | `user_id, name, router?` | Remove a profile (fails if users assigned). **CONFIRM.** |
 
 ### PPP/VPN
@@ -192,7 +192,8 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_ppp_active` | `user_id, router?` | Active PPP/VPN connections |
 | `kick_ppp_user` | `user_id, session_id, router?` | Disconnect active PPP/VPN session. **CONFIRM.** |
 | `list_ppp_secrets` | `user_id, router?` | PPP user accounts |
-| `add_ppp_secret` | `user_id, name, password, service?, profile?, router?` | Add PPP user. **CONFIRM.** |
+| `add_ppp_secret` | `user_id, name, password, service?, profile?, local_address?, remote_address?, comment?, disabled?, routes?, router?` | Add PPP user with optional IP/routes. **CONFIRM.** |
+| `update_ppp_secret` | `user_id, name, new_password?, new_profile?, local_address?, remote_address?, comment?, disabled?, routes?, router?` | Update PPP user fields. **CONFIRM.** |
 | `remove_ppp_secret` | `user_id, name, router?` | Remove PPP user. **CONFIRM.** |
 | `list_ppp_profiles` | `user_id, router?` | PPP profiles (rate limits, DNS, etc) |
 | `list_l2tp_server` | `user_id, router?` | L2TP server config and status |
@@ -204,7 +205,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `list_simple_queues` | `user_id, router?` | Bandwidth limit rules |
-| `add_simple_queue` | `user_id, name, target, max_limit, router?` | Add bandwidth limit. **CONFIRM.** |
+| `add_simple_queue` | `user_id, name, target, max_limit, burst_limit?, burst_threshold?, burst_time?, priority?, limit_at?, parent?, comment?, disabled?, router?` | Add bandwidth limit with optional burst/priority. **CONFIRM.** |
 | `remove_simple_queue` | `user_id, queue_id, router?` | Remove queue. **CONFIRM.** |
 | `enable_simple_queue` | `user_id, queue_id, router?` | Enable queue. **CONFIRM.** |
 | `disable_simple_queue` | `user_id, queue_id, router?` | Disable queue. **CONFIRM.** |
@@ -323,6 +324,7 @@ Before ANY write/destructive operation:
 - `update_hotspot_user_profile`
 - `remove_hotspot_user_profile`
 - `add_ppp_secret`
+- `update_ppp_secret`
 - `remove_ppp_secret`
 - `kick_ppp_user`
 - `add_simple_queue`

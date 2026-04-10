@@ -106,6 +106,65 @@ def _format_bytes(n: int | str) -> str:
     return f"{n:.1f} TB"
 
 
+def _parse_ros_time(s: str) -> int:
+    """Parse RouterOS time string (e.g., '1h30m', '2d3h', '45m10s') to seconds."""
+    if not s:
+        return 0
+    total = 0
+    num = ""
+    for ch in s:
+        if ch.isdigit():
+            num += ch
+        else:
+            if num:
+                n = int(num)
+                if ch == "w":
+                    total += n * 604800
+                elif ch == "d":
+                    total += n * 86400
+                elif ch == "h":
+                    total += n * 3600
+                elif ch == "m":
+                    total += n * 60
+                elif ch == "s":
+                    total += n
+                num = ""
+    if num:
+        total += int(num)
+    return total
+
+
+def _parse_ros_bytes(s: str) -> int:
+    """Parse RouterOS byte string (e.g., '100M', '1G', '500K', '1048576') to bytes."""
+    if not s:
+        return 0
+    s = s.strip().upper()
+    multipliers = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
+    if s[-1] in multipliers:
+        try:
+            return int(float(s[:-1]) * multipliers[s[-1]])
+        except ValueError:
+            return 0
+    try:
+        return int(s)
+    except ValueError:
+        return 0
+
+
+def _normalize_bytes_input(value: str) -> str:
+    """Convert human-friendly byte strings ('500M', '1G') to integer byte strings for RouterOS."""
+    if not value:
+        return value
+    stripped = value.strip()
+    try:
+        int(stripped)
+        return stripped
+    except ValueError:
+        pass
+    result = _parse_ros_bytes(stripped)
+    return str(result) if result > 0 else stripped
+
+
 def _validate_user_id(user_id: str) -> str | None:
     """Return an error message if user_id looks like a group chat ID, else None."""
     try:
@@ -545,6 +604,7 @@ def list_hotspot_users(user_id: str, router: str = "") -> list[dict]:
             {
                 "name": r.get("name"),
                 "profile": r.get("profile"),
+                "server": r.get("server", ""),
                 "limit_uptime": r.get("limit-uptime", ""),
                 "limit_bytes_total": r.get("limit-bytes-total", ""),
                 "disabled": r.get("disabled"),
@@ -598,7 +658,11 @@ def count_hotspot_active(user_id: str, router: str = "") -> dict:
 
 
 @mcp.tool()
-def add_hotspot_user(user_id: str, username: str, password: str, profile: str = "default", router: str = "") -> dict:
+def add_hotspot_user(user_id: str, username: str, password: str, profile: str = "default",
+                     server: str = "", limit_uptime: str = "", limit_bytes_total: str = "",
+                     limit_bytes_in: str = "", limit_bytes_out: str = "",
+                     comment: str = "", address: str = "", mac_address: str = "",
+                     email: str = "", router: str = "") -> dict:
     """Add a new hotspot user account.
 
     Args:
@@ -606,6 +670,15 @@ def add_hotspot_user(user_id: str, username: str, password: str, profile: str = 
         username: The login username for the hotspot user
         password: The login password
         profile: Hotspot user profile to assign (default: "default")
+        server: Hotspot server name to assign user to. Empty = default 'all'.
+        limit_uptime: Max online time (e.g., '1h', '3h', '1d'). Empty = unlimited.
+        limit_bytes_total: Total data limit (e.g., '500M', '1G'). Empty = unlimited.
+        limit_bytes_in: Download data limit (e.g., '500M', '1G'). Empty = unlimited.
+        limit_bytes_out: Upload data limit (e.g., '100M', '500M'). Empty = unlimited.
+        comment: Comment text for this user.
+        address: Static IP address binding (e.g., '10.10.8.100'). Empty = no binding.
+        mac_address: MAC address binding (e.g., 'AA:BB:CC:DD:EE:FF'). Empty = no binding.
+        email: User's email address.
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
@@ -613,14 +686,46 @@ def add_hotspot_user(user_id: str, username: str, password: str, profile: str = 
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            profiles = list(api.path("/ip/hotspot/user/profile"))
+            profiles = list(api.path("ip", "hotspot", "user", "profile"))
             profile_names = [p.get("name", "") for p in profiles]
             if profile and profile not in profile_names:
                 return {"error": f"Profile '{profile}' not found. Available profiles: {', '.join(profile_names)}. Try one of these instead."}
-            resource = api.path("/ip/hotspot/user")
-            resource.add(name=username, password=password, profile=profile)
+            if server:
+                servers = list(api.path("ip", "hotspot"))
+                server_names = [s.get("name", "") for s in servers]
+                if server not in server_names:
+                    return {"error": f"Hotspot server '{server}' not found. Available: {', '.join(server_names)}"}
+            params: dict[str, str] = {"name": username, "password": password, "profile": profile}
+            if server:
+                params["server"] = server
+            if limit_uptime:
+                params["limit-uptime"] = limit_uptime
+            if limit_bytes_total:
+                params["limit-bytes-total"] = _normalize_bytes_input(limit_bytes_total)
+            if limit_bytes_in:
+                params["limit-bytes-in"] = _normalize_bytes_input(limit_bytes_in)
+            if limit_bytes_out:
+                params["limit-bytes-out"] = _normalize_bytes_input(limit_bytes_out)
+            if comment:
+                params["comment"] = comment
+            if address:
+                params["address"] = address
+            if mac_address:
+                params["mac-address"] = mac_address
+            if email:
+                params["email"] = email
+            resource = api.path("ip", "hotspot", "user")
+            resource.add(**params)
             registry.update_last_seen(user_id, conn["name"])
-            return {"status": "ok", "message": f"Hotspot user '{username}' created with profile '{profile}'"}
+            extras = []
+            if limit_uptime:
+                extras.append(f"uptime={limit_uptime}")
+            if limit_bytes_total:
+                extras.append(f"data={limit_bytes_total}")
+            if server:
+                extras.append(f"server={server}")
+            extra_info = f" ({', '.join(extras)})" if extras else ""
+            return {"status": "ok", "message": f"Hotspot user '{username}' created with profile '{profile}'{extra_info}"}
     except Exception as e:
         err = str(e)
         if "already" in err.lower() or "exists" in err.lower():
@@ -704,15 +809,29 @@ def disable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
 
 
 @mcp.tool()
-def update_hotspot_user(user_id: str, username: str, new_password: str = "", new_profile: str = "", new_name: str = "", router: str = "") -> dict:
-    """Update an existing hotspot user (change password, profile, or name).
+def update_hotspot_user(user_id: str, username: str, new_password: str = "", new_profile: str = "",
+                        new_name: str = "", server: str = "", limit_uptime: str = "",
+                        limit_bytes_total: str = "", limit_bytes_in: str = "", limit_bytes_out: str = "",
+                        comment: str = "", address: str = "", mac_address: str = "",
+                        email: str = "", disabled: str = "", router: str = "") -> dict:
+    """Update an existing hotspot user (change any field).
 
     Args:
         user_id: Telegram user ID (required)
         username: Current username to update
-        new_password: New password (leave empty to keep current)
-        new_profile: New profile name (leave empty to keep current)
-        new_name: New username (leave empty to keep current)
+        new_password: New password. Empty = don't change.
+        new_profile: New profile name. Empty = don't change.
+        new_name: New username. Empty = don't change.
+        server: New hotspot server assignment. Empty = don't change.
+        limit_uptime: New uptime limit (e.g., '1h', '3h', '1d'). Empty = don't change. Use '0s' to clear.
+        limit_bytes_total: New total data limit (e.g., '500M', '1G'). Empty = don't change. Use '0' to clear.
+        limit_bytes_in: New download limit (e.g., '500M'). Empty = don't change. Use '0' to clear.
+        limit_bytes_out: New upload limit (e.g., '100M'). Empty = don't change. Use '0' to clear.
+        comment: New comment. Empty = don't change.
+        address: New IP binding (e.g., '10.10.8.100'). Empty = don't change.
+        mac_address: New MAC binding (e.g., 'AA:BB:CC:DD:EE:FF'). Empty = don't change.
+        email: New email. Empty = don't change.
+        disabled: Set 'true' to disable, 'false' to enable. Empty = don't change.
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
@@ -730,7 +849,7 @@ def update_hotspot_user(user_id: str, username: str, new_password: str = "", new
                 update_params["password"] = new_password
                 changes.append("password")
             if new_profile:
-                profiles = list(api.path("/ip/hotspot/user/profile"))
+                profiles = list(api.path("ip", "hotspot", "user", "profile"))
                 profile_names = [p.get("name", "") for p in profiles]
                 if new_profile not in profile_names:
                     return {"error": f"Profile '{new_profile}' not found. Available: {', '.join(profile_names)}"}
@@ -739,8 +858,42 @@ def update_hotspot_user(user_id: str, username: str, new_password: str = "", new
             if new_name:
                 update_params["name"] = new_name
                 changes.append(f"name→{new_name}")
+            if server:
+                servers = list(api.path("ip", "hotspot"))
+                server_names = [s.get("name", "") for s in servers]
+                if server not in server_names:
+                    return {"error": f"Hotspot server '{server}' not found. Available: {', '.join(server_names)}"}
+                update_params["server"] = server
+                changes.append(f"server→{server}")
+            if limit_uptime:
+                update_params["limit-uptime"] = limit_uptime
+                changes.append(f"limit-uptime={limit_uptime}")
+            if limit_bytes_total:
+                update_params["limit-bytes-total"] = _normalize_bytes_input(limit_bytes_total)
+                changes.append(f"limit-bytes-total={limit_bytes_total}")
+            if limit_bytes_in:
+                update_params["limit-bytes-in"] = _normalize_bytes_input(limit_bytes_in)
+                changes.append(f"limit-bytes-in={limit_bytes_in}")
+            if limit_bytes_out:
+                update_params["limit-bytes-out"] = _normalize_bytes_input(limit_bytes_out)
+                changes.append(f"limit-bytes-out={limit_bytes_out}")
+            if comment:
+                update_params["comment"] = comment
+                changes.append("comment updated")
+            if address:
+                update_params["address"] = address
+                changes.append(f"address={address}")
+            if mac_address:
+                update_params["mac-address"] = mac_address
+                changes.append(f"mac-address={mac_address}")
+            if email:
+                update_params["email"] = email
+                changes.append(f"email={email}")
+            if disabled:
+                update_params["disabled"] = disabled
+                changes.append(f"disabled={disabled}")
             if not changes:
-                return {"error": "No changes specified. Provide new_password, new_profile, or new_name."}
+                return {"error": "No changes specified."}
             resource.update(**update_params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"User '{username}' updated: {', '.join(changes)}"}
@@ -776,6 +929,8 @@ def search_hotspot_user(user_id: str, username: str, router: str = "") -> list[d
                     "profile": u.get("profile"),
                     "disabled": u.get("disabled"),
                     "limit_uptime": u.get("limit-uptime", ""),
+                    "limit_bytes_total": u.get("limit-bytes-total", ""),
+                    "server": u.get("server", ""),
                     "comment": u.get("comment", ""),
                 }
                 for u in users
@@ -785,7 +940,11 @@ def search_hotspot_user(user_id: str, username: str, router: str = "") -> list[d
 
 
 @mcp.tool()
-def add_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "", shared_users: int = 1, session_timeout: str = "", router: str = "") -> dict:
+def add_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "", shared_users: int = 1,
+                              session_timeout: str = "", keepalive_timeout: str = "",
+                              idle_timeout: str = "", address_list: str = "",
+                              transparent_proxy: str = "", open_status_page: str = "",
+                              router: str = "") -> dict:
     """Create a new hotspot user profile (rate limit template).
 
     Args:
@@ -794,6 +953,11 @@ def add_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "", shar
         rate_limit: Upload/download limit (e.g., '1M/2M' or '512k/1M')
         shared_users: Max concurrent sessions per user (default: 1)
         session_timeout: Session timeout (e.g., '1h', '8h', '1d')
+        keepalive_timeout: Keepalive timeout for detecting dead connections (e.g., '2m')
+        idle_timeout: Disconnect after idle period (e.g., '5m', '10m')
+        address_list: Firewall address list to add logged-in users to
+        transparent_proxy: Enable transparent proxy ('yes' or 'no')
+        open_status_page: Auto-open status page on login ('always', 'http-login', 'no')
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
@@ -806,7 +970,17 @@ def add_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "", shar
                 params["rate-limit"] = rate_limit
             if session_timeout:
                 params["session-timeout"] = session_timeout
-            api.path("/ip/hotspot/user/profile").add(**params)
+            if keepalive_timeout:
+                params["keepalive-timeout"] = keepalive_timeout
+            if idle_timeout:
+                params["idle-timeout"] = idle_timeout
+            if address_list:
+                params["address-list"] = address_list
+            if transparent_proxy:
+                params["transparent-proxy"] = transparent_proxy
+            if open_status_page:
+                params["open-status-page"] = open_status_page
+            api.path("ip", "hotspot", "user", "profile").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Profile '{name}' created (rate: {rate_limit or 'unlimited'}, shared: {shared_users})"}
     except Exception as e:
@@ -1398,13 +1572,17 @@ def list_dns_static(user_id: str, router: str = "") -> list[dict]:
 
 
 @mcp.tool()
-def add_dns_static(user_id: str, name: str, address: str, router: str = "") -> dict:
+def add_dns_static(user_id: str, name: str, address: str, comment: str = "",
+                    ttl: str = "", disabled: str = "", router: str = "") -> dict:
     """Add a static DNS entry.
 
     Args:
         user_id: Telegram user ID
         name: DNS hostname (e.g. 'myserver.local')
         address: IP address to resolve to (e.g. '192.168.1.100')
+        comment: Entry description.
+        ttl: Time-to-live (e.g., '1d', '1h'). Empty = use global TTL.
+        disabled: Create as disabled ('true'). Empty = enabled.
         router: Router name (empty = default)
     """
     conn = _resolve_connection(user_id, router)
@@ -1412,7 +1590,14 @@ def add_dns_static(user_id: str, name: str, address: str, router: str = "") -> d
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            api.path("/ip/dns/static").add(name=name, address=address)
+            params: dict[str, str] = {"name": name, "address": address}
+            if comment:
+                params["comment"] = comment
+            if ttl:
+                params["ttl"] = ttl
+            if disabled:
+                params["disabled"] = disabled
+            api.path("ip", "dns", "static").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"DNS static entry added: {name} -> {address}"}
     except Exception as e:
@@ -1549,7 +1734,8 @@ def list_hotspot_walled_garden(user_id: str, router: str = "") -> list[dict]:
 def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: str = "",
                                password_length: int = 6, username_length: int = 6,
                                limit_uptime: str = "", limit_bytes_total: str = "",
-                               comment: str = "", router: str = "") -> dict:
+                               limit_bytes_in: str = "", limit_bytes_out: str = "",
+                               comment: str = "", server: str = "", router: str = "") -> dict:
     """Generate multiple hotspot voucher users in bulk (like Mikhmon).
 
     Creates random username/password pairs and adds them as hotspot users.
@@ -1563,8 +1749,11 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
         password_length: Length of generated password (default 6)
         username_length: Length of random part of username (default 6)
         limit_uptime: Per-user uptime limit (e.g., '1h', '3h', '1d')
-        limit_bytes_total: Per-user data limit (e.g., '100M', '1G')
+        limit_bytes_total: Per-user total data limit (e.g., '100M', '1G')
+        limit_bytes_in: Per-user download limit (e.g., '500M', '1G'). Empty = unlimited.
+        limit_bytes_out: Per-user upload limit (e.g., '100M', '500M'). Empty = unlimited.
         comment: Comment for all generated users (e.g., 'Batch 2026-04-09')
+        server: Hotspot server to assign vouchers to. Empty = default ('all').
         router: Router name. Empty = default router.
     """
     if count < 1:
@@ -1582,16 +1771,21 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             # Validate profile exists
-            profiles = list(api.path("/ip/hotspot/user/profile"))
+            profiles = list(api.path("ip", "hotspot", "user", "profile"))
             profile_names = [p.get("name", "") for p in profiles]
             if profile not in profile_names:
                 return {"error": f"Profile '{profile}' not found. Available profiles: {', '.join(profile_names)}"}
+            if server:
+                hotspot_servers = list(api.path("ip", "hotspot"))
+                hs_names = [s.get("name", "") for s in hotspot_servers]
+                if server not in hs_names:
+                    return {"error": f"Hotspot server '{server}' not found. Available: {', '.join(hs_names)}"}
 
             # Get existing usernames to avoid collisions
-            existing = {u.get("name", "") for u in api.path("/ip/hotspot/user")}
+            existing = {u.get("name", "") for u in api.path("ip", "hotspot", "user")}
 
             charset = string.ascii_lowercase + string.digits
-            resource = api.path("/ip/hotspot/user")
+            resource = api.path("ip", "hotspot", "user")
             vouchers = []
             errors = []
 
@@ -1615,9 +1809,15 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
                 if limit_uptime:
                     params["limit-uptime"] = limit_uptime
                 if limit_bytes_total:
-                    params["limit-bytes-total"] = limit_bytes_total
+                    params["limit-bytes-total"] = _normalize_bytes_input(limit_bytes_total)
+                if limit_bytes_in:
+                    params["limit-bytes-in"] = _normalize_bytes_input(limit_bytes_in)
+                if limit_bytes_out:
+                    params["limit-bytes-out"] = _normalize_bytes_input(limit_bytes_out)
                 if comment:
                     params["comment"] = comment
+                if server:
+                    params["server"] = server
 
                 try:
                     resource.add(**params)
@@ -1709,14 +1909,20 @@ def get_hotspot_user_detail(user_id: str, username: str, router: str = "") -> di
                 "profile": u.get("profile"),
                 "disabled": u.get("disabled"),
                 "comment": u.get("comment", ""),
+                "server": u.get("server", ""),
                 "limit_uptime": u.get("limit-uptime", ""),
                 "limit_bytes_total": u.get("limit-bytes-total", ""),
+                "limit_bytes_in": u.get("limit-bytes-in", ""),
+                "limit_bytes_out": u.get("limit-bytes-out", ""),
                 "uptime_used": u.get("uptime", ""),
                 "bytes_in": u.get("bytes-in", "0"),
                 "bytes_out": u.get("bytes-out", "0"),
                 "packets_in": u.get("packets-in", "0"),
                 "packets_out": u.get("packets-out", "0"),
                 "last_logged_out": u.get("last-logged-out", ""),
+                "address": u.get("address", ""),
+                "mac_address": u.get("mac-address", ""),
+                "email": u.get("email", ""),
             }
     except Exception as e:
         return {"error": f"Failed to get hotspot user detail: {e}"}
@@ -1896,50 +2102,6 @@ def remove_expired_hotspot_users(user_id: str, router: str = "") -> dict:
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return conn
-
-    def _parse_ros_time(s: str) -> int:
-        """Parse RouterOS time string (e.g., '1h30m', '2d3h', '45m10s') to seconds."""
-        if not s:
-            return 0
-        total = 0
-        num = ""
-        for ch in s:
-            if ch.isdigit():
-                num += ch
-            else:
-                if num:
-                    n = int(num)
-                    if ch == "w":
-                        total += n * 604800
-                    elif ch == "d":
-                        total += n * 86400
-                    elif ch == "h":
-                        total += n * 3600
-                    elif ch == "m":
-                        total += n * 60
-                    elif ch == "s":
-                        total += n
-                    num = ""
-        if num:
-            total += int(num)
-        return total
-
-    def _parse_ros_bytes(s: str) -> int:
-        """Parse RouterOS byte string (e.g., '100M', '1G', '500K', '1048576') to bytes."""
-        if not s:
-            return 0
-        s = s.strip().upper()
-        multipliers = {"K": 1024, "M": 1024**2, "G": 1024**3, "T": 1024**4}
-        if s[-1] in multipliers:
-            try:
-                return int(float(s[:-1]) * multipliers[s[-1]])
-            except ValueError:
-                return 0
-        try:
-            return int(s)
-        except ValueError:
-            return 0
-
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
@@ -1994,7 +2156,9 @@ def remove_expired_hotspot_users(user_id: str, router: str = "") -> dict:
 @mcp.tool()
 def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
                                  shared_users: int = 0, session_timeout: str = "",
-                                 keepalive_timeout: str = "", router: str = "") -> dict:
+                                 keepalive_timeout: str = "", idle_timeout: str = "",
+                                 address_list: str = "", transparent_proxy: str = "",
+                                 open_status_page: str = "", router: str = "") -> dict:
     """Update an existing hotspot user profile settings.
 
     Args:
@@ -2004,6 +2168,10 @@ def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
         shared_users: New max concurrent sessions (0 = don't change)
         session_timeout: New session timeout (e.g., '1h', '8h'). Empty = don't change.
         keepalive_timeout: New keepalive timeout (e.g., '2m'). Empty = don't change.
+        idle_timeout: New idle timeout (e.g., '5m', '10m'). Empty = don't change.
+        address_list: Firewall address list for logged-in users. Empty = don't change.
+        transparent_proxy: Enable transparent proxy ('yes' or 'no'). Empty = don't change.
+        open_status_page: Auto-open status page ('always', 'http-login', 'no'). Empty = don't change.
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
@@ -2031,9 +2199,21 @@ def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
             if keepalive_timeout:
                 update_params["keepalive-timeout"] = keepalive_timeout
                 changes.append(f"keepalive-timeout={keepalive_timeout}")
+            if idle_timeout:
+                update_params["idle-timeout"] = idle_timeout
+                changes.append(f"idle-timeout={idle_timeout}")
+            if address_list:
+                update_params["address-list"] = address_list
+                changes.append(f"address-list={address_list}")
+            if transparent_proxy:
+                update_params["transparent-proxy"] = transparent_proxy
+                changes.append(f"transparent-proxy={transparent_proxy}")
+            if open_status_page:
+                update_params["open-status-page"] = open_status_page
+                changes.append(f"open-status-page={open_status_page}")
 
             if not changes:
-                return {"error": "No changes specified. Provide rate_limit, shared_users, session_timeout, or keepalive_timeout."}
+                return {"error": "No changes specified."}
 
             resource.update(**update_params)
             registry.update_last_seen(user_id, conn["name"])
@@ -2117,7 +2297,10 @@ def list_ppp_secrets(user_id: str, router: str = "") -> list[dict]:
 
 
 @mcp.tool()
-def add_ppp_secret(user_id: str, name: str, password: str, service: str = "any", profile: str = "default", router: str = "") -> dict:
+def add_ppp_secret(user_id: str, name: str, password: str, service: str = "any",
+                    profile: str = "default", local_address: str = "", remote_address: str = "",
+                    comment: str = "", disabled: str = "", routes: str = "",
+                    router: str = "") -> dict:
     """Add a PPP user account (PPPoE, PPTP, L2TP, etc.).
 
     Args:
@@ -2126,6 +2309,11 @@ def add_ppp_secret(user_id: str, name: str, password: str, service: str = "any",
         password: Password for the PPP account
         service: Service type — 'any', 'pppoe', 'pptp', 'l2tp', etc. (default: 'any')
         profile: PPP profile to assign (default: 'default')
+        local_address: IP on router side of tunnel. Empty = from pool.
+        remote_address: IP for client side of tunnel. Empty = from pool.
+        comment: Account description.
+        disabled: Create as disabled ('true'). Empty = enabled.
+        routes: Static routes to add when user connects (comma-separated CIDRs).
         router: Router name (empty = default)
     """
     conn = _resolve_connection(user_id, router)
@@ -2133,9 +2321,18 @@ def add_ppp_secret(user_id: str, name: str, password: str, service: str = "any",
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            api.path("/ppp/secret").add(
-                name=name, password=password, service=service, profile=profile
-            )
+            params: dict[str, str] = {"name": name, "password": password, "service": service, "profile": profile}
+            if local_address:
+                params["local-address"] = local_address
+            if remote_address:
+                params["remote-address"] = remote_address
+            if comment:
+                params["comment"] = comment
+            if disabled:
+                params["disabled"] = disabled
+            if routes:
+                params["routes"] = routes
+            api.path("ppp", "secret").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"PPP secret '{name}' created (service={service}, profile={profile})"}
     except Exception as e:
@@ -2164,6 +2361,65 @@ def remove_ppp_secret(user_id: str, name: str, router: str = "") -> dict:
             return {"status": "ok", "message": f"PPP secret '{name}' removed"}
     except Exception as e:
         return {"error": f"Failed to remove PPP secret: {e}"}
+
+
+@mcp.tool()
+def update_ppp_secret(user_id: str, name: str, new_password: str = "", new_profile: str = "",
+                       local_address: str = "", remote_address: str = "",
+                       comment: str = "", disabled: str = "", routes: str = "",
+                       router: str = "") -> dict:
+    """Update an existing PPP user account (change password, profile, addresses, etc).
+
+    Args:
+        user_id: Telegram user ID
+        name: Current PPP username to update
+        new_password: New password. Empty = don't change.
+        new_profile: New profile. Empty = don't change.
+        local_address: New local IP. Empty = don't change.
+        remote_address: New remote IP. Empty = don't change.
+        comment: New comment. Empty = don't change.
+        disabled: Set 'true' to disable, 'false' to enable. Empty = don't change.
+        routes: New routes. Empty = don't change.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            secrets = list(api.path("ppp", "secret").select().where(Key("name") == name))
+            if not secrets:
+                return {"error": f"PPP secret '{name}' not found"}
+            update_params: dict = {".id": secrets[0][".id"]}
+            changes = []
+            if new_password:
+                update_params["password"] = new_password
+                changes.append("password")
+            if new_profile:
+                update_params["profile"] = new_profile
+                changes.append(f"profile→{new_profile}")
+            if local_address:
+                update_params["local-address"] = local_address
+                changes.append(f"local-address={local_address}")
+            if remote_address:
+                update_params["remote-address"] = remote_address
+                changes.append(f"remote-address={remote_address}")
+            if comment:
+                update_params["comment"] = comment
+                changes.append("comment updated")
+            if disabled:
+                update_params["disabled"] = disabled
+                changes.append(f"disabled={disabled}")
+            if routes:
+                update_params["routes"] = routes
+                changes.append(f"routes={routes}")
+            if not changes:
+                return {"error": "No changes specified."}
+            api.path("ppp", "secret").update(**update_params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"PPP secret '{name}' updated: {', '.join(changes)}"}
+    except Exception as e:
+        return {"error": f"Failed to update PPP secret: {e}"}
 
 
 @mcp.tool()
@@ -2366,7 +2622,10 @@ def reboot_router(user_id: str, router: str = "") -> dict:
 # ─────────────────────────────────────────────
 
 @mcp.tool()
-def add_simple_queue(user_id: str, name: str, target: str, max_limit: str, router: str = "") -> dict:
+def add_simple_queue(user_id: str, name: str, target: str, max_limit: str,
+                      burst_limit: str = "", burst_threshold: str = "", burst_time: str = "",
+                      priority: str = "", limit_at: str = "", parent: str = "",
+                      comment: str = "", disabled: str = "", router: str = "") -> dict:
     """Add a simple queue (bandwidth limit).
 
     Args:
@@ -2374,6 +2633,14 @@ def add_simple_queue(user_id: str, name: str, target: str, max_limit: str, route
         name: Queue name (e.g. 'limit-john')
         target: Target IP or subnet (e.g. '192.168.1.100/32')
         max_limit: Upload/download limit (e.g. '5M/10M' for 5Mbps up / 10Mbps down)
+        burst_limit: Burst speed limit (e.g., '10M/20M'). Empty = no burst.
+        burst_threshold: Threshold to trigger burst (e.g., '4M/8M'). Empty = no burst.
+        burst_time: Burst duration in seconds (e.g., '10/10'). Empty = no burst.
+        priority: Queue priority 1-8 (1=highest). Format: 'upload/download' e.g. '1/1'.
+        limit_at: Guaranteed minimum bandwidth (e.g., '2M/4M'). Empty = none.
+        parent: Parent queue name for hierarchical queueing. Empty = none.
+        comment: Queue description.
+        disabled: Create as disabled ('true'). Empty = enabled.
         router: Router name (empty = default)
     """
     conn = _resolve_connection(user_id, router)
@@ -2381,9 +2648,24 @@ def add_simple_queue(user_id: str, name: str, target: str, max_limit: str, route
         return conn
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-            api.path("/queue/simple").add(
-                name=name, target=target, **{"max-limit": max_limit}
-            )
+            params: dict[str, str] = {"name": name, "target": target, "max-limit": max_limit}
+            if burst_limit:
+                params["burst-limit"] = burst_limit
+            if burst_threshold:
+                params["burst-threshold"] = burst_threshold
+            if burst_time:
+                params["burst-time"] = burst_time
+            if priority:
+                params["priority"] = priority
+            if limit_at:
+                params["limit-at"] = limit_at
+            if parent:
+                params["parent"] = parent
+            if comment:
+                params["comment"] = comment
+            if disabled:
+                params["disabled"] = disabled
+            api.path("queue", "simple").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Simple queue '{name}' created: target={target}, max-limit={max_limit}"}
     except Exception as e:
@@ -3000,17 +3282,31 @@ def list_bonding_interfaces(user_id: str, router: str = "") -> list[dict]:
 @mcp.tool()
 def add_firewall_filter(user_id: str, chain: str, action: str, protocol: str = "",
                         src_address: str = "", dst_address: str = "", dst_port: str = "",
+                        src_port: str = "", in_interface: str = "", out_interface: str = "",
+                        connection_state: str = "", src_address_list: str = "",
+                        dst_address_list: str = "", log: str = "", log_prefix: str = "",
+                        jump_target: str = "", disabled: str = "",
                         comment: str = "", router: str = "") -> dict:
     """Add a firewall filter rule. WRITE operation.
 
     Args:
         user_id: Telegram user ID
         chain: Chain name (input, forward, output)
-        action: Action (accept, drop, reject, jump, etc)
+        action: Action (accept, drop, reject, jump, log, passthrough, etc)
         protocol: Protocol (tcp, udp, icmp, etc). Empty = any.
         src_address: Source IP/subnet. Empty = any.
         dst_address: Destination IP/subnet. Empty = any.
-        dst_port: Destination port(s). Empty = any.
+        dst_port: Destination port(s) e.g., '80', '80,443', '8000-9000'. Empty = any.
+        src_port: Source port(s). Empty = any.
+        in_interface: Incoming interface (e.g., 'ether1', 'bridge1'). Empty = any.
+        out_interface: Outgoing interface. Empty = any.
+        connection_state: Connection state (e.g., 'established,related' or 'new'). Empty = any.
+        src_address_list: Source address list name. Empty = any.
+        dst_address_list: Destination address list name. Empty = any.
+        log: Enable logging ('true' or 'false'). Empty = don't set.
+        log_prefix: Log prefix string for identification. Empty = none.
+        jump_target: Target chain for jump action.
+        disabled: Create rule as disabled ('true'). Empty = enabled.
         comment: Rule comment/description.
         router: Router name (empty = default)
     """
@@ -3028,9 +3324,29 @@ def add_firewall_filter(user_id: str, chain: str, action: str, protocol: str = "
                 params["dst-address"] = dst_address
             if dst_port:
                 params["dst-port"] = dst_port
+            if src_port:
+                params["src-port"] = src_port
+            if in_interface:
+                params["in-interface"] = in_interface
+            if out_interface:
+                params["out-interface"] = out_interface
+            if connection_state:
+                params["connection-state"] = connection_state
+            if src_address_list:
+                params["src-address-list"] = src_address_list
+            if dst_address_list:
+                params["dst-address-list"] = dst_address_list
+            if log:
+                params["log"] = log
+            if log_prefix:
+                params["log-prefix"] = log_prefix
+            if jump_target:
+                params["jump-target"] = jump_target
+            if disabled:
+                params["disabled"] = disabled
             if comment:
                 params["comment"] = comment
-            api.path("/ip/firewall/filter").add(**params)
+            api.path("ip", "firewall", "filter").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"Firewall filter rule added: chain={chain}, action={action}"}
     except Exception as e:
@@ -3061,20 +3377,28 @@ def remove_firewall_filter(user_id: str, rule_id: str, router: str = "") -> dict
 @mcp.tool()
 def add_nat_rule(user_id: str, chain: str, action: str, protocol: str = "",
                  src_address: str = "", dst_address: str = "", dst_port: str = "",
-                 to_addresses: str = "", to_ports: str = "", comment: str = "",
-                 router: str = "") -> dict:
+                 src_port: str = "", in_interface: str = "", out_interface: str = "",
+                 to_addresses: str = "", to_ports: str = "",
+                 log: str = "", log_prefix: str = "", disabled: str = "",
+                 comment: str = "", router: str = "") -> dict:
     """Add a NAT rule. WRITE operation.
 
     Args:
         user_id: Telegram user ID
         chain: Chain name (srcnat, dstnat)
-        action: Action (masquerade, dst-nat, src-nat, etc)
+        action: Action (masquerade, dst-nat, src-nat, redirect, etc)
         protocol: Protocol (tcp, udp, etc). Empty = any.
         src_address: Source IP/subnet. Empty = any.
         dst_address: Destination IP/subnet. Empty = any.
         dst_port: Destination port(s). Empty = any.
+        src_port: Source port(s). Empty = any.
+        in_interface: Incoming interface. Empty = any.
+        out_interface: Outgoing interface. Empty = any.
         to_addresses: NAT destination address(es). Empty = not set.
         to_ports: NAT destination port(s). Empty = not set.
+        log: Enable logging ('true' or 'false'). Empty = don't set.
+        log_prefix: Log prefix string. Empty = none.
+        disabled: Create rule as disabled ('true'). Empty = enabled.
         comment: Rule comment/description.
         router: Router name (empty = default)
     """
@@ -3092,13 +3416,25 @@ def add_nat_rule(user_id: str, chain: str, action: str, protocol: str = "",
                 params["dst-address"] = dst_address
             if dst_port:
                 params["dst-port"] = dst_port
+            if src_port:
+                params["src-port"] = src_port
+            if in_interface:
+                params["in-interface"] = in_interface
+            if out_interface:
+                params["out-interface"] = out_interface
             if to_addresses:
                 params["to-addresses"] = to_addresses
             if to_ports:
                 params["to-ports"] = to_ports
+            if log:
+                params["log"] = log
+            if log_prefix:
+                params["log-prefix"] = log_prefix
+            if disabled:
+                params["disabled"] = disabled
             if comment:
                 params["comment"] = comment
-            api.path("/ip/firewall/nat").add(**params)
+            api.path("ip", "firewall", "nat").add(**params)
             registry.update_last_seen(user_id, conn["name"])
             return {"status": "ok", "message": f"NAT rule added: chain={chain}, action={action}"}
     except Exception as e:
