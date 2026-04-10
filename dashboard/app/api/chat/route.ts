@@ -31,7 +31,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { message, image } = body as { message: string; image?: string }
+    const { message, image, history } = body as {
+      message: string
+      image?: string
+      history?: Array<{ role: string; content: string }>
+    }
 
     if (!message && !image) {
       return Response.json(
@@ -53,18 +57,27 @@ export async function POST(request: Request) {
       })
     }
 
-    // Build messages for the OpenAI-compatible API
-    const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = []
+    // Build messages array with full conversation history
+    const apiMessages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = []
 
-    if (message) {
-      content.push({ type: "text", text: message })
-    }
-
-    if (image) {
-      content.push({
-        type: "image_url",
-        image_url: { url: image },
-      })
+    // Include conversation history if provided
+    if (history && history.length > 0) {
+      for (const msg of history) {
+        apiMessages.push({ role: msg.role, content: msg.content })
+      }
+    } else {
+      // Fallback: single message (no history)
+      if (image) {
+        apiMessages.push({
+          role: "user",
+          content: [
+            ...(message ? [{ type: "text" as const, text: message }] : []),
+            { type: "image_url" as const, image_url: { url: image } },
+          ],
+        })
+      } else {
+        apiMessages.push({ role: "user", content: message })
+      }
     }
 
     const sessionId = `dashboard-${session.user.id}`
@@ -84,12 +97,7 @@ export async function POST(request: Request) {
           "X-Telegram-Id": user.telegramId,
         },
         body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: content.length === 1 ? message : content,
-            },
-          ],
+          messages: apiMessages,
           session_id: sessionId,
           user_context: {
             telegram_id: user.telegramId,
