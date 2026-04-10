@@ -8,21 +8,24 @@ async function fetchPPPSecrets(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/ppp/secrets${qs}`)
   if (!res.ok) throw new Error("Failed to fetch PPP secrets")
-  return res.json()
+  const data = await res.json()
+  return data.secrets ?? data
 }
 
 async function fetchPPPActive(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/ppp/active${qs}`)
   if (!res.ok) throw new Error("Failed to fetch PPP active sessions")
-  return res.json()
+  const data = await res.json()
+  return data.sessions ?? data
 }
 
 async function fetchPPPProfiles(router?: string) {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/ppp/profiles${qs}`)
   if (!res.ok) throw new Error("Failed to fetch PPP profiles")
-  return res.json()
+  const data = await res.json()
+  return data.profiles ?? data
 }
 
 export function usePPPSecrets(router?: string) {

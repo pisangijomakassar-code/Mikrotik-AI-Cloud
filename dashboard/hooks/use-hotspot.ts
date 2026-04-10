@@ -65,21 +65,24 @@ async function fetchHotspotUsers(router?: string): Promise<HotspotUser[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/hotspot/users${qs}`)
   if (!res.ok) throw new Error("Failed to fetch hotspot users")
-  return res.json()
+  const data = await res.json()
+  return data.users ?? data
 }
 
 async function fetchHotspotActive(router?: string): Promise<HotspotActiveSession[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/hotspot/active${qs}`)
   if (!res.ok) throw new Error("Failed to fetch active sessions")
-  return res.json()
+  const data = await res.json()
+  return data.sessions ?? data
 }
 
 async function fetchHotspotProfiles(router?: string): Promise<HotspotProfile[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const res = await fetch(`/api/hotspot/profiles${qs}`)
   if (!res.ok) throw new Error("Failed to fetch hotspot profiles")
-  return res.json()
+  const data = await res.json()
+  return data.profiles ?? data
 }
 
 async function fetchHotspotStats(router?: string): Promise<HotspotStats> {
