@@ -7,6 +7,7 @@ import { AddHotspotUserDialog } from "@/components/dialogs/add-hotspot-user-dial
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -111,15 +112,7 @@ export default function HotspotUsersPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <TableSkeleton rows={5} columns={7} />
               ) : !filteredUsers?.length ? (
                 <tr>
                   <td colSpan={7} className="px-8 py-16 text-center">

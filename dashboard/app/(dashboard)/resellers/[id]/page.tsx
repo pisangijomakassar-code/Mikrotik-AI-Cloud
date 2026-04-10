@@ -8,8 +8,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Ticket,
-  ChevronLeft,
-  ChevronRight,
   Download,
 } from "lucide-react"
 import {
@@ -20,55 +18,13 @@ import {
 import { GenerateVoucherDialog } from "@/components/dialogs/generate-voucher-dialog"
 import { SaldoDialog } from "@/components/dialogs/saldo-dialog"
 import { cn } from "@/lib/utils"
-import { formatRupiah } from "@/lib/formatters"
+import { formatRupiah, formatDate, formatDateShort } from "@/lib/formatters"
+import { StatusBadge } from "@/components/badges/status-badge"
+import { SourceBadge, TransactionTypeBadge } from "@/components/badges/source-badge"
+import { TableSkeleton } from "@/components/table-skeleton"
+import { PaginationControl } from "@/components/pagination-control"
 import { toast } from "sonner"
 
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "-"
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-function formatDateShort(dateStr: string | null | undefined): string {
-  if (!dateStr) return "-"
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-function sourceBadge(source: string) {
-  switch (source) {
-    case "dashboard":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4cd7f6]/15 text-[#4cd7f6]">Dashboard</span>
-    case "nanobot":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4ae176]/15 text-[#4ae176]">Nanobot</span>
-    case "reseller_bot":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#a78bfa]/15 text-[#a78bfa]">Reseller Bot</span>
-    default:
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 text-slate-400">{source}</span>
-  }
-}
-
-function transactionTypeBadge(type: string) {
-  switch (type) {
-    case "TOP_UP":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4ae176]/15 text-[#4ae176]">Top Up</span>
-    case "TOP_DOWN":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#ffb4ab]/15 text-[#ffb4ab]">Top Down</span>
-    case "VOUCHER_PURCHASE":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4cd7f6]/15 text-[#4cd7f6]">Voucher Purchase</span>
-    default:
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-700/50 text-slate-400">{type}</span>
-  }
-}
 
 export default function ResellerDetailPage({
   params,
@@ -159,16 +115,7 @@ export default function ResellerDetailPage({
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-slate-500">Status</span>
-              <span
-                className={cn(
-                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                  reseller.status === "ACTIVE"
-                    ? "bg-[#4ae176]/15 text-[#4ae176]"
-                    : "bg-slate-700/50 text-slate-400"
-                )}
-              >
-                {reseller.status}
-              </span>
+              <StatusBadge status={reseller.status} />
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-slate-500">Created</span>
@@ -247,15 +194,7 @@ export default function ResellerDetailPage({
               </thead>
               <tbody className="divide-y divide-white/5">
                 {batchesLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} className="px-6 py-5">
-                          <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
+                  <TableSkeleton rows={3} columns={6} />
                 ) : !voucherBatches?.length ? (
                   <tr>
                     <td colSpan={6} className="px-8 py-12 text-center text-slate-400">
@@ -270,7 +209,7 @@ export default function ResellerDetailPage({
                       <td className="px-6 py-5 text-sm font-bold text-[#dae2fd]">{batch.profile}</td>
                       <td className="px-6 py-5 text-sm text-[#dae2fd]">{batch.count}</td>
                       <td className="px-6 py-5 text-sm font-bold text-[#4cd7f6]">{formatRupiah(batch.totalCost ?? 0)}</td>
-                      <td className="px-6 py-5">{sourceBadge(batch.source)}</td>
+                      <td className="px-6 py-5"><SourceBadge source={batch.source} /></td>
                       <td className="px-6 py-5 text-right">
                         <button
                           onClick={() => toast.info("PDF download coming soon")}
@@ -305,15 +244,7 @@ export default function ResellerDetailPage({
               </thead>
               <tbody className="divide-y divide-white/5">
                 {txLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} className="px-6 py-5">
-                          <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
+                  <TableSkeleton rows={3} columns={6} />
                 ) : !transactionsData?.data?.length ? (
                   <tr>
                     <td colSpan={6} className="px-8 py-12 text-center text-slate-400">
@@ -325,7 +256,7 @@ export default function ResellerDetailPage({
                   transactionsData.data.map((tx: any) => (
                     <tr key={tx.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-5 text-sm text-slate-400">{formatDate(tx.createdAt)}</td>
-                      <td className="px-6 py-5">{transactionTypeBadge(tx.type)}</td>
+                      <td className="px-6 py-5"><TransactionTypeBadge type={tx.type} /></td>
                       <td className={cn(
                         "px-6 py-5 text-sm font-bold",
                         tx.type === "TOP_UP" ? "text-[#4ae176]" : tx.type === "TOP_DOWN" ? "text-[#ffb4ab]" : "text-[#4cd7f6]"
@@ -342,48 +273,13 @@ export default function ResellerDetailPage({
             </table>
           </div>
 
-          {/* Pagination */}
-          {transactionsData && transactionsData.totalPages > 1 && (
-            <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
-              <span className="text-xs text-slate-500">
-                Page {transactionsData.page} of {transactionsData.totalPages} ({transactionsData.total} total)
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30"
-                  disabled={txPage <= 1}
-                  onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft className="h-4 w-4 text-slate-400" />
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(transactionsData.totalPages, 5) }).map((_, i) => {
-                    const page = i + 1
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => setTxPage(page)}
-                        className={cn(
-                          "w-6 h-6 flex items-center justify-center text-xs font-bold rounded-lg",
-                          txPage === page
-                            ? "bg-[#4cd7f6] text-[#003640]"
-                            : "text-slate-400 hover:bg-[#2d3449]"
-                        )}
-                      >
-                        {page}
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30"
-                  disabled={txPage >= (transactionsData.totalPages ?? 1)}
-                  onClick={() => setTxPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </button>
-              </div>
-            </div>
+          {transactionsData && (
+            <PaginationControl
+              page={txPage}
+              totalPages={transactionsData.totalPages}
+              total={transactionsData.total}
+              onPageChange={setTxPage}
+            />
           )}
         </div>
       )}

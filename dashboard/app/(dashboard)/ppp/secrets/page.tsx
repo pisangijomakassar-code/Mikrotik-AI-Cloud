@@ -5,6 +5,7 @@ import { Network, PlusCircle, Trash2, Search, UserX } from "lucide-react"
 import { usePPPSecrets, useRemovePPPSecret } from "@/hooks/use-ppp"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { AddPPPSecretDialog } from "@/components/dialogs/add-ppp-secret-dialog"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
@@ -81,15 +82,7 @@ export default function PPPSecretsPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <TableSkeleton rows={5} columns={8} />
               ) : !filteredSecrets?.length ? (
                 <tr>
                   <td colSpan={8} className="px-8 py-16 text-center">

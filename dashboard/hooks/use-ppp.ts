@@ -3,24 +3,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api-client"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRecord = Record<string, any>
+
 // --- Queries ---
 
-async function fetchPPPSecrets(router?: string) {
+async function fetchPPPSecrets(router?: string): Promise<AnyRecord[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/secrets${qs}`)
-  return (data as { secrets?: unknown[] }).secrets ?? data
+  const data = await apiClient.get<AnyRecord>(`/api/ppp/secrets${qs}`)
+  return (data.secrets ?? data) as AnyRecord[]
 }
 
-async function fetchPPPActive(router?: string) {
+async function fetchPPPActive(router?: string): Promise<AnyRecord[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/active${qs}`)
-  return (data as { sessions?: unknown[] }).sessions ?? data
+  const data = await apiClient.get<AnyRecord>(`/api/ppp/active${qs}`)
+  return (data.sessions ?? data) as AnyRecord[]
 }
 
-async function fetchPPPProfiles(router?: string) {
+async function fetchPPPProfiles(router?: string): Promise<AnyRecord[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
-  const data = await apiClient.get<Record<string, unknown>>(`/api/ppp/profiles${qs}`)
-  return (data as { profiles?: unknown[] }).profiles ?? data
+  const data = await apiClient.get<AnyRecord>(`/api/ppp/profiles${qs}`)
+  return (data.profiles ?? data) as AnyRecord[]
 }
 
 export function usePPPSecrets(router?: string) {

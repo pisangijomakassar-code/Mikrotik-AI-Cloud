@@ -10,21 +10,24 @@ import type {
   PaginatedResult,
 } from "@/lib/types"
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Reseller = Record<string, any>
+
 // ── Fetch helpers ──
 
-async function fetchResellers() {
-  return apiClient.get("/api/resellers")
+async function fetchResellers(): Promise<Reseller[]> {
+  return apiClient.get<Reseller[]>("/api/resellers")
 }
 
-async function fetchReseller(id: string) {
-  return apiClient.get(`/api/resellers/${id}`)
+async function fetchReseller(id: string): Promise<Reseller> {
+  return apiClient.get<Reseller>(`/api/resellers/${id}`)
 }
 
-async function fetchVoucherBatches(resellerId?: string) {
+async function fetchVoucherBatches(resellerId?: string): Promise<Reseller[]> {
   const url = resellerId
     ? `/api/resellers/${resellerId}/vouchers`
     : "/api/vouchers"
-  return apiClient.get(url)
+  return apiClient.get<Reseller[]>(url)
 }
 
 async function fetchTransactions(
@@ -32,7 +35,7 @@ async function fetchTransactions(
   page = 1,
   pageSize = 20
 ) {
-  return apiClient.get(
+  return apiClient.get<PaginatedResult<Record<string, unknown>>>(
     `/api/resellers/${resellerId}/transactions?page=${page}&pageSize=${pageSize}`
   )
 }

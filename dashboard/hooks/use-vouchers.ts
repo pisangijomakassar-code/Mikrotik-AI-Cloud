@@ -18,7 +18,8 @@ async function fetchAllVouchers(filter?: VoucherFilter) {
   if (filter?.pageSize) params.set("pageSize", String(filter.pageSize))
 
   const qs = params.toString()
-  return apiClient.get(`/api/vouchers${qs ? `?${qs}` : ""}`)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return apiClient.get<any>(`/api/vouchers${qs ? `?${qs}` : ""}`)
 }
 
 export function useAllVouchers(filter?: VoucherFilter) {

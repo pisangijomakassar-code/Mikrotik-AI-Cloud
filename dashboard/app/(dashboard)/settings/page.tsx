@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
 import {
   Brain,
   SlidersHorizontal,
-  Send,
-  Database,
-  AlertTriangle,
   Eye,
   EyeOff,
   Download,
@@ -16,49 +14,53 @@ import {
   Loader2,
   Save,
   RefreshCw,
-  Users,
-  CheckCircle,
-  XCircle,
+  Database,
+  AlertTriangle,
   Heart,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import {
+  useNanobotSettings,
+  useAgentUsers,
+  useSaveSettingsField,
+  useSyncAgent,
+} from "@/hooks/use-settings"
+import { AgentList } from "@/components/settings/agent-list"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
-interface NanobotSettings {
-  agent: { model: string; provider: string }
-  providers: string[]
-  telegram: { enabled: boolean; allowFrom: string[] }
-  mcpServers: string[]
-  soul: string | null
-  heartbeat: string | null
-  configDir: string
-}
-
-interface AgentUser {
-  id: string
-  name: string
-  telegramId: string
-  botToken: string | null
-  status: string
+interface SettingsFormValues {
+  model: string
+  soul: string
+  heartbeat: string
 }
 
 export default function SettingsPage() {
   const { isAdmin, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [settings, setSettings] = useState<NanobotSettings | null>(null)
-  const [agents, setAgents] = useState<AgentUser[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSyncing, setIsSyncing] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
 
-  // Editable fields
-  const [model, setModel] = useState("")
-  const [soul, setSoul] = useState("")
-  const [heartbeat, setHeartbeat] = useState("")
-  const [savingField, setSavingField] = useState<string | null>(null)
+  const { data: settings, isLoading: settingsLoading } = useNanobotSettings()
+  const { data: agents = [], isLoading: agentsLoading } = useAgentUsers()
+  const saveField = useSaveSettingsField()
+  const syncAgent = useSyncAgent()
+
+  const { register, handleSubmit, reset, getValues } = useForm<SettingsFormValues>({
+    defaultValues: { model: "", soul: "", heartbeat: "" },
+  })
+
+  // Reset form values when settings load
+  useEffect(() => {
+    if (settings) {
+      reset({
+        model: settings.agent.model,
+        soul: settings.soul ?? "",
+        heartbeat: settings.heartbeat ?? "",
+      })
+    }
+  }, [settings, reset])
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -66,59 +68,28 @@ export default function SettingsPage() {
     }
   }, [authLoading, isAdmin, router])
 
-  useEffect(() => {
-    if (!isAdmin) return
-    Promise.all([
-      fetch("/api/settings").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/users").then((r) => (r.ok ? r.json() : [])),
-    ])
-      .then(([s, u]) => {
-        if (s) {
-          setSettings(s)
-          setModel(s.agent.model)
-          setSoul(s.soul ?? "")
-          setHeartbeat(s.heartbeat ?? "")
-        }
-        setAgents(u ?? [])
-      })
-      .catch(() => toast.error("Failed to load settings"))
-      .finally(() => setIsLoading(false))
-  }, [isAdmin])
-
-  async function saveField(field: string, value: string) {
-    setSavingField(field)
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ field, value }),
-      })
-      if (!res.ok) throw new Error("Save failed")
-      toast.success(`${field} updated`)
-    } catch {
-      toast.error(`Failed to save ${field}`)
-    } finally {
-      setSavingField(null)
-    }
+  function onSaveField(field: keyof SettingsFormValues) {
+    const value = getValues(field)
+    saveField.mutate(
+      { field, value },
+      {
+        onSuccess: () => toast.success(`${field} updated`),
+        onError: () => toast.error(`Failed to save ${field}`),
+      }
+    )
   }
 
-  async function handleSync() {
-    setIsSyncing(true)
-    try {
-      const res = await fetch("/api/provisioning", { method: "POST" })
-      if (!res.ok) throw new Error("Sync failed")
-      const data = await res.json()
-      toast.success(`Agent synced — ${data.usersProvisioned} users provisioned`)
-    } catch {
-      toast.error("Failed to sync agent. Check server logs.")
-    } finally {
-      setIsSyncing(false)
-    }
+  function handleSync() {
+    syncAgent.mutate(undefined, {
+      onSuccess: (data) =>
+        toast.success(`Agent synced — ${data.usersProvisioned} users provisioned`),
+      onError: () => toast.error("Failed to sync agent. Check server logs."),
+    })
   }
 
   if (authLoading || !isAdmin) return null
 
-  if (isLoading) {
+  if (settingsLoading) {
     return (
       <div className="flex items-center justify-center py-32">
         <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
@@ -140,11 +111,11 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleSync}
-            disabled={isSyncing}
+            disabled={syncAgent.isPending}
             className="flex items-center gap-2 px-5 py-2.5 bg-[#4cd7f6]/10 border border-[#4cd7f6]/20 text-[#4cd7f6] text-xs font-bold rounded-lg hover:bg-[#4cd7f6] hover:text-[#003640] transition-all disabled:opacity-50"
           >
-            <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
-            {isSyncing ? "Syncing..." : "Sync & Restart Agent"}
+            <RefreshCw className={cn("h-4 w-4", syncAgent.isPending && "animate-spin")} />
+            {syncAgent.isPending ? "Syncing..." : "Sync & Restart Agent"}
           </button>
         </div>
       </div>
@@ -164,16 +135,15 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <Input
                   className="flex-1 bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2.5 font-mono-tech text-[#dae2fd] focus:ring-1 focus:ring-[#4cd7f6] outline-none"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
                   placeholder="openai/gpt-5.4-nano"
+                  {...register("model")}
                 />
                 <button
-                  onClick={() => saveField("model", model)}
-                  disabled={savingField === "model"}
+                  onClick={() => onSaveField("model")}
+                  disabled={saveField.isPending}
                   className="p-2.5 bg-[#222a3d] rounded-lg text-slate-400 hover:text-[#4cd7f6] transition-colors disabled:opacity-50"
                 >
-                  {savingField === "model" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {saveField.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -181,7 +151,7 @@ export default function SettingsPage() {
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Provider</label>
               <div className="flex items-center gap-2 px-4 py-2.5 bg-[#222a3d] rounded-lg">
                 <Bot className="h-4 w-4 text-[#4cd7f6]" />
-                <span className="text-sm font-medium text-[#dae2fd] capitalize">{settings?.agent.provider || "—"}</span>
+                <span className="text-sm font-medium text-[#dae2fd] capitalize">{settings?.agent.provider || "\u2014"}</span>
               </div>
             </div>
           </div>
@@ -192,7 +162,7 @@ export default function SettingsPage() {
                 <Input
                   className="w-full bg-[#222a3d] border-none rounded-lg text-sm px-4 py-2.5 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] pr-12 text-[#dae2fd] outline-none"
                   type={showApiKey ? "text" : "password"}
-                  defaultValue="sk-or-v1-••••••••••••"
+                  defaultValue="sk-or-v1-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
                   readOnly
                 />
                 <button
@@ -220,64 +190,13 @@ export default function SettingsPage() {
       </section>
 
       {/* Agent List */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#4cd7f6]/10 rounded-lg">
-            <Users className="h-5 w-5 text-[#4cd7f6]" />
-          </div>
-          <h3 className="text-lg font-semibold font-headline text-[#dae2fd]">Agents</h3>
-          <span className="text-xs text-slate-500 ml-auto">{agents.length} users</span>
-        </div>
-        <div className="bg-[#131b2e] rounded-xl border border-white/5 overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-white/[0.02]">
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">User</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Telegram ID</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bot Token</th>
-                <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {agents.map((agent) => (
-                <tr key={agent.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-3 text-sm text-[#dae2fd] font-medium">{agent.name}</td>
-                  <td className="px-6 py-3 text-xs font-mono text-slate-400">{agent.telegramId}</td>
-                  <td className="px-6 py-3">
-                    {agent.botToken ? (
-                      <span className="text-xs font-mono text-slate-500">{agent.botToken.slice(0, 8)}•••</span>
-                    ) : (
-                      <span className="text-xs text-[#ffb4ab]">Not set</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-3">
-                    {agent.botToken ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#4ae176]">
-                        <CheckCircle className="h-3 w-3" /> Configured
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#ffb4ab]">
-                        <XCircle className="h-3 w-3" /> Incomplete
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {agents.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">No users configured</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <Send className="h-3.5 w-3.5" />
-          Telegram allowFrom: {settings?.telegram.allowFrom.length ?? 0} user IDs provisioned
-        </div>
-      </section>
+      <AgentList
+        agents={agents}
+        isLoading={agentsLoading}
+        telegramAllowFromCount={settings?.telegram.allowFrom.length ?? 0}
+      />
 
-      {/* SOUL.md — Agent Personality */}
+      {/* SOUL.md -- Agent Personality */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -290,23 +209,22 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={() => saveField("soul", soul)}
-            disabled={savingField === "soul"}
+            onClick={() => onSaveField("soul")}
+            disabled={saveField.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-xs text-slate-400 hover:text-[#4cd7f6] hover:border-[#4cd7f6]/30 transition-all disabled:opacity-50"
           >
-            {savingField === "soul" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saveField.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save
           </button>
         </div>
         <Textarea
           className="w-full bg-[#131b2e] border border-white/5 rounded-xl text-sm px-6 py-4 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] leading-relaxed text-[#dae2fd] outline-none resize-y"
-          value={soul}
-          onChange={(e) => setSoul(e.target.value)}
           rows={12}
+          {...register("soul")}
         />
       </section>
 
-      {/* HEARTBEAT.md — Monitoring Tasks */}
+      {/* HEARTBEAT.md -- Monitoring Tasks */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -319,19 +237,18 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={() => saveField("heartbeat", heartbeat)}
-            disabled={savingField === "heartbeat"}
+            onClick={() => onSaveField("heartbeat")}
+            disabled={saveField.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg text-xs text-slate-400 hover:text-[#4cd7f6] hover:border-[#4cd7f6]/30 transition-all disabled:opacity-50"
           >
-            {savingField === "heartbeat" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saveField.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save
           </button>
         </div>
         <Textarea
           className="w-full bg-[#131b2e] border border-white/5 rounded-xl text-sm px-6 py-4 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] leading-relaxed text-[#dae2fd] outline-none resize-y"
-          value={heartbeat}
-          onChange={(e) => setHeartbeat(e.target.value)}
           rows={8}
+          {...register("heartbeat")}
         />
       </section>
 
@@ -377,10 +294,10 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={handleSync}
-              disabled={isSyncing}
+              disabled={syncAgent.isPending}
               className="px-6 py-2 bg-[#93000a]/20 border border-[#ffb4ab]/20 text-[#ffb4ab] text-xs font-bold rounded-lg hover:bg-[#ffb4ab] hover:text-[#690005] transition-all disabled:opacity-50 whitespace-nowrap"
             >
-              {isSyncing ? (
+              {syncAgent.isPending ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-3 w-3 animate-spin" /> Restarting...
                 </span>
@@ -394,7 +311,7 @@ export default function SettingsPage() {
 
       {/* Config Info */}
       <div className="text-[10px] text-slate-600 text-right">
-        Config directory: <span className="font-mono">{settings?.configDir ?? "—"}</span>
+        Config directory: <span className="font-mono">{settings?.configDir ?? "\u2014"}</span>
       </div>
     </div>
   )

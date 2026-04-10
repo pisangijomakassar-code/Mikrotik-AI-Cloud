@@ -133,7 +133,7 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
                   </SelectTrigger>
                   <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
                     <SelectItem value="__default__">Default</SelectItem>
-                    {profiles?.map((p: { name: string }) => (
+                    {(profiles as { name: string }[] | undefined)?.map((p) => (
                       <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>

@@ -1,76 +1,31 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Bot, User, Send, Paperclip, Heart, Shield, FileText, Cpu, Wifi, Plus, MessageSquare, Trash2, Pencil, Check, X, HardDrive, Router } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
+import { useChatHistory, WELCOME_MSG } from "@/hooks/use-chat-history"
+import type { ChatMessage } from "@/hooks/use-chat-history"
+import { apiClient } from "@/lib/api-client"
+import { formatTime } from "@/lib/formatters"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
-interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-  timestamp: string
-}
-
-interface Conversation {
-  id: string
-  title: string
-  messages: ChatMessage[]
-  createdAt: string
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-}
-
-const WELCOME_MSG: ChatMessage = {
-  role: "assistant",
-  content: "System online. I'm connected to your MikroTik network and ready to assist. Ask me to check router status, manage hotspot users, audit firewall rules, or monitor traffic.",
-  timestamp: formatTime(new Date()),
-}
-
-function deriveTitle(msgs: ChatMessage[]): string {
-  const firstUser = msgs.find((m) => m.role === "user")
-  if (!firstUser) return "New Chat"
-  return firstUser.content.length > 40 ? firstUser.content.slice(0, 40) + "..." : firstUser.content
-}
-
 export default function ChatPage() {
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    if (typeof window === "undefined") return []
-    try {
-      const saved = localStorage.getItem("mikrotik-chat-history")
-      return saved ? JSON.parse(saved) : []
-    } catch { return [] }
-  })
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const {
+    conversations,
+    activeId,
+    activeConversation,
+    newConversation,
+    deleteConversation,
+    setActiveId,
+    updateMessages,
+    renameConversation,
+  } = useChatHistory()
 
-  const activeConv = conversations.find((c) => c.id === activeId)
-  const messages = activeConv?.messages ?? [WELCOME_MSG]
-
-  const setMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
-    setConversations((prev) => {
-      const next = prev.map((c) => {
-        if (c.id !== activeId) return c
-        const newMsgs = typeof updater === "function" ? updater(c.messages) : updater
-        return { ...c, messages: newMsgs, title: deriveTitle(newMsgs) }
-      })
-      return next
-    })
-  }, [activeId])
-
-  // Persist conversations to localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    localStorage.setItem("mikrotik-chat-history", JSON.stringify(conversations))
-  }, [conversations])
+  const messages = activeConversation?.messages ?? [WELCOME_MSG]
 
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -79,22 +34,6 @@ export default function ChatPage() {
   const defaultRouter = routers?.find(r => r.isDefault) || routers?.[0]
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
-
-  function newConversation() {
-    const conv: Conversation = {
-      id: generateId(),
-      title: "New Chat",
-      messages: [WELCOME_MSG],
-      createdAt: new Date().toISOString(),
-    }
-    setConversations((prev) => [conv, ...prev])
-    setActiveId(conv.id)
-  }
-
-  function deleteConversation(id: string) {
-    setConversations((prev) => prev.filter((c) => c.id !== id))
-    if (activeId === id) setActiveId(null)
-  }
 
   const [editingConvId, setEditingConvId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState("")
@@ -106,9 +45,7 @@ export default function ChatPage() {
 
   function saveRename() {
     if (!editingConvId || !editingTitle.trim()) return
-    setConversations((prev) =>
-      prev.map((c) => c.id === editingConvId ? { ...c, title: editingTitle.trim() } : c)
-    )
+    renameConversation(editingConvId, editingTitle)
     setEditingConvId(null)
   }
 
@@ -118,15 +55,7 @@ export default function ChatPage() {
     // Auto-create conversation if none active
     let currentId = activeId
     if (!currentId) {
-      const conv: Conversation = {
-        id: generateId(),
-        title: "New Chat",
-        messages: [WELCOME_MSG],
-        createdAt: new Date().toISOString(),
-      }
-      setConversations((prev) => [conv, ...prev])
-      setActiveId(conv.id)
-      currentId = conv.id
+      currentId = newConversation()
     }
 
     const userMsg: ChatMessage = { role: "user", content: input.trim(), timestamp: formatTime(new Date()) }
@@ -134,27 +63,18 @@ export default function ChatPage() {
     const updatedMessages = [...currentMsgs, userMsg]
 
     // Update messages in the active conversation
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === currentId ? { ...c, messages: updatedMessages, title: deriveTitle(updatedMessages) } : c
-      )
-    )
+    updateMessages(currentId, updatedMessages)
     setInput("")
     setIsLoading(true)
     try {
       // Send full conversation history for context awareness
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.content }))
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMsg.content, history, conversationId: currentId }) })
-      const data = res.ok ? await res.json() : null
+      const data = await apiClient.post<Record<string, string>>("/api/chat", { message: userMsg.content, history, conversationId: currentId })
       const assistantMsg: ChatMessage = { role: "assistant", content: data?.reply || data?.message || data?.response || "Agent is offline. Try again.", timestamp: formatTime(new Date()) }
-      setConversations((prev) =>
-        prev.map((c) => c.id === currentId ? { ...c, messages: [...c.messages, assistantMsg] } : c)
-      )
+      updateMessages(currentId, (prev) => [...prev, assistantMsg])
     } catch {
       const errMsg: ChatMessage = { role: "assistant", content: "Connection error. The AI agent may be offline.", timestamp: formatTime(new Date()) }
-      setConversations((prev) =>
-        prev.map((c) => c.id === currentId ? { ...c, messages: [...c.messages, errMsg] } : c)
-      )
+      updateMessages(currentId, (prev) => [...prev, errMsg])
     } finally { setIsLoading(false) }
   }
 

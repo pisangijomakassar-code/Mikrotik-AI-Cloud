@@ -21,23 +21,13 @@ import {
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { AddResellerDialog } from "@/components/dialogs/add-reseller-dialog"
 import { cn } from "@/lib/utils"
+import { formatRupiah } from "@/lib/formatters"
+import { StatusBadge } from "@/components/badges/status-badge"
+import { TableSkeleton } from "@/components/table-skeleton"
 import { toast } from "sonner"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-function formatRupiah(amount: number): string {
-  return `Rp ${amount.toLocaleString("id-ID")}`
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "-"
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
 
 export default function ResellersPage() {
   const { data: resellers, isLoading } = useResellers()
@@ -148,15 +138,7 @@ export default function ResellersPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-6 py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <TableSkeleton rows={5} columns={7} />
               ) : !resellers?.length ? (
                 <tr>
                   <td colSpan={7} className="px-8 py-12 text-center text-slate-400">
@@ -185,16 +167,7 @@ export default function ResellersPage() {
                       {formatRupiah(reseller.balance ?? 0)}
                     </td>
                     <td className="px-6 py-5">
-                      <span
-                        className={cn(
-                          "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                          reseller.status === "ACTIVE"
-                            ? "bg-[#4ae176]/15 text-[#4ae176]"
-                            : "bg-slate-700/50 text-slate-400"
-                        )}
-                      >
-                        {reseller.status}
-                      </span>
+                      <StatusBadge status={reseller.status} />
                     </td>
                     <td className="px-6 py-5 text-sm text-[#dae2fd]">
                       {reseller._count?.voucherBatches ?? reseller.vouchersSold ?? 0}
