@@ -1484,6 +1484,49 @@ def list_ip_services(user_id: str, router: str = "") -> list[dict]:
     return result
 
 
+@mcp.tool()
+def set_ip_service(user_id: str, service_name: str, disabled: str = "",
+                   port: str = "", address: str = "", router: str = "") -> dict:
+    """Enable, disable, or configure an IP service (telnet, ssh, winbox, api, www, etc.).
+
+    Args:
+        user_id: Telegram user ID
+        service_name: Service name exactly as shown in list_ip_services (e.g., 'telnet', 'ssh', 'winbox', 'api', 'www', 'www-ssl', 'ftp', 'api-ssl')
+        disabled: Set 'true' to disable the service, 'false' to enable. Empty = don't change.
+        port: New port number for the service. Empty = don't change.
+        address: Allowed source address/subnet (e.g., '192.168.88.0/24'). Empty = don't change.
+        router: Router name (empty = default)
+    """
+    conn = _resolve_connection(user_id, router)
+    if "error" in conn:
+        return conn
+    try:
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("ip", "service")
+            services = list(resource.select().where(Key("name") == service_name))
+            if not services:
+                all_svc = [s.get("name", "") for s in resource]
+                return {"error": f"Service '{service_name}' not found. Available: {', '.join(all_svc)}"}
+            update_params: dict = {".id": services[0][".id"]}
+            changes = []
+            if disabled:
+                update_params["disabled"] = disabled
+                changes.append("disabled" if disabled == "true" else "enabled")
+            if port:
+                update_params["port"] = port
+                changes.append(f"port→{port}")
+            if address:
+                update_params["address"] = address
+                changes.append(f"address={address}")
+            if not changes:
+                return {"error": "No changes specified. Provide disabled, port, or address."}
+            resource.update(**update_params)
+            registry.update_last_seen(user_id, conn["name"])
+            return {"status": "ok", "message": f"Service '{service_name}' updated: {', '.join(changes)}"}
+    except Exception as e:
+        return {"error": f"Failed to update IP service: {e}"}
+
+
 # ─────────────────────────────────────────────
 #  DHCP EXTENDED (Read + Write)
 # ─────────────────────────────────────────────

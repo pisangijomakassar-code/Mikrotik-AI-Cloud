@@ -105,6 +105,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `remove_ip_address` | `user_id, address_id, router?` | Remove IP. **CONFIRM.** |
 | `list_ip_pools` | `user_id, router?` | IP address pools |
 | `list_ip_services` | `user_id, router?` | Enabled services (api, ssh, winbox, www) |
+| `set_ip_service` | `user_id, service_name, disabled?, port?, address?, router?` | Enable/disable/configure IP service (telnet, ssh, winbox, api, www, etc). **CONFIRM.** |
 | `list_ip_routes` | `user_id, router?` | Routing table |
 | `get_cloud_status` | `user_id, router?` | MikroTik Cloud (DDNS) status |
 
@@ -176,7 +177,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 |------|-----------|-------------|
 | `generate_hotspot_vouchers` | `user_id, count, profile, prefix?, password_length?, username_length?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, server?, router?` | Bulk generate voucher users (max 100). **CONFIRM.** |
 | `get_hotspot_voucher_stats` | `user_id, router?` | Dashboard stats: total/enabled/disabled, breakdown by profile |
-| `get_hotspot_user_detail` | `user_id, username, router?` | Full user detail with usage stats (bytes, uptime, limits) |
+| `get_hotspot_user_detail` | `user_id, username, router?` | Full user detail: profile, limits, **bandwidth usage (bytes_in/bytes_out)**, uptime, server, IP/MAC bindings, email |
 | `bulk_enable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Enable multiple users at once. **CONFIRM.** |
 | `bulk_disable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Disable/suspend multiple users. **CONFIRM.** |
 | `bulk_remove_hotspot_users` | `user_id, usernames (comma-separated), router?` | Remove multiple users. **DOUBLE CONFIRM.** |
@@ -327,6 +328,7 @@ Before ANY write/destructive operation:
 - `update_ppp_secret`
 - `remove_ppp_secret`
 - `kick_ppp_user`
+- `set_ip_service`
 - `add_simple_queue`
 - `remove_simple_queue`
 - `enable_simple_queue`
