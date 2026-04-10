@@ -31,10 +31,9 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { message, image, history } = body as {
+    const { message, image } = body as {
       message: string
       image?: string
-      history?: Array<{ role: string; content: string }>
     }
 
     if (!message && !image) {
@@ -57,27 +56,15 @@ export async function POST(request: Request) {
       })
     }
 
-    // Build messages array with full conversation history
-    const apiMessages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = []
-
-    // Include conversation history if provided
-    if (history && history.length > 0) {
-      for (const msg of history) {
-        apiMessages.push({ role: msg.role, content: msg.content })
-      }
-    } else {
-      // Fallback: single message (no history)
-      if (image) {
-        apiMessages.push({
-          role: "user",
-          content: [
-            ...(message ? [{ type: "text" as const, text: message }] : []),
-            { type: "image_url" as const, image_url: { url: image } },
-          ],
-        })
-      } else {
-        apiMessages.push({ role: "user", content: message })
-      }
+    // Nanobot API only accepts a single user message per request.
+    // Context is maintained server-side via session_id.
+    // Build the single message (text or multimodal).
+    let userContent: string | Array<{ type: string; text?: string; image_url?: { url: string } }> = message
+    if (image) {
+      userContent = [
+        ...(message ? [{ type: "text" as const, text: message }] : []),
+        { type: "image_url" as const, image_url: { url: image } },
+      ]
     }
 
     const sessionId = `dashboard-${session.user.id}`
@@ -86,7 +73,7 @@ export async function POST(request: Request) {
     const agentUrl = user.agentUrl
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30000)
+    const timeout = setTimeout(() => controller.abort(), 60000) // 60s for tool calls
 
     try {
       const apiResponse = await fetch(`${agentUrl}/v1/chat/completions`, {
@@ -97,13 +84,8 @@ export async function POST(request: Request) {
           "X-Telegram-Id": user.telegramId,
         },
         body: JSON.stringify({
-          messages: apiMessages,
+          messages: [{ role: "user", content: userContent }],
           session_id: sessionId,
-          user_context: {
-            telegram_id: user.telegramId,
-            bot_token: user.botToken,
-            name: user.name,
-          },
         }),
         signal: controller.signal,
       })
