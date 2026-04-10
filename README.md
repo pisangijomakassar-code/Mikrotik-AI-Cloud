@@ -124,7 +124,7 @@ Web-based admin panel at `http://your-server:3000`:
 | Component | Technology |
 |-----------|-----------|
 | AI Agent | [Nanobot](https://github.com/HKUDS/nanobot) v0.1.5 |
-| LLM | OpenAI GPT-5.4 Nano via [OpenRouter](https://openrouter.ai) |
+| LLM | Google Gemini 2.5 Flash via [OpenRouter](https://openrouter.ai) |
 | MCP Server | Python + [FastMCP](https://github.com/jlowin/fastmcp) |
 | RouterOS Client | [librouteros](https://github.com/luqasz/librouteros) |
 | Dashboard | Next.js 16 + React 19 + Tailwind + shadcn/ui |

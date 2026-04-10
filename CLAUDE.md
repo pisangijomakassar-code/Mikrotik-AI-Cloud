@@ -45,7 +45,7 @@ npx prisma generate            # regenerate client after schema changes
 
 ### Dashboard (Next.js 16, `dashboard/`)
 - App Router with React 19, TypeScript strict, Tailwind + shadcn/ui
-- Auth: NextAuth v5 (session-based)
+- Auth: NextAuth v5 (JWT-based)
 - ORM: Prisma 7 with PostgreSQL adapter — schema at `dashboard/prisma/schema.prisma`
 - Data fetching: TanStack Query hooks in `dashboard/hooks/`
 - Auto-provisioning: when users are added via dashboard, it generates `config/config.generated.json` and the agent hot-reloads via inotifywait in `entrypoint.sh`
@@ -79,4 +79,4 @@ Push to `main` → GitHub Actions (`deploy.yml`) → SSH to VPS → sequential D
 
 ## Environment Variables
 
-See `.env.example`. Key vars: `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_USER_ID`, `DB_PASSWORD`, `NEXTAUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+See `.env.example`. Key vars: `OPENROUTER_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_USER_ID`, `DB_PASSWORD`, `NEXTAUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `VPS_HOST`.

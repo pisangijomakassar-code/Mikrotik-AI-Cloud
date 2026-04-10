@@ -143,7 +143,7 @@ export default function ChatPage() {
     try {
       // Send full conversation history for context awareness
       const history = updatedMessages.map((m) => ({ role: m.role, content: m.content }))
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMsg.content, history }) })
+      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMsg.content, history, conversationId: currentId }) })
       const data = res.ok ? await res.json() : null
       const assistantMsg: ChatMessage = { role: "assistant", content: data?.reply || data?.message || data?.response || "Agent is offline. Try again.", timestamp: formatTime(new Date()) }
       setConversations((prev) =>
@@ -303,16 +303,16 @@ export default function ChatPage() {
                       <p className="text-xs truncate">{conv.title}</p>
                       <p className="text-[10px] text-slate-600">{conv.messages.length - 1} messages</p>
                     </div>
-                    <div className="hidden group-hover/conv:flex items-center gap-0.5 shrink-0">
+                    <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/conv:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => { e.stopPropagation(); startRename(conv.id, conv.title) }}
-                        className="p-1 text-slate-600 hover:text-[#4cd7f6] transition-colors"
+                        className="p-1 text-slate-500 hover:text-[#4cd7f6] transition-colors"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
-                        className="p-1 text-slate-600 hover:text-[#ffb4ab] transition-colors"
+                        className="p-1 text-slate-500 hover:text-[#ffb4ab] transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

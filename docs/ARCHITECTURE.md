@@ -75,7 +75,7 @@ User A sends message
 
 ```
 SHARED (one copy for all agents):          ISOLATED (one copy per agent):
-├── LLM model (GPT-5.4 Nano)              ├── Conversation session
+├── LLM model (Gemini 2.5 Flash)          ├── Conversation session
 ├── SOUL.md (personality)                  ├── Conversation memory
 ├── SKILL.md (tool instructions)           ├── Router data (PostgreSQL rows, encrypted)
 ├── MCP Server (137 tools)                 └── LLM context window
@@ -98,6 +98,14 @@ SHARED (one copy for all agents):          ISOLATED (one copy per agent):
 └──────────────┬───────────────────────────┬─────────────────────┘
                │                           │
                ▼                           ▼
+                                                    ┌──────────────────────┐
+                                                    │  ADMIN DASHBOARD     │
+                                                    │  (Next.js, port 3000)│
+                                                    │                      │
+                                                    │  Chat → :8900       │
+                                                    │  Health → :8080     │
+                                                    └──────────┬───────────┘
+                                                               │
 ┌────────────────────────────────────────────────────────────────┐
 │                  NANOBOT GATEWAY (agent runtime)               │
 │                                                                │
@@ -119,8 +127,8 @@ SHARED (one copy for all agents):          ISOLATED (one copy per agent):
 │  │                                                       │     │
 │  │  ┌────────────┐  ┌────────────────────────────────┐  │     │
 │  │  │    LLM     │  │   Skills & Personality          │  │     │
-│  │  │  GPT-5.4   │  │   - mikrotik-admin (SKILL.md)  │  │     │
-│  │  │  Nano via  │  │   - SOUL.md (personality)       │  │     │
+│  │  │  Gemini    │  │   - mikrotik-admin (SKILL.md)  │  │     │
+│  │  │  2.5 Flash │  │   - SOUL.md (personality)       │  │     │
 │  │  │  OpenRouter│  │                                 │  │     │
 │  │  └────────────┘  └────────────────────────────────┘  │     │
 │  └──────────────────────────────────────────────────────┘     │
@@ -132,17 +140,17 @@ SHARED (one copy for all agents):          ISOLATED (one copy per agent):
 │  │  access its own user's router data.                     │   │
 │  │                                                         │   │
 │  │  ┌───────────────────────────────────────────────────┐ │   │
-│  │  │            Per-User Router Registry                │ │   │
+│  │  │     Per-User Router Registry (PostgreSQL)          │ │   │
 │  │  │                                                    │ │   │
-│  │  │  data/                                             │ │   │
-│  │  │  ├── 86340875.json   (Agent A's routers)          │ │   │
+│  │  │  "Router" table (credentials Fernet-encrypted)    │ │   │
+│  │  │  ├── User A (telegramId: 86340875)                │ │   │
 │  │  │  │   ├── UmmiNEW   → id30.tunnel.my.id:12065     │ │   │
 │  │  │  │   └── Kantor    → office.tunnel.my.id:8728    │ │   │
 │  │  │  │                                                │ │   │
-│  │  │  ├── 12345678.json   (Agent B's routers)          │ │   │
+│  │  │  ├── User B (telegramId: 12345678)                │ │   │
 │  │  │  │   └── Warnet    → warnet.tunnel.my.id:8728    │ │   │
 │  │  │  │                                                │ │   │
-│  │  │  └── ...                                          │ │   │
+│  │  │  └── (Legacy fallback: data/*.json for local dev) │ │   │
 │  │  └───────────────────────────────────────────────────┘ │   │
 │  │                                                         │   │
 │  │  Tools (100+ total, all scoped to user_id):               │   │
@@ -473,30 +481,14 @@ Push to main → GitHub Actions → SSH to VPS → git pull → docker compose u
 
 Workflow: `.github/workflows/deploy.yml`
 
-```yaml
-name: Deploy to VPS
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/mikrotik-ai-agent
-            git fetch origin && git reset --hard origin/main
-            docker compose down || true
-            docker compose up -d --build --force-recreate
-```
+Key steps:
+1. **Swap creation** — Creates 2GB swap on first run to prevent OOM during Docker builds on low-RAM VPS
+2. **Git pull** — Fetch and reset to `origin/main` (handles fresh clone, existing repo, or corrupted state)
+3. **Stop all containers** — Free RAM for build phase
+4. **Sequential builds** — Build agent first, then dashboard (with `--max-old-space-size=512`) to limit peak RAM
+5. **Ordered startup** — Start `postgres` → wait 10s → `dashboard` → wait 5s → `mikrotik-agent`
+6. **Prisma migrations** — Run `prisma migrate deploy` after dashboard is up
+7. **Timeout** — 30-minute command timeout for slow VPS builds
 
 ### Docker Compose
 
@@ -506,11 +498,14 @@ Three services on a shared internal network:
 | ------- | --------- | --------- | ------- |
 | `postgres` | `mikrotik-db` | 128MB RAM | PostgreSQL 16 — shared database for dashboard + MCP server |
 | `dashboard` | `mikrotik-dashboard` | 256MB RAM | Next.js admin UI — port 3000 |
-| `mikrotik-agent` | `mikrotik-agent` | 1 CPU, 512MB RAM | Nanobot gateway + MCP server + health API (port 8080) |
+| `mikrotik-agent` | `mikrotik-agent` | 1 CPU, 512MB RAM | Nanobot gateway (port 8900) + MCP server + health API (port 8080) |
 
-- **Volumes**: `pgdata` (PostgreSQL data), `nanobot-data` (agent state), config/skills/MCP (bind mounts)
+- **Volumes**: `pgdata` (PostgreSQL data), `nanobot-data` (agent state), config/skills/MCP/docs (bind mounts), Docker socket (dashboard only)
 - **Restart policy**: `unless-stopped` (all services)
 - **Health check**: PostgreSQL readiness check; dashboard and agent depend on it
+- **Docker socket**: Dashboard mounts `/var/run/docker.sock` for container management during provisioning
+- **PostgreSQL tuning**: Custom low-RAM config (`shared_buffers=32MB`, `max_connections=20`, `work_mem=2MB`) for 128MB container
+- **Internal ports**: Agent exposes two services on the internal network — health API (8080) for router data queries, and nanobot gateway API (8900) for OpenAI-compatible `/v1/chat/completions` used by dashboard chat
 
 ### Container Startup (entrypoint.sh)
 
@@ -528,13 +523,13 @@ Three services on a shared internal network:
 | Component             | Technology                                                    | Why                                                             |
 | --------------------- | ------------------------------------------------------------- | --------------------------------------------------------------- |
 | Agent Runtime         | Nanobot (nanobot-ai)                                          | 1 agent per user, MCP support, multi-channel, session isolation |
-| LLM                   | OpenAI GPT-5.4 Nano via OpenRouter                            | Fast, tool calling support, cost-effective                      |
+| LLM                   | Google Gemini 2.5 Flash via OpenRouter                         | Fast, tool calling support, cost-effective                      |
 | MCP Server            | Python + FastMCP (stdio)                                      | Standard protocol, auto-discovered by Nanobot                   |
 | MCP Tools             | 137 tools                                                     | Full RouterOS management coverage                               |
 | RouterOS Client       | librouteros                                                   | Mature Python library for RouterOS API v6/v7                    |
 | Database              | PostgreSQL 16 + Prisma 7                                      | Shared between dashboard and MCP server, relational integrity   |
 | Dashboard             | Next.js 16 + React 19 + Tailwind + shadcn/ui                 | Admin UI with user/router management, chat, logs                |
-| Auth                  | NextAuth v5                                                   | Session-based dashboard authentication                          |
+| Auth                  | NextAuth v5                                                   | JWT-based dashboard authentication                              |
 | Messaging             | Telegram (primary)                                            | Built-in Nanobot channel support                                |
 | Container             | Docker Compose (3 services)                                   | PostgreSQL + Dashboard + Agent on shared network                |
 | CI/CD                 | GitHub Actions + SSH                                          | Auto-deploy on push to main                                     |
@@ -581,6 +576,7 @@ Mikrotik Ai Agent/
 │
 ├── scripts/
 │   ├── add-user.sh                   # Add Telegram ID to allowFrom
+│   ├── remove-user.sh                # Remove Telegram ID from allowFrom
 │   ├── list-users.sh                 # List provisioned users
 │   └── migrate-json-to-pg.py         # One-time JSON→PostgreSQL migration
 │

@@ -90,12 +90,19 @@ def _query_path(path: str, host: str, port: int, username: str, password: str, w
     """Generic helper: query a RouterOS API path and return rows as dicts."""
     with connect_router(host, port, username, password) as api:
         resource = api.path(path)
+        rows = list(resource)
         if where:
-            params = tuple(
-                librouteros.query.Key(k) == v for k, v in where.items()
-            )
-            return list(resource.select(*params))
-        return list(resource)
+            return [r for r in rows if all(r.get(k) == v for k, v in where.items())]
+        return rows
+
+
+def _find_items(resource, key: str, value: str) -> list[dict]:
+    """Find items in a RouterOS resource by key match (local filter).
+
+    librouteros 4.x select() returns empty on many paths, so we list all
+    items and filter locally instead.
+    """
+    return [item for item in resource if item.get(key) == value]
 
 
 def _format_bytes(n: int | str) -> str:
@@ -654,7 +661,7 @@ def remove_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = _find_items(resource, "name", username)
             if not users:
                 return {"error": f"User '{username}' not found. Check the exact username spelling."}
             resource.remove(users[0][".id"])
@@ -679,7 +686,7 @@ def enable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = _find_items(resource, "name", username)
             if not users:
                 return {"error": f"User '{username}' not found."}
             resource.update(**{".id": users[0][".id"], "disabled": "false"})
@@ -704,7 +711,7 @@ def disable_hotspot_user(user_id: str, username: str, router: str = "") -> dict:
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = _find_items(resource, "name", username)
             if not users:
                 return {"error": f"User '{username}' not found."}
             resource.update(**{".id": users[0][".id"], "disabled": "true"})
@@ -732,7 +739,7 @@ def update_hotspot_user(user_id: str, username: str, new_password: str = "", new
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = _find_items(resource, "name", username)
             if not users:
                 return {"error": f"User '{username}' not found."}
             update_params: dict = {".id": users[0][".id"]}
@@ -774,11 +781,11 @@ def search_hotspot_user(user_id: str, username: str, router: str = "") -> list[d
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
+            all_users = list(resource)
             # Try exact match first
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = [u for u in all_users if u.get("name") == username]
             if not users:
-                # Fallback: scan all users for partial match
-                all_users = list(resource)
+                # Fallback: partial/case-insensitive match
                 users = [u for u in all_users if username.lower() in u.get("name", "").lower()]
             registry.update_last_seen(user_id, conn["name"])
             return [
@@ -1716,7 +1723,7 @@ def get_hotspot_user_detail(user_id: str, username: str, router: str = "") -> di
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
-            users = list(resource.select(librouteros.query.Key("name") == username))
+            users = _find_items(resource, "name", username)
             if not users:
                 return {"error": f"Hotspot user '{username}' not found."}
             registry.update_last_seen(user_id, conn["name"])
@@ -1757,15 +1764,16 @@ def bulk_enable_hotspot_users(user_id: str, usernames: str, router: str = "") ->
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
+            all_users = {u.get("name"): u for u in resource}
             enabled = []
             errors = []
             for uname in name_list:
                 try:
-                    users = list(resource.select(librouteros.query.Key("name") == uname))
-                    if not users:
+                    user = all_users.get(uname)
+                    if not user:
                         errors.append(f"{uname}: not found")
                         continue
-                    resource.update(**{".id": users[0][".id"], "disabled": "false"})
+                    resource.update(**{".id": user[".id"], "disabled": "false"})
                     enabled.append(uname)
                 except Exception as e:
                     errors.append(f"{uname}: {e}")
@@ -1796,15 +1804,16 @@ def bulk_disable_hotspot_users(user_id: str, usernames: str, router: str = "") -
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
+            all_users = {u.get("name"): u for u in resource}
             disabled = []
             errors = []
             for uname in name_list:
                 try:
-                    users = list(resource.select(librouteros.query.Key("name") == uname))
-                    if not users:
+                    user = all_users.get(uname)
+                    if not user:
                         errors.append(f"{uname}: not found")
                         continue
-                    resource.update(**{".id": users[0][".id"], "disabled": "true"})
+                    resource.update(**{".id": user[".id"], "disabled": "true"})
                     disabled.append(uname)
                 except Exception as e:
                     errors.append(f"{uname}: {e}")
@@ -1835,15 +1844,16 @@ def bulk_remove_hotspot_users(user_id: str, usernames: str, router: str = "") ->
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user")
+            all_users = {u.get("name"): u for u in resource}
             removed = []
             errors = []
             for uname in name_list:
                 try:
-                    users = list(resource.select(librouteros.query.Key("name") == uname))
-                    if not users:
+                    user = all_users.get(uname)
+                    if not user:
                         errors.append(f"{uname}: not found")
                         continue
-                    resource.remove(users[0][".id"])
+                    resource.remove(user[".id"])
                     removed.append(uname)
                 except Exception as e:
                     errors.append(f"{uname}: {e}")
@@ -2026,9 +2036,9 @@ def update_hotspot_user_profile(user_id: str, name: str, rate_limit: str = "",
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user/profile")
-            profiles = list(resource.select(librouteros.query.Key("name") == name))
+            all_profiles = list(resource)
+            profiles = [p for p in all_profiles if p.get("name") == name]
             if not profiles:
-                all_profiles = list(resource)
                 available = [p.get("name", "") for p in all_profiles]
                 return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
 
@@ -2074,16 +2084,14 @@ def remove_hotspot_user_profile(user_id: str, name: str, router: str = "") -> di
     try:
         with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
             resource = api.path("/ip/hotspot/user/profile")
-            profiles = list(resource.select(librouteros.query.Key("name") == name))
+            all_profiles = list(resource)
+            profiles = [p for p in all_profiles if p.get("name") == name]
             if not profiles:
-                all_profiles = list(resource)
                 available = [p.get("name", "") for p in all_profiles]
                 return {"error": f"Profile '{name}' not found. Available profiles: {', '.join(available)}"}
 
             # Check if any users are assigned to this profile
-            users = list(api.path("/ip/hotspot/user").select(
-                librouteros.query.Key("profile") == name
-            ))
+            users = _find_items(api.path("/ip/hotspot/user"), "profile", name)
             if users:
                 return {"error": f"Cannot remove profile '{name}': {len(users)} user(s) still assigned to it. "
                         f"Reassign or remove those users first."}

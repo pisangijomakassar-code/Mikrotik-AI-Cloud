@@ -31,9 +31,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { message, image } = body as {
+    const { message, image, conversationId } = body as {
       message: string
       image?: string
+      conversationId?: string
     }
 
     if (!message && !image) {
@@ -65,8 +66,10 @@ export async function POST(request: Request) {
       ]
     }
 
-    // Session isolated per user — nanobot maintains context per session_id
-    const sessionId = `dashboard-${user.telegramId}`
+    // Session isolated per user+conversation — nanobot maintains context per session_id
+    const sessionId = conversationId
+      ? `dashboard-${user.telegramId}-${conversationId}`
+      : `dashboard-${user.telegramId}`
 
     // Single nanobot instance, agents separated by session_id + telegramId
     const nanobotUrl = process.env.NANOBOT_API_URL || "http://mikrotik-agent:8900"
