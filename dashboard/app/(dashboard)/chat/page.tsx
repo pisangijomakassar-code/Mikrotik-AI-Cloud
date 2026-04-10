@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Bot, User, Send, Paperclip, Mic, Heart, Shield, FileText, Cpu, Wifi, Plus, MessageSquare, Trash2 } from "lucide-react"
+import { Bot, User, Send, Paperclip, Mic, Heart, Shield, FileText, Cpu, Wifi, Plus, MessageSquare, Trash2, Pencil, Check, X, HardDrive, Router } from "lucide-react"
 import { useRouters } from "@/hooks/use-routers"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -93,6 +93,22 @@ export default function ChatPage() {
   function deleteConversation(id: string) {
     setConversations((prev) => prev.filter((c) => c.id !== id))
     if (activeId === id) setActiveId(null)
+  }
+
+  const [editingConvId, setEditingConvId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState("")
+
+  function startRename(id: string, currentTitle: string) {
+    setEditingConvId(id)
+    setEditingTitle(currentTitle)
+  }
+
+  function saveRename() {
+    if (!editingConvId || !editingTitle.trim()) return
+    setConversations((prev) =>
+      prev.map((c) => c.id === editingConvId ? { ...c, title: editingTitle.trim() } : c)
+    )
+    setEditingConvId(null)
   }
 
   async function send() {
@@ -266,30 +282,98 @@ export default function ChatPage() {
                 onClick={() => setActiveId(conv.id)}
               >
                 <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs truncate">{conv.title}</p>
-                  <p className="text-[10px] text-slate-600">{conv.messages.length - 1} messages</p>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-600 hover:text-[#ffb4ab] transition-all"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                {editingConvId === conv.id ? (
+                  <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="flex-1 bg-[#131b2e] border border-white/10 rounded px-1.5 py-0.5 text-xs text-[#dae2fd] outline-none focus:border-[#4cd7f6]"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setEditingConvId(null) }}
+                      autoFocus
+                    />
+                    <button onClick={saveRename} className="p-0.5 text-[#4ae176] hover:text-[#4ae176]">
+                      <Check className="h-3 w-3" />
+                    </button>
+                    <button onClick={() => setEditingConvId(null)} className="p-0.5 text-slate-500 hover:text-slate-300">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs truncate">{conv.title}</p>
+                      <p className="text-[10px] text-slate-600">{conv.messages.length - 1} messages</p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startRename(conv.id, conv.title) }}
+                        className="p-1 text-slate-600 hover:text-[#4cd7f6]"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
+                        className="p-1 text-slate-600 hover:text-[#ffb4ab]"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))
           )}
         </div>
 
-        {/* Compact router status */}
+        {/* Router status with CPU & Memory */}
         {defaultRouter && (
-          <div className="p-3 border-t border-white/5">
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-slate-500 truncate">{defaultRouter.name}</span>
-              <span className={defaultRouter.health?.status === "online" ? "text-[#4ae176]" : "text-[#ffb4ab]"}>
-                {defaultRouter.health?.status === "online" ? "Online" : "Offline"}
+          <div className="shrink-0 p-3 border-t border-white/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Router className="h-3 w-3 text-[#4cd7f6]" />
+                <span className="text-[10px] font-bold text-slate-400 truncate max-w-[120px]">{defaultRouter.name}</span>
+              </div>
+              <span className={cn(
+                "text-[9px] font-bold px-1.5 py-0.5 rounded",
+                defaultRouter.health?.status === "online"
+                  ? "bg-[#4ae176]/10 text-[#4ae176]"
+                  : "bg-[#ffb4ab]/10 text-[#ffb4ab]"
+              )}>
+                {defaultRouter.health?.status === "online" ? "ONLINE" : "OFFLINE"}
               </span>
             </div>
+            {defaultRouter.health?.status === "online" && (
+              <div className="space-y-1.5">
+                <div>
+                  <div className="flex items-center justify-between text-[9px] mb-0.5">
+                    <span className="text-slate-500 flex items-center gap-1"><Cpu className="h-2.5 w-2.5" />CPU</span>
+                    <span className="font-mono text-slate-400">{defaultRouter.health.cpuLoad}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full", defaultRouter.health.cpuLoad > 80 ? "bg-[#ffb4ab]" : defaultRouter.health.cpuLoad > 50 ? "bg-amber-400" : "bg-[#4cd7f6]")}
+                      style={{ width: `${defaultRouter.health.cpuLoad}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-[9px] mb-0.5">
+                    <span className="text-slate-500 flex items-center gap-1"><HardDrive className="h-2.5 w-2.5" />MEM</span>
+                    <span className="font-mono text-slate-400">{defaultRouter.health.memoryPercent}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full", defaultRouter.health.memoryPercent > 80 ? "bg-[#ffb4ab]" : defaultRouter.health.memoryPercent > 50 ? "bg-amber-400" : "bg-[#4ae176]")}
+                      style={{ width: `${defaultRouter.health.memoryPercent}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[9px]">
+                  <span className="text-slate-500 flex items-center gap-1"><Wifi className="h-2.5 w-2.5" />Clients</span>
+                  <span className="font-mono text-[#4cd7f6] font-bold">{defaultRouter.health.activeClients}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </aside>
