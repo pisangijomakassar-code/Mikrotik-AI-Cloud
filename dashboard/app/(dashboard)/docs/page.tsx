@@ -5,16 +5,19 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { BookOpen, FileCode, ShieldCheck, Loader2, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 
-const DOCS = [
-  { slug: "user-guide", label: "User Guide", icon: BookOpen },
-  { slug: "api-reference", label: "API Reference", icon: FileCode },
-  { slug: "admin-guide", label: "Admin Guide", icon: ShieldCheck },
+const ALL_DOCS = [
+  { slug: "user-guide", label: "User Guide", icon: BookOpen, adminOnly: false },
+  { slug: "api-reference", label: "API Reference", icon: FileCode, adminOnly: false },
+  { slug: "admin-guide", label: "Admin Guide", icon: ShieldCheck, adminOnly: true },
 ] as const
 
-type DocSlug = (typeof DOCS)[number]["slug"]
+type DocSlug = (typeof ALL_DOCS)[number]["slug"]
 
 export default function DocsPage() {
+  const { isAdmin } = useAuth()
+  const DOCS = ALL_DOCS.filter((d) => !d.adminOnly || isAdmin)
   const [contents, setContents] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [search, setSearch] = useState("")
