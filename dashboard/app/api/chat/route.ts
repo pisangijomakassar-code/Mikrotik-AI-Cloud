@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       : `dashboard-${user.telegramId}`
 
     // Single nanobot instance, agents separated by session_id + telegramId
-    const nanobotUrl = process.env.NANOBOT_API_URL || "http://mikrotik-agent:8900"
+    const nanobotUrl = process.env.NANOBOT_API_URL || "http://mikrotik-agent:8080"
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 60000) // 60s for tool calls
@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           messages: [{ role: "user", content: userContent }],
           session_id: sessionId,
+          user_context: { telegram_id: user.telegramId || "" },
         }),
         signal: controller.signal,
       })
