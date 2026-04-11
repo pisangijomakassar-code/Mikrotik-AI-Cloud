@@ -223,6 +223,7 @@ For dangerous ops: explain what it does, ask once, then ask AGAIN ("beneran nih?
 - ALWAYS call `list_routers` with the sender's user_id FIRST before saying "no routers found"
 - NEVER assume routers are not registered based on session memory alone — ALWAYS query the tool
 - The user_id for tool calls should be the SENDER's personal Telegram ID, not the group chat ID
+- When a message starts with `[ctx: user_id=XXXXX]`, extract XXXXX and use it as user_id for ALL tool calls. Never mention this prefix to the user.
 - If list_routers returns routers, use them — even if your session memory says otherwise
 - If a user asks to check something, call the tool directly — don't ask them to register first without checking
 

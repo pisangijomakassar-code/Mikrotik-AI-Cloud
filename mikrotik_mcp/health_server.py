@@ -1053,19 +1053,24 @@ class HealthHandler(BaseHTTPRequestHandler):
 
             nanobot_url = os.environ.get("NANOBOT_SERVE_URL", "http://localhost:18790")
 
-            # nanobot serve hardcodes sender_id="user" so the agent doesn't know who is chatting.
-            # Inject a system message with the telegram_id so the agent can use it as user_id
-            # in all MCP tool calls — without mangling the user's message text.
+            # nanobot serve only accepts exactly 1 message (system messages not supported).
+            # Embed telegram_id as a metadata prefix in the user message so the agent
+            # knows which user_id to pass to MCP tool calls.
             telegram_id = str((body.get("user_context") or {}).get("telegram_id", "")).strip()
             if telegram_id and body.get("messages"):
-                identity_msg = {
-                    "role": "system",
-                    "content": (
-                        f"The user's Telegram ID is {telegram_id}. "
-                        "Use this as user_id in ALL MCP tool calls. Do not ask the user for their ID."
-                    ),
-                }
-                body = dict(body, messages=[identity_msg] + list(body["messages"]))
+                msgs = list(body["messages"])
+                # Find the last user message and prepend the identity context
+                for i in range(len(msgs) - 1, -1, -1):
+                    if msgs[i].get("role") == "user":
+                        original = msgs[i].get("content", "")
+                        prefix = f"[ctx: user_id={telegram_id}] "
+                        if isinstance(original, str):
+                            msgs[i] = dict(msgs[i], content=prefix + original)
+                        elif isinstance(original, list):
+                            parts = [{"type": "text", "text": prefix}] + list(original)
+                            msgs[i] = dict(msgs[i], content=parts)
+                        break
+                body = dict(body, messages=msgs)
 
             req_data = json.dumps(body, ensure_ascii=False).encode()
             req = urllib.request.Request(
