@@ -5,13 +5,15 @@ async function main() {
   const email = process.env.ADMIN_EMAIL || "admin@mikrotik.local"
   const password = process.env.ADMIN_PASSWORD || "admin123"
 
+  const hash = await bcrypt.hash(password, 12)
+
   const user = await prisma.user.upsert({
     where: { email },
-    update: {},
+    update: { passwordHash: hash },
     create: {
       email,
       name: "Admin",
-      passwordHash: await bcrypt.hash(password, 12),
+      passwordHash: hash,
       telegramId: process.env.TELEGRAM_USER_ID || "0",
       role: "ADMIN",
       status: "ACTIVE",
