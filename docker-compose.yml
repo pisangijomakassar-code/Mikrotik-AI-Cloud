@@ -3,6 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: mikrotik-db
     restart: unless-stopped
+    env_file: .env
     environment:
       POSTGRES_DB: mikrotik
       POSTGRES_USER: mikrotik
@@ -39,10 +40,9 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
-      NEXTAUTH_URL: http://${VPS_HOST:-localhost}:3000
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mikrotik.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      AUTH_URL: http://${VPS_HOST:-localhost}:3000
+      AUTH_SECRET: ${NEXTAUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
     volumes:
       - ./config:/app/config
       - ./docs:/app/docs:ro
@@ -70,6 +70,14 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      CLOUDFLARE_TUNNEL_DOMAIN: ${CLOUDFLARE_TUNNEL_DOMAIN}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID}
+      SSTP_SERVER_HOST: ${SSTP_SERVER_HOST}
+      SSTP_VPN_SUBNET: ${SSTP_VPN_SUBNET}
+      SSTP_ADMIN_PASSWORD: ${SSTP_ADMIN_PASSWORD}
     volumes:
       - nanobot-data:/root/.nanobot
       - ./skills:/app/skills:ro
@@ -99,11 +107,10 @@ services:
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
-    ports:
-      - "443:443"    # SSTP
+    env_file: .env
     environment:
-      SPW: ${SSTP_ADMIN_PASSWORD}    # Server password
-      HPW: ${SSTP_ADMIN_PASSWORD}    # Hub password
+      SPW: ${SSTP_ADMIN_PASSWORD}
+      HPW: ${SSTP_ADMIN_PASSWORD}
     volumes:
       - vpn-data:/usr/vpnserver
     networks:
