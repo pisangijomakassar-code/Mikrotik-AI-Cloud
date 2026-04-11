@@ -86,9 +86,13 @@ jobs:
             echo "Starting mikrotik-agent..."
             docker compose up -d mikrotik-agent
 
-            # Run database migrations if dashboard is up
+            # Run database migrations
             echo "Running migrations..."
             docker compose exec -T dashboard npx prisma migrate deploy 2>/dev/null || echo "Migration skipped (first run needs manual setup)"
+
+            # Seed admin user (upsert — safe to re-run, reads ADMIN_EMAIL + ADMIN_PASSWORD from .env)
+            echo "Seeding admin user..."
+            docker compose exec -T dashboard npx prisma db seed 2>/dev/null || echo "Seed skipped"
 
             echo "---"
             docker compose ps
