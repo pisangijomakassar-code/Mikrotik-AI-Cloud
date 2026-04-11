@@ -1053,22 +1053,19 @@ class HealthHandler(BaseHTTPRequestHandler):
 
             nanobot_url = os.environ.get("NANOBOT_SERVE_URL", "http://localhost:18790")
 
-            # nanobot serve doesn't expose sender identity to the agent.
-            # Inject telegram_id into the user message so the LLM can pass it to MCP tools.
+            # nanobot serve hardcodes sender_id="user" so the agent doesn't know who is chatting.
+            # Inject a system message with the telegram_id so the agent can use it as user_id
+            # in all MCP tool calls — without mangling the user's message text.
             telegram_id = str((body.get("user_context") or {}).get("telegram_id", "")).strip()
             if telegram_id and body.get("messages"):
-                msgs = body["messages"]
-                last = msgs[-1]
-                if last.get("role") == "user":
-                    original = last.get("content", "")
-                    if isinstance(original, str):
-                        last = dict(last, content=f"[user_id:{telegram_id}] {original}")
-                    elif isinstance(original, list):
-                        # multimodal: prepend to text part
-                        parts = list(original)
-                        parts.insert(0, {"type": "text", "text": f"[user_id:{telegram_id}]"})
-                        last = dict(last, content=parts)
-                    body = dict(body, messages=msgs[:-1] + [last])
+                identity_msg = {
+                    "role": "system",
+                    "content": (
+                        f"The user's Telegram ID is {telegram_id}. "
+                        "Use this as user_id in ALL MCP tool calls. Do not ask the user for their ID."
+                    ),
+                }
+                body = dict(body, messages=[identity_msg] + list(body["messages"]))
 
             req_data = json.dumps(body, ensure_ascii=False).encode()
             req = urllib.request.Request(
