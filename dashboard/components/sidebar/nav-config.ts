@@ -18,6 +18,7 @@ import {
   Receipt,
   MessageSquare,
   BotMessageSquare,
+  Cable,
 } from "lucide-react"
 
 export interface NavItem {
@@ -71,6 +72,7 @@ export const navGroups: NavGroup[] = [
     label: "System",
     items: [
       { label: "Routers", href: "/routers", icon: Router },
+      { label: "Tunnel", href: "/tunnel", icon: Cable },
       { label: "Users", href: "/users", icon: Users, adminOnly: true },
       { label: "Logs", href: "/logs", icon: Terminal },
       { label: "Communication", href: "/communication", icon: MessageSquare },

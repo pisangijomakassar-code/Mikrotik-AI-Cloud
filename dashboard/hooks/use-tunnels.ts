@@ -78,6 +78,27 @@ export function useTunnelSetup(routerId: string, enabled = true) {
   })
 }
 
+export interface CreateTunnelInput {
+  routerId: string
+  method: "CLOUDFLARE" | "SSTP"
+  routerLanIp?: string
+  enabledPorts?: string[]
+}
+
+export function useCreateTunnel() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: CreateTunnelInput) => {
+      return apiClient.post<Tunnel>("/api/tunnels", input)
+    },
+    onSuccess: (_, { routerId }) => {
+      queryClient.invalidateQueries({ queryKey: tunnelKeys.all })
+      queryClient.invalidateQueries({ queryKey: tunnelKeys.byRouter(routerId) })
+      queryClient.invalidateQueries({ queryKey: ["routers"] })
+    },
+  })
+}
+
 export function useDeleteTunnel() {
   const queryClient = useQueryClient()
   return useMutation({

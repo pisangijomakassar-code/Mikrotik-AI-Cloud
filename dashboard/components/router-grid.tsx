@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Router, Users, ChevronLeft, ChevronRight, Sparkles, Pencil, Trash2 } from "lucide-react"
+import { Router, Users, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { TunnelStatusBadge } from "@/components/tunnel-status-badge"
@@ -299,59 +299,6 @@ export function RouterGrid() {
         </div>
       </div>
 
-      {/* AI Insight Overlay */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 glass-panel p-6 rounded-3xl border border-[#4ae176]/20 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4">
-            <Sparkles className="h-5 w-5 text-[#4ae176] animate-pulse" />
-          </div>
-          <h3 className="font-headline font-bold text-foreground mb-4 flex items-center gap-2">
-            AI Agent Insights
-          </h3>
-          <div className="space-y-4">
-            <div className="bg-[#4ae176]/10 p-4 rounded-2xl border border-[#4ae176]/10">
-              <p className="text-sm text-[#6bff8f] font-medium">
-                Anomaly detected: CPU spikes correlate with unusual DNS traffic from specific clients. Suggesting firewall rule update.
-              </p>
-              <div className="mt-3 flex gap-3">
-                <button className="text-[10px] uppercase font-bold tracking-widest text-[#003915] bg-[#4ae176] px-3 py-1.5 rounded-lg hover:brightness-110 transition-all">
-                  Apply Suggestion
-                </button>
-                <button className="text-[10px] uppercase font-bold tracking-widest text-[#4ae176] border border-[#4ae176]/30 px-3 py-1.5 rounded-lg hover:bg-[#4ae176]/10 transition-all">
-                  Review Logs
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-muted p-6 rounded-3xl border border-border flex flex-col justify-between">
-          <div>
-            <h3 className="font-headline font-bold text-foreground text-lg">System Health</h3>
-            <p className="text-xs text-muted-foreground/70 mt-1">Average response time: 24ms</p>
-          </div>
-          <div className="mt-6 flex justify-center">
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90">
-                <circle cx="64" cy="64" fill="none" r="56" stroke="var(--muted)" strokeWidth="8" />
-                <circle
-                  cx="64"
-                  cy="64"
-                  fill="none"
-                  r="56"
-                  stroke="#4cd7f6"
-                  strokeWidth="8"
-                  strokeDasharray="351.8"
-                  strokeDashoffset={351.8 * (1 - healthPct / 100)}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-headline font-bold text-foreground">{healthPct}%</span>
-                <span className="text-[8px] uppercase tracking-widest text-muted-foreground/70">Uptime</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
