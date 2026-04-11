@@ -6,10 +6,11 @@ mkdir -p /root/.nanobot/skills
 ln -sfn /app/skills/mikrotik /root/.nanobot/skills/mikrotik
 
 # Use generated config (from dashboard) if available, else template
+# envsubst expands ${TELEGRAM_BOT_TOKEN}, ${TELEGRAM_USER_ID}, etc. from environment
 if [ -f /app/config/config.generated.json ]; then
-    cp /app/config/config.generated.json /root/.nanobot/config.json
+    envsubst < /app/config/config.generated.json > /root/.nanobot/config.json
 else
-    cp /app/config/config.json /root/.nanobot/config.json
+    envsubst < /app/config/config.json > /root/.nanobot/config.json
 fi
 
 # Always overwrite SOUL.md and HEARTBEAT.md
@@ -40,9 +41,9 @@ start_nanobot() {
 
 reload_nanobot() {
     echo "[entrypoint] Config change detected, reloading nanobot..."
-    # Copy fresh config
+    # Copy fresh config (envsubst expands env vars like TELEGRAM_BOT_TOKEN)
     if [ -f /app/config/config.generated.json ]; then
-        cp /app/config/config.generated.json /root/.nanobot/config.json
+        envsubst < /app/config/config.generated.json > /root/.nanobot/config.json
         echo "[entrypoint] config.json updated from config.generated.json"
     fi
     # Gracefully stop nanobot
