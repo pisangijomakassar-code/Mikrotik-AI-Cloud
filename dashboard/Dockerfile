@@ -22,7 +22,11 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/app/generated ./app/generated
+# Copy node_modules so prisma CLI and seed are available at runtime
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 USER nextjs
 EXPOSE 3000
 ENV HOSTNAME="0.0.0.0"
