@@ -27,8 +27,9 @@ export async function GET() {
   ).then((rows) => rows[0] ?? null)
     .catch(() => null)
 
-  // Get recent token usage (last 30 days)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  // Get today's token usage (aligns with daily enforcement)
+  const todayStart = new Date()
+  todayStart.setUTCHours(0, 0, 0, 0)
   const tokenUsage = await prisma.$queryRawUnsafe<
     Array<{
       totalIn: bigint
@@ -41,7 +42,7 @@ export async function GET() {
             COUNT(*) as count
      FROM "TokenUsage" WHERE "userId" = $1 AND timestamp >= $2`,
     userId,
-    thirtyDaysAgo
+    todayStart
   ).then((rows) => rows[0] ?? null)
     .catch(() => null)
 
@@ -89,7 +90,7 @@ export async function GET() {
     subscription: subscription ?? {
       plan: "FREE",
       status: "ACTIVE",
-      tokenLimit: 20000,
+      tokenLimit: 100,
       tokensUsed: 0,
       billingCycleStart: new Date(),
       billingCycleEnd: null,

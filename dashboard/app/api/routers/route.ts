@@ -5,6 +5,7 @@ import { getRouters, createRouter } from "@/lib/services/router.service"
 import { createCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
 import { createSstpTunnel } from "@/lib/services/sstp-tunnel.service"
 import { TUNNEL_SERVICES } from "@/lib/types"
+import { PLAN_LIMITS } from "@/lib/constants/plan-limits"
 
 export async function GET(request: NextRequest) {
   const session = await auth()
@@ -48,6 +49,27 @@ export async function POST(request: NextRequest) {
       return Response.json(
         { error: "Name, host, username, password, and userId are required" },
         { status: 400 }
+      )
+    }
+
+    // Enforce router limit based on target user's subscription plan
+    const targetSub = await prisma.$queryRawUnsafe<Array<{ plan: string }>>(
+      `SELECT plan FROM "Subscription" WHERE "userId" = $1 LIMIT 1`,
+      body.userId as string
+    ).then((rows) => rows[0] ?? { plan: "FREE" })
+
+    const planLimits = PLAN_LIMITS[targetSub.plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.FREE
+    const existingCount = await prisma.router.count({ where: { userId: body.userId as string } })
+
+    if (existingCount >= planLimits.maxRouters) {
+      return Response.json(
+        {
+          error: "router_limit_exceeded",
+          message: `Plan ${targetSub.plan} hanya mendukung maksimal ${planLimits.maxRouters} router. Saat ini: ${existingCount}.`,
+          limit: planLimits.maxRouters,
+          current: existingCount,
+        },
+        { status: 409 }
       )
     }
 

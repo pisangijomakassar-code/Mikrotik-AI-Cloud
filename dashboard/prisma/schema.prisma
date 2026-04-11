@@ -161,7 +161,7 @@ model SystemSetting {
 enum SubscriptionPlan {
   FREE
   PRO
-  ENTERPRISE
+  PREMIUM
 }
 
 enum SubscriptionStatus {
@@ -183,7 +183,7 @@ model Subscription {
   id               String             @id @default(cuid())
   plan             SubscriptionPlan   @default(FREE)
   status           SubscriptionStatus @default(ACTIVE)
-  tokenLimit       Int                @default(20000)
+  tokenLimit       Int                @default(100)
   tokensUsed       Int                @default(0)
   billingCycleStart DateTime          @default(now())
   billingCycleEnd   DateTime?

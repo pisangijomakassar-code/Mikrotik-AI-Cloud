@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   MessageSquare,
   Send,
@@ -18,6 +18,19 @@ import {
 } from "@/components/communication/recipient-selector"
 
 export default function CommunicationPage() {
+  const [planData, setPlanData] = useState<{ plan: string } | null>(null)
+  const [planLoading, setPlanLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/plan")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.subscription) setPlanData({ plan: data.subscription.plan })
+      })
+      .catch(() => {})
+      .finally(() => setPlanLoading(false))
+  }, [])
+
   const [mode, setMode] = useState<RecipientMode>("single")
   const [selectedResellerId, setSelectedResellerId] = useState("")
   const [customChatId, setCustomChatId] = useState("")
@@ -98,6 +111,32 @@ export default function CommunicationPage() {
         }
       )
     }
+  }
+
+  if (planLoading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
+      </div>
+    )
+  }
+
+  if (planData?.plan !== "PREMIUM") {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-6">
+        <MessageSquare className="h-16 w-16 text-slate-600" />
+        <h2 className="text-2xl font-headline font-bold text-[#dae2fd]">Premium Feature</h2>
+        <p className="text-slate-400 text-center max-w-md">
+          Communication panel tersedia hanya untuk plan Premium. Upgrade untuk mengirim pesan ke reseller via Telegram.
+        </p>
+        <a
+          href="/plan"
+          className="px-6 py-3 rounded-lg text-sm font-bold bg-linear-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:brightness-110 transition-all"
+        >
+          Upgrade ke Premium
+        </a>
+      </div>
+    )
   }
 
   return (

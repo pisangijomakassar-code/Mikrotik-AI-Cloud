@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { CreditCard, Zap, TrendingUp, FileText, Loader2, CheckCircle, Clock, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { PLAN_LIMITS } from "@/lib/constants/plan-limits"
 
 interface PlanData {
   subscription: {
@@ -38,23 +39,6 @@ interface PlanData {
   }>
 }
 
-const PLAN_DETAILS: Record<string, { label: string; color: string; features: string[] }> = {
-  FREE: {
-    label: "Free",
-    color: "text-slate-400",
-    features: ["20,000 tokens/month", "1 router", "Basic AI assistant", "Community support"],
-  },
-  PRO: {
-    label: "Pro",
-    color: "text-[#4cd7f6]",
-    features: ["200,000 tokens/month", "10 routers", "Advanced AI assistant", "Priority support", "Custom alerts"],
-  },
-  ENTERPRISE: {
-    label: "Enterprise",
-    color: "text-[#4ae176]",
-    features: ["Unlimited tokens", "Unlimited routers", "Full AI suite", "Dedicated support", "Custom integrations", "SLA guarantee"],
-  },
-}
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency }).format(amount / 100)
@@ -105,10 +89,12 @@ export default function PlanPage() {
   if (!data) return null
 
   const { subscription, usage, dailyUsage, invoices } = data
-  const planInfo = PLAN_DETAILS[subscription.plan] ?? PLAN_DETAILS.FREE
-  const usagePercent = subscription.tokenLimit > 0
-    ? Math.min(Math.round(((usage.totalIn + usage.totalOut) / subscription.tokenLimit) * 100), 100)
-    : 0
+  const planInfo = PLAN_LIMITS[subscription.plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.FREE
+  const usagePercent = subscription.tokenLimit === -1
+    ? 0
+    : subscription.tokenLimit > 0
+      ? Math.min(Math.round(((usage.totalIn + usage.totalOut) / subscription.tokenLimit) * 100), 100)
+      : 0
   const totalTokens = usage.totalIn + usage.totalOut
 
   // Find max daily usage for bar chart scaling
@@ -160,8 +146,8 @@ export default function PlanPage() {
               ))}
             </div>
 
-            {subscription.plan !== "ENTERPRISE" && (
-              <button className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:brightness-110 transition-all">
+            {subscription.plan !== "PREMIUM" && (
+              <button className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-linear-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:brightness-110 transition-all">
                 Upgrade Plan
               </button>
             )}
@@ -171,7 +157,7 @@ export default function PlanPage() {
           <div className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Available Plans</span>
             <div className="mt-4 space-y-3">
-              {Object.entries(PLAN_DETAILS).map(([key, plan]) => (
+              {Object.entries(PLAN_LIMITS).map(([key, plan]) => (
                 <div
                   key={key}
                   className={cn(
@@ -203,7 +189,7 @@ export default function PlanPage() {
                 <Zap className="h-4 w-4 text-[#4cd7f6]" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Token Usage</span>
               </div>
-              <span className="text-xs text-slate-500">This billing cycle</span>
+              <span className="text-xs text-slate-500">Today&apos;s usage</span>
             </div>
 
             <div className="grid grid-cols-3 gap-6 mb-6">
@@ -211,7 +197,9 @@ export default function PlanPage() {
                 <p className="text-2xl font-headline font-bold text-[#dae2fd]">
                   {totalTokens.toLocaleString()}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-1">of {subscription.tokenLimit.toLocaleString()} tokens</p>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  of {subscription.tokenLimit === -1 ? "∞" : subscription.tokenLimit.toLocaleString()} tokens/day
+                </p>
               </div>
               <div>
                 <p className="text-2xl font-headline font-bold text-[#4cd7f6]">

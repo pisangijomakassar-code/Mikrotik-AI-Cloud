@@ -46,7 +46,7 @@ export function PlanCard() {
       <Link href="/plan" className="block">
         <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors">
           <div className="flex items-center gap-3 mb-3">
-            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "ENTERPRISE" ? "text-[#4ae176]" : planInfo?.plan === "PRO" ? "text-[#4cd7f6]" : "text-muted-foreground")} />
+            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "PREMIUM" ? "text-[#4ae176]" : planInfo?.plan === "PRO" ? "text-[#4cd7f6]" : "text-muted-foreground")} />
             <span className="text-xs font-headline font-bold text-foreground">
               {planInfo ? `AI AGENT ${planInfo.plan}` : "AI AGENT"}
             </span>
@@ -57,15 +57,23 @@ export function PlanCard() {
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
-                    planInfo.tokensUsed / planInfo.tokenLimit > 0.9 ? "bg-[#ffb4ab]"
+                    planInfo.tokenLimit === -1
+                      ? "bg-[#4cd7f6]"
+                      : planInfo.tokensUsed / planInfo.tokenLimit > 0.9 ? "bg-[#ffb4ab]"
                       : planInfo.tokensUsed / planInfo.tokenLimit > 0.7 ? "bg-amber-400"
                       : "bg-[#4cd7f6]"
                   )}
-                  style={{ width: `${Math.min((planInfo.tokensUsed / planInfo.tokenLimit) * 100, 100)}%` }}
+                  style={{
+                    width: planInfo.tokenLimit === -1
+                      ? "0%"
+                      : `${Math.min((planInfo.tokensUsed / planInfo.tokenLimit) * 100, 100)}%`
+                  }}
                 />
               </div>
               <p className="text-[10px] mt-2 text-muted-foreground">
-                Tokens: {formatTokens(planInfo.tokensUsed)} / {formatTokens(planInfo.tokenLimit)}
+                {planInfo.tokenLimit === -1
+                  ? `Tokens: ${formatTokens(planInfo.tokensUsed)} / ∞`
+                  : `Tokens: ${formatTokens(planInfo.tokensUsed)} / ${formatTokens(planInfo.tokenLimit)}`}
               </p>
             </>
           ) : (

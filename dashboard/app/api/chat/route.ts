@@ -56,6 +56,38 @@ export async function POST(request: Request) {
       })
     }
 
+    // Pre-flight: enforce daily token limit
+    const subscription = await prisma.$queryRawUnsafe<
+      Array<{ plan: string; tokenLimit: number }>
+    >(
+      `SELECT plan, "tokenLimit" FROM "Subscription" WHERE "userId" = $1 LIMIT 1`,
+      session.user.id as string
+    ).then((rows) => rows[0] ?? { plan: "FREE", tokenLimit: 100 })
+
+    if (subscription.tokenLimit !== -1) {
+      const todayStart = new Date()
+      todayStart.setUTCHours(0, 0, 0, 0)
+
+      const usageToday = await prisma.$queryRawUnsafe<Array<{ total: bigint }>>(
+        `SELECT COALESCE(SUM("tokensIn" + "tokensOut"), 0)::bigint AS total
+         FROM "TokenUsage" WHERE "userId" = $1 AND timestamp >= $2`,
+        session.user.id as string,
+        todayStart
+      ).then((rows) => Number(rows[0]?.total ?? 0))
+
+      if (usageToday >= subscription.tokenLimit) {
+        return Response.json(
+          {
+            error: "daily_token_limit_exceeded",
+            message: `Batas token harian (${subscription.tokenLimit}) sudah tercapai. Upgrade plan untuk mendapatkan lebih banyak token.`,
+            used: usageToday,
+            limit: subscription.tokenLimit,
+          },
+          { status: 429 }
+        )
+      }
+    }
+
     // Build the single message (nanobot API accepts 1 user message per request).
     // Context is maintained server-side via session_id.
     let userContent: string | Array<{ type: string; text?: string; image_url?: { url: string } }> = message
