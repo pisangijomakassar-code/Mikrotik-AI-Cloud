@@ -1062,9 +1062,28 @@ class HealthHandler(BaseHTTPRequestHandler):
 
             with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read())
-                _send_json(self, result)
 
-        except urllib.error.URLError as e:
+            # nanobot serve hardcodes usage=0 — estimate from char length (1 token ≈ 4 chars)
+            usage = result.get("usage", {})
+            if not usage.get("prompt_tokens") and not usage.get("completion_tokens"):
+                input_chars = sum(
+                    len(str(m.get("content", "")))
+                    for m in body.get("messages", [])
+                )
+                output_chars = len(
+                    result.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                )
+                result["usage"] = {
+                    "prompt_tokens": max(1, input_chars // 4),
+                    "completion_tokens": max(1, output_chars // 4),
+                    "total_tokens": max(1, (input_chars + output_chars) // 4),
+                }
+
+            _send_json(self, result)
+
+        except urllib.error.URLError:
             _send_json(self, {
                 "choices": [{"message": {"role": "assistant", "content": "AI Agent sedang tidak tersedia. Coba lagi sebentar."}}],
             })
