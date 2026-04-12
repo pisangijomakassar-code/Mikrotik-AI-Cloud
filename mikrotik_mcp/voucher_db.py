@@ -230,6 +230,34 @@ class VoucherDB:
                 result.append(d)
             return result
 
+    def get_voucher_batches(self, telegram_id: str, limit: int = 5) -> list[dict]:
+        """Return recent VoucherBatch records for a user (by telegram_id)."""
+        if not self._pool:
+            return []
+
+        with self._conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT vb."id", vb."routerName", vb."profile", vb."count",
+                       vb."pricePerUnit", vb."vouchers", vb."source", vb."createdAt"
+                FROM "VoucherBatch" vb
+                JOIN "User" u ON u."id" = vb."userId"
+                WHERE u."telegramId" = %s
+                ORDER BY vb."createdAt" DESC
+                LIMIT %s
+                """,
+                (telegram_id, limit),
+            )
+            rows = cur.fetchall()
+            result = []
+            for row in rows:
+                d = dict(row)
+                if isinstance(d.get("createdAt"), datetime):
+                    d["createdAt"] = d["createdAt"].strftime("%d-%m-%Y %H:%M:%S")
+                result.append(d)
+            return result
+
     def get_owner_telegram_id(self, reseller_id: str) -> str | None:
         """Get the owner (User) telegram ID for a reseller. Used to send deposit notifications."""
         if not self._pool:

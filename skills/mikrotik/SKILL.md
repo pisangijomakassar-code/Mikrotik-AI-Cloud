@@ -218,6 +218,7 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | Tool | Parameters | Description |
 |------|-----------|-------------|
 | `generate_hotspot_vouchers` | `user_id, count, profile, prefix?, password_length?, username_length?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, server?, router?` | Generate voucher dengan username/password acak (max 100). Hasil berisi `profile_details` (rate_limit, session_timeout, dll). **CONFIRM.** |
+| `get_voucher_history` | `user_id, limit?` | Ambil riwayat voucher yang pernah digenerate (dari DB, tidak perlu koneksi router). Gunakan saat user tanya "voucher tadi apa?", "kasih liat voucher terakhir", dll. |
 | `get_hotspot_voucher_stats` | `user_id, router?` | Dashboard stats: total/enabled/disabled, breakdown by profile |
 | `get_hotspot_user_detail` | `user_id, username, router?` | Full user detail: profile, limits, **bandwidth usage (bytes_in/bytes_out)**, uptime, server, IP/MAC bindings, email |
 | `bulk_enable_hotspot_users` | `user_id, usernames (comma-separated), router?` | Enable multiple users at once. **CONFIRM.** |
