@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Receipt, ChevronLeft, ChevronRight, PlusCircle, Zap, Copy, Check, Loader2, X } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAllVouchers } from "@/hooks/use-vouchers"
 import { useResellers } from "@/hooks/use-resellers"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
@@ -40,10 +41,8 @@ function sourceBadge(source: string) {
 
 interface GeneratedVoucher { username: string; password: string }
 
-const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-const rand = (len: number) => Array.from({ length: len }, () => charset[Math.floor(Math.random() * charset.length)]).join("")
-
 function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient()
   const { data: profiles, isLoading: profilesLoading } = useHotspotProfiles()
   const [profile, setProfile] = useState("")
   const [count, setCount] = useState(1)
@@ -57,22 +56,25 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
     const qty = Math.max(1, Math.min(count, 50))
     setGenerating(true)
     try {
-      const results: GeneratedVoucher[] = []
-      for (let i = 0; i < qty; i++) {
-        const username = (prefix || "v") + rand(5)
-        const password = rand(6)
-        const res = await fetch("/api/hotspot/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: username, password, profile }),
-        })
-        if (!res.ok) throw new Error("Failed")
-        results.push({ username, password })
+      const res = await fetch("/api/vouchers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile, count: qty, prefix: prefix || "" }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Failed")
       }
-      setVouchers((prev) => [...results, ...prev])
-      toast.success(`${results.length} voucher berhasil dibuat`)
-    } catch {
-      toast.error("Gagal membuat voucher")
+      const result = await res.json()
+      const generated: GeneratedVoucher[] = (result.vouchers ?? []).map(
+        (v: { username: string; password: string }) => ({ username: v.username, password: v.password })
+      )
+      setVouchers((prev) => [...generated, ...prev])
+      toast.success(`${generated.length} voucher berhasil dibuat`)
+      // Refresh the history table
+      queryClient.invalidateQueries({ queryKey: ["vouchers"] })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membuat voucher")
     } finally {
       setGenerating(false)
     }
