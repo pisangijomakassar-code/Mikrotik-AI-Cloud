@@ -203,7 +203,17 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 > **Voucher vs User — PENTING:**
 > - User bilang **"buat voucher"**, **"generate voucher"**, **"cetak voucher"** → SELALU gunakan `generate_hotspot_vouchers` (username/password di-generate otomatis secara acak, jangan tanya nama user)
 > - User bilang **"tambah user"**, **"buat user"**, **"daftarkan user"** dengan nama spesifik → gunakan `add_hotspot_user`
-> - Setelah `generate_hotspot_vouchers` berhasil, **tampilkan detail voucher**: username, password, profile, dan info dari `profile_details` (durasi/session_timeout, rate_limit, dll). Format sebagai daftar voucher yang siap dibagikan.
+>
+> **Format output setelah `generate_hotspot_vouchers` berhasil** — tampilkan setiap voucher seperti ini (pisahkan dengan baris kosong jika lebih dari 1):
+> ```
+> 🎟️ Kode voucher: {username}
+> Password: {password}
+> Tgl create: {created_at}
+> Masa berlaku: {profile_details.session_timeout atau limit_uptime}
+> Harga: {parse dari nama profile, misal "New-2HP-100K" → "100 k", "5rb" → "5 rb"; jika tidak bisa diparse → "-"}
+> ```
+> "Masa berlaku" prioritaskan `session_timeout`, fallback ke `limit_uptime`. Jika keduanya kosong, tulis "-".
+> "Harga" ekstrak angka dari nama profile: cari pola seperti "100K", "50K", "5rb", "10rb" (case-insensitive).
 
 | Tool | Parameters | Description |
 |------|-----------|-------------|

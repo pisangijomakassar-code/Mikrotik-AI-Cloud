@@ -16,6 +16,7 @@ import socket
 import string
 import time
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 import librouteros
@@ -1896,7 +1897,11 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
                 try:
                     resource.add(**params)
                     existing.add(uname)
-                    vouchers.append({"username": uname, "password": pwd})
+                    vouchers.append({
+                        "username": uname,
+                        "password": pwd,
+                        "created_at": datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S"),
+                    })
                 except Exception as e:
                     errors.append(f"Voucher #{i+1} ({uname}): {e}")
 
