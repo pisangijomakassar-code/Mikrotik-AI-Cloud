@@ -1916,10 +1916,25 @@ def generate_hotspot_vouchers(user_id: str, count: int, profile: str, prefix: st
             except Exception as e:
                 logger.warning("Failed to persist voucher batch to DB: %s", e)
 
+            # Fetch profile details so the LLM can show duration/speed in response
+            profile_obj = next((p for p in profiles if p.get("name") == profile), {})
+            profile_details: dict = {}
+            if profile_obj.get("session-timeout"):
+                profile_details["session_timeout"] = profile_obj["session-timeout"]
+            if profile_obj.get("limit-uptime"):
+                profile_details["limit_uptime"] = profile_obj["limit-uptime"]
+            if profile_obj.get("shared-users"):
+                profile_details["shared_users"] = profile_obj["shared-users"]
+            if profile_obj.get("rate-limit"):
+                profile_details["rate_limit"] = profile_obj["rate-limit"]
+            if profile_obj.get("address-list"):
+                profile_details["address_list"] = profile_obj["address-list"]
+
             result: dict = {
                 "status": "ok",
                 "count": len(vouchers),
                 "profile": profile,
+                "profile_details": profile_details,
                 "vouchers": vouchers,
             }
             if errors:
