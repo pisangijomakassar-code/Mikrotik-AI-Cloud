@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Receipt, ChevronLeft, ChevronRight, PlusCircle, Zap, Copy, Check, Loader2, X } from "lucide-react"
+import { Receipt, ChevronLeft, ChevronRight, PlusCircle, Zap, Copy, Check, Loader2, X, Printer } from "lucide-react"
+import { PrintVoucherSheet } from "@/components/print-voucher-sheet"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAllVouchers } from "@/hooks/use-vouchers"
 import { useResellers } from "@/hooks/use-resellers"
@@ -50,6 +51,7 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
   const [generating, setGenerating] = useState(false)
   const [vouchers, setVouchers] = useState<GeneratedVoucher[]>([])
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+  const [showPrint, setShowPrint] = useState(false)
 
   const handleGenerate = async () => {
     if (!profile) { toast.error("Pilih profile terlebih dahulu"); return }
@@ -87,6 +89,7 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
       <div className="w-full max-w-lg mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
         <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between">
@@ -120,6 +123,15 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
             {generating ? "Generating..." : "Generate Voucher"}
           </button>
           {vouchers.length > 0 && (
+            <button
+              onClick={() => setShowPrint(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border border-white/10 text-[#dae2fd] hover:bg-white/5 transition-all"
+            >
+              <Printer className="h-4 w-4 shrink-0" />
+              Cetak Voucher ({vouchers.length})
+            </button>
+          )}
+          {vouchers.length > 0 && (
             <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-hide">
               {vouchers.map((v, i) => (
                 <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0b1326] border border-white/5">
@@ -132,6 +144,15 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+
+    {showPrint && (
+      <PrintVoucherSheet
+        vouchers={vouchers}
+        profile={profile}
+        onClose={() => setShowPrint(false)}
+      />
+    )}
+    </>
   )
 }
 
