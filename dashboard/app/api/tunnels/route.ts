@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { createCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
 import { createSstpTunnel } from "@/lib/services/sstp-tunnel.service"
 import { TUNNEL_SERVICES } from "@/lib/types"
+import { PLAN_LIMITS, type PlanKey } from "@/lib/constants/plan-limits"
 
 // GET /api/tunnels
 // Returns all tunnels with their ports for the current user's routers.
@@ -69,6 +70,14 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Tunnel already exists for this router" }, { status: 409 })
     }
 
+    // Determine allowed ports based on the router owner's subscription plan
+    const ownerSubscription = await prisma.subscription.findUnique({
+      where: { userId: router.userId },
+      select: { plan: true },
+    })
+    const ownerPlan = (ownerSubscription?.plan ?? "FREE") as PlanKey
+    const { allowedTunnelPorts } = PLAN_LIMITS[ownerPlan]
+
     const lanIp = routerLanIp ?? "192.168.88.1"
 
     if (method === "CLOUDFLARE") {
@@ -131,7 +140,7 @@ export async function POST(request: NextRequest) {
             create: TUNNEL_SERVICES.map((s) => ({
               serviceName: s.serviceName,
               remotePort: s.remotePort,
-              enabled: true,
+              enabled: allowedTunnelPorts.includes(s.serviceName),
             })),
           },
         },

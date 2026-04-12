@@ -601,53 +601,70 @@ def list_hotspot_active(user_id: str, router: str = "") -> list[dict]:
 
 
 @mcp.tool()
-def list_hotspot_users(user_id: str, router: str = "") -> list[dict]:
-    """List all configured hotspot user accounts.
+def list_hotspot_users(user_id: str, profile: str = "", router: str = "") -> list[dict]:
+    """List configured hotspot user accounts. Always filter by profile when the user asks for users
+    in a specific profile — do NOT list all users if a profile is mentioned.
 
     Args:
         user_id: Telegram user ID (required)
+        profile: Filter by profile name (e.g., 'free xxx', 'Premium'). Empty = return all (warning: can be thousands).
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return [conn]
     try:
-        rows = _query_path("/ip/hotspot/user", conn["host"], conn["port"], conn["username"], conn["password"])
-        registry.update_last_seen(user_id, conn["name"])
-        return [
-            {
-                "name": r.get("name"),
-                "profile": r.get("profile"),
-                "server": r.get("server", ""),
-                "limit_uptime": r.get("limit-uptime", ""),
-                "limit_bytes_total": r.get("limit-bytes-total", ""),
-                "disabled": r.get("disabled"),
-                "comment": r.get("comment", ""),
-            }
-            for r in rows
-        ]
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("ip", "hotspot", "user")
+            if profile:
+                rows = list(resource.select().where(Key("profile") == profile))
+            else:
+                rows = list(resource)
+            registry.update_last_seen(user_id, conn["name"])
+            return [
+                {
+                    "name": r.get("name"),
+                    "profile": r.get("profile"),
+                    "server": r.get("server", ""),
+                    "limit_uptime": r.get("limit-uptime", ""),
+                    "limit_bytes_total": r.get("limit-bytes-total", ""),
+                    "disabled": r.get("disabled"),
+                    "comment": r.get("comment", ""),
+                }
+                for r in rows
+            ]
     except Exception as e:
         return [{"error": f"Failed to list hotspot users: {e}"}]
 
 
 @mcp.tool()
-def count_hotspot_users(user_id: str, router: str = "") -> dict:
+def count_hotspot_users(user_id: str, profile: str = "", router: str = "") -> dict:
     """Count total hotspot users (without listing all of them). Much faster for large user lists.
+    When counting users in a specific profile, always pass the profile parameter.
 
     Args:
         user_id: Telegram user ID (required)
+        profile: Filter by profile name. Empty = count all profiles.
         router: Router name. Empty = default router.
     """
     conn = _resolve_connection(user_id, router)
     if "error" in conn:
         return conn
     try:
-        rows = _query_path("/ip/hotspot/user", conn["host"], conn["port"], conn["username"], conn["password"])
-        registry.update_last_seen(user_id, conn["name"])
-        total = len(rows)
-        enabled = len([r for r in rows if r.get("disabled", "false") != "true"])
-        disabled = total - enabled
-        return {"total_users": total, "enabled": enabled, "disabled": disabled}
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("ip", "hotspot", "user")
+            if profile:
+                rows = list(resource.select().where(Key("profile") == profile))
+            else:
+                rows = list(resource)
+            registry.update_last_seen(user_id, conn["name"])
+            total = len(rows)
+            enabled = len([r for r in rows if r.get("disabled", "false") != "true"])
+            disabled = total - enabled
+            result = {"total_users": total, "enabled": enabled, "disabled": disabled}
+            if profile:
+                result["profile"] = profile
+            return result
     except Exception as e:
         return {"error": f"Failed to count hotspot users: {e}"}
 

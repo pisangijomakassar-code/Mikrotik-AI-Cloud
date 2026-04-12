@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUpdateTunnelPort } from "@/hooks/use-tunnels"
+import { usePlan } from "@/hooks/use-plan"
+import { PLAN_LIMITS } from "@/lib/constants/plan-limits"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
@@ -37,8 +39,10 @@ const SERVICE_LABEL: Record<string, string> = {
 
 export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
   const updatePort = useUpdateTunnelPort()
+  const { data: plan = "FREE" } = usePlan()
   const [pendingPortId, setPendingPortId] = useState<string | null>(null)
 
+  const { allowedTunnelPorts } = PLAN_LIMITS[plan]
   const enabledCount = tunnel.ports.filter((p) => p.enabled).length
 
   async function handleToggle(port: TunnelPort, checked: boolean) {
@@ -106,6 +110,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
             <tbody className="divide-y divide-white/5">
               {tunnel.ports.map((port) => {
                 const isRequired = port.serviceName === "api"
+                const isPlanLocked = !isRequired && !allowedTunnelPorts.includes(port.serviceName)
                 const isPending = pendingPortId === port.id
                 const connectionInfo = getConnectionInfo(port, tunnel)
 
@@ -114,7 +119,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                     key={port.id}
                     className={cn(
                       "transition-colors",
-                      isRequired ? "opacity-80" : "hover:bg-white/3"
+                      isRequired || isPlanLocked ? "opacity-70" : "hover:bg-white/3"
                     )}
                   >
                     {/* Service Name */}
@@ -133,6 +138,16 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                             </TooltipContent>
                           </Tooltip>
                         )}
+                        {isPlanLocked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock className="h-3 w-3 text-amber-500/70 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Upgrade ke Pro atau Premium untuk mengaktifkan port ini
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                     </td>
 
@@ -144,7 +159,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                     </td>
 
                     {/* Connection Info */}
-                    <td className="px-4 py-3 max-w-[220px]">
+                    <td className="px-4 py-3 max-w-55">
                       {isConnected && connectionInfo !== "—" ? (
                         <span
                           className="font-mono-tech text-[10px] text-slate-400 truncate block"
@@ -173,6 +188,22 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                           </TooltipTrigger>
                           <TooltipContent>
                             Tidak dapat dinonaktifkan — diperlukan untuk AI Agent
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : isPlanLocked ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex justify-end">
+                              <Switch
+                                checked={false}
+                                disabled
+                                size="sm"
+                                className="opacity-40 cursor-not-allowed"
+                              />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Upgrade ke Pro atau Premium untuk mengaktifkan port ini
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -205,6 +236,17 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
           <div className="px-4 py-2.5 bg-amber-400/5 border-t border-amber-400/10">
             <p className="text-[10px] text-amber-400">
               Batas maksimal {MAX_ENABLED_PORTS} port aktif tercapai. Nonaktifkan satu port untuk mengaktifkan yang lain.
+            </p>
+          </div>
+        )}
+
+        {/* Free tier notice */}
+        {plan === "FREE" && (
+          <div className="px-4 py-2.5 bg-[#4cd7f6]/5 border-t border-[#4cd7f6]/10">
+            <p className="text-[10px] text-[#4cd7f6]/80">
+              Plan Free hanya mendukung port API. Upgrade ke{" "}
+              <span className="font-bold">Pro</span> atau{" "}
+              <span className="font-bold">Premium</span> untuk port lainnya.
             </p>
           </div>
         )}

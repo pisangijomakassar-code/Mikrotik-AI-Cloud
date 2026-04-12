@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server"
 import { readFile } from "fs/promises"
 import { join } from "path"
 import { existsSync } from "fs"
+import { auth } from "@/lib/auth"
 
 const DOCS_MAP: Record<string, string> = {
   "user-guide": "USER_GUIDE.md",
   "api-reference": "API_REFERENCE.md",
   "admin-guide": "ADMIN_GUIDE.md",
 }
+
+const ADMIN_ONLY_DOCS = ["admin-guide"]
 
 function findDocsDir(): string {
   // Try multiple paths to handle different deployment scenarios
@@ -28,7 +31,16 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const { slug } = await params
+
+  if (ADMIN_ONLY_DOCS.includes(slug) && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
 
   const filename = DOCS_MAP[slug]
   if (!filename) {

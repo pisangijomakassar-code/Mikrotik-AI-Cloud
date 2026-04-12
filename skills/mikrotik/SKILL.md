@@ -178,8 +178,8 @@ All tools require `user_id`. Tools that interact with a router accept an optiona
 | `list_hotspot_active` | `user_id, router?` | Currently connected hotspot users |
 | `count_hotspot_active` | `user_id, router?` | Count active hotspot sessions (just the number) |
 | `kick_hotspot_user` | `user_id, session_id, router?` | Disconnect active hotspot session. **CONFIRM.** |
-| `list_hotspot_users` | `user_id, router?` | All hotspot user accounts (warning: can be 1000+) |
-| `count_hotspot_users` | `user_id, router?` | Count total/enabled/disabled hotspot users (use this instead of listing all) |
+| `list_hotspot_users` | `user_id, profile?, router?` | Hotspot user accounts. **Always pass `profile` when user asks about a specific profile** (e.g. "user di profile free") to avoid fetching thousands of rows |
+| `count_hotspot_users` | `user_id, profile?, router?` | Count total/enabled/disabled hotspot users. Pass `profile` to count only within that profile |
 | `search_hotspot_user` | `user_id, username, router?` | Search for specific user by name (exact + partial match) |
 | `add_hotspot_user` | `user_id, username, password, profile?, server?, limit_uptime?, limit_bytes_total?, limit_bytes_in?, limit_bytes_out?, comment?, address?, mac_address?, email?, router?` | Create hotspot user with optional limits, server, and bindings. **CONFIRM.** |
 | `remove_hotspot_user` | `user_id, username, router?` | Delete hotspot user. **CONFIRM.** |

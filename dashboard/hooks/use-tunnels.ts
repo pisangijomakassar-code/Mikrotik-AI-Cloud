@@ -106,6 +106,7 @@ export function useDeleteTunnel() {
       return apiClient.delete<void>(`/api/tunnels/${routerId}`)
     },
     onSuccess: (_, routerId) => {
+      queryClient.invalidateQueries({ queryKey: tunnelKeys.all })
       queryClient.invalidateQueries({ queryKey: tunnelKeys.byRouter(routerId) })
       queryClient.invalidateQueries({ queryKey: tunnelKeys.status(routerId) })
       queryClient.invalidateQueries({ queryKey: ["routers"] })

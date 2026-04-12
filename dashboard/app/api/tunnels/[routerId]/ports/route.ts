@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { PLAN_LIMITS, type PlanKey } from "@/lib/constants/plan-limits"
 
 // PATCH /api/tunnels/[routerId]/ports
 // Body: { portId: string, enabled: boolean }
@@ -55,6 +56,25 @@ export async function PATCH(
         { error: "The 'api' port (8728) cannot be disabled — it is required for the AI agent to communicate with your router" },
         { status: 422 }
       )
+    }
+
+    // Free tier can only enable the API port — other ports require Pro or Premium
+    if (enabled && port.serviceName !== "api") {
+      const subscription = await prisma.subscription.findUnique({
+        where: { userId: session.user.id },
+        select: { plan: true },
+      })
+      const plan = (subscription?.plan ?? "FREE") as PlanKey
+      const { allowedTunnelPorts } = PLAN_LIMITS[plan]
+      if (!allowedTunnelPorts.includes(port.serviceName)) {
+        return Response.json(
+          {
+            error: "upgrade_required",
+            message: `Port '${port.serviceName}' hanya tersedia untuk plan Pro atau Premium. Upgrade plan Anda untuk mengaktifkan port ini.`,
+          },
+          { status: 403 }
+        )
+      }
     }
 
     // Enforce a maximum of 5 enabled ports across the tunnel

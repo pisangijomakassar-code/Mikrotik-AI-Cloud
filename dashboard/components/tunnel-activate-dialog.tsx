@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Cloud, Shield, X } from "lucide-react"
+import { Cloud, Shield, X, CheckCircle2, MessageCircle } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { useCreateTunnel } from "@/hooks/use-tunnels"
+import { useAuth } from "@/hooks/use-auth"
 import { TunnelSetupWizard } from "@/components/tunnel-setup-wizard"
 import { TUNNEL_SERVICES } from "@/lib/types/index"
 import type { TunnelMethod } from "@/lib/types/index"
@@ -25,6 +26,11 @@ const METHOD_OPTIONS = [
     badge: "RouterOS 7+",
     color: "text-primary border-primary/50 bg-primary/8",
     badgeColor: "bg-primary/10 text-primary",
+    features: [
+      "Tidak perlu IP publik atau port forwarding",
+      "Menggunakan Docker container di RouterOS 7",
+      "Cocok untuk RB5009, CCR2004, hEX S, dll",
+    ],
   },
   {
     value: "SSTP" as TunnelMethod,
@@ -34,16 +40,78 @@ const METHOD_OPTIONS = [
     badge: "RouterOS 6",
     color: "text-amber-400 border-amber-400/50 bg-amber-400/8",
     badgeColor: "bg-amber-400/10 text-amber-400",
+    features: [
+      "Tidak perlu Docker atau container support",
+      "SSTP client built-in di RouterOS 6.x",
+      "Cocok untuk RB750, RB951, RB2011, dll",
+    ],
   },
 ]
 
 type Step = "config" | "setup"
+
+// ── Non-admin contact panel ───────────────────────────────────────────────────
+
+function ContactAdminPanel({
+  routerName,
+  onClose,
+}: {
+  routerName: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
+      <div className="w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.4)] overflow-hidden">
+        <div className="p-6 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-headline font-bold text-foreground">Setup Tunnel</h3>
+            <p className="text-sm text-muted-foreground/70 mt-0.5">{routerName}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground/70 hover:text-foreground transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-8 flex flex-col items-center text-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <MessageCircle className="h-7 w-7 text-primary" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="font-headline font-bold text-foreground text-base">
+              Hubungi Admin untuk Mengaktifkan
+            </p>
+            <p className="text-xs text-muted-foreground/70 max-w-xs leading-relaxed">
+              Tunnel perlu disetup oleh admin. Setelah aktif, kamu bisa mengelola port dan melihat instruksi setup dari halaman ini.
+            </p>
+          </div>
+          <div className="w-full mt-2 p-3 bg-muted/60 rounded-xl border border-border text-left space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Router</p>
+            <p className="text-sm font-mono text-foreground font-semibold">{routerName}</p>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 rounded-lg text-xs font-headline font-bold border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-all"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main dialog ───────────────────────────────────────────────────────────────
 
 export function TunnelActivateDialog({
   routerId,
   routerName,
   onClose,
 }: TunnelActivateDialogProps) {
+  const { isAdmin } = useAuth()
   const [step, setStep] = useState<Step>("config")
   const [method, setMethod] = useState<TunnelMethod>("CLOUDFLARE")
   const [routerLanIp, setRouterLanIp] = useState("192.168.88.1")
@@ -52,6 +120,11 @@ export function TunnelActivateDialog({
   )
 
   const createTunnel = useCreateTunnel()
+
+  // Non-admin users cannot provision tunnels — show contact admin panel
+  if (!isAdmin) {
+    return <ContactAdminPanel routerName={routerName} onClose={onClose} />
+  }
 
   function togglePort(serviceName: string, isRequired: boolean) {
     if (isRequired) return
@@ -132,6 +205,16 @@ export function TunnelActivateDialog({
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground/70 mt-0.5">{opt.description}</p>
+                      {selected && (
+                        <ul className="mt-2 space-y-1">
+                          {opt.features.map((f) => (
+                            <li key={f} className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+                              <CheckCircle2 className="h-3 w-3 shrink-0 opacity-60" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </button>
                 )
@@ -193,6 +276,9 @@ export function TunnelActivateDialog({
                   )
                 })}
               </div>
+              <p className="text-[10px] text-muted-foreground/50 ml-1">
+                Port yang diizinkan ditentukan oleh plan pengguna. Port di luar plan akan otomatis dinonaktifkan.
+              </p>
             </div>
           )}
 
@@ -200,7 +286,7 @@ export function TunnelActivateDialog({
           {method === "SSTP" && (
             <div className="p-3 bg-amber-400/5 border border-amber-400/10 rounded-xl">
               <p className="text-[11px] text-amber-400">
-                SSTP VPN akan membuka semua port melalui IP yang ditetapkan secara otomatis.
+                SSTP VPN akan mengaktifkan port sesuai plan pengguna secara otomatis.
               </p>
             </div>
           )}
