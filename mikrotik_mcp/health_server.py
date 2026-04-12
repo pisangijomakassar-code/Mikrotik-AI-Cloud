@@ -658,15 +658,18 @@ class HealthHandler(BaseHTTPRequestHandler):
                 return
 
             prefix = body.get("prefix", "v")
-            pwd_len = int(body.get("passwordLength", 6))
-            usr_len = int(body.get("usernameLength", 6))
-            server = body.get("server")
-            router_name = body.get("router")
+            # Accept both camelCase and snake_case field names
+            pwd_len = int(body.get("password_length") or body.get("passwordLength") or 6)
+            usr_len = int(body.get("username_length") or body.get("usernameLength") or 6)
+            server = body.get("server") or ""
+            router_name = body.get("router_name") or body.get("router") or ""
+            reseller_id = body.get("reseller_id") or body.get("resellerId")
+            price_per_unit = int(body.get("price_per_unit") or body.get("pricePerUnit") or 0)
 
             charset = string.ascii_lowercase + string.digits
 
             registry = _get_registry()
-            conn = registry.resolve(user_id, router_name)
+            conn = registry.resolve(user_id, router_name or None)
 
             vouchers = []
             with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
@@ -696,9 +699,14 @@ class HealthHandler(BaseHTTPRequestHandler):
                         profile=profile,
                         vouchers=vouchers,
                         source="dashboard",
+                        reseller_id=reseller_id,
+                        price_per_unit=price_per_unit,
                     )
-                except Exception:
-                    pass  # DB persistence is best-effort
+                    logger.info("VoucherBatch saved: %s vouchers, profile=%s, user=%s", len(vouchers), profile, user_id)
+                except Exception as e:
+                    logger.error("Failed to save VoucherBatch to DB: %s", e)
+            else:
+                logger.warning("VoucherDB not available — batch not persisted (DATABASE_URL missing?)")
 
             _send_json(self, {"status": "ok", "vouchers": vouchers, "count": len(vouchers)})
         except Exception as e:
