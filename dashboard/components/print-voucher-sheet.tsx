@@ -1,14 +1,54 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Printer, X } from "lucide-react"
+import QRCode from "qrcode"
+import { useVoucherProfileSettings } from "@/hooks/use-voucher-profiles"
 
 interface PrintVoucherSheetProps {
   vouchers: { username: string; password: string }[]
   profile: string
+  /** Optional override: the captive-portal login URL (e.g. `http://10.5.50.1/login`).
+   *  When set, the QR encodes an auto-login URL with credentials prefilled.
+   *  When omitted, the QR encodes `username\npassword` as plain text. */
+  hotspotLoginUrl?: string
   onClose: () => void
 }
 
-export function PrintVoucherSheet({ vouchers, profile, onClose }: PrintVoucherSheetProps) {
+export function PrintVoucherSheet({ vouchers, profile, hotspotLoginUrl, onClose }: PrintVoucherSheetProps) {
+  const { data: profileSettings } = useVoucherProfileSettings()
+  const qrColor = profileSettings?.find((s) => s.profileName === profile)?.qrColor ?? "#000000"
+
+  const [qrMap, setQrMap] = useState<Record<string, string>>({})
+
+  // Generate QR codes for all vouchers once (by username+password key)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const next: Record<string, string> = {}
+      for (const v of vouchers) {
+        const key = `${v.username}|${v.password}`
+        if (qrMap[key]) { next[key] = qrMap[key]; continue }
+        const content = hotspotLoginUrl
+          ? `${hotspotLoginUrl}?username=${encodeURIComponent(v.username)}&password=${encodeURIComponent(v.password)}`
+          : `${v.username}\n${v.password}`
+        try {
+          next[key] = await QRCode.toDataURL(content, {
+            margin: 0,
+            width: 120,
+            color: { dark: qrColor, light: "#ffffff" },
+            errorCorrectionLevel: "M",
+          })
+        } catch {
+          next[key] = ""
+        }
+      }
+      if (!cancelled) setQrMap(next)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vouchers, qrColor, hotspotLoginUrl])
+
   const now = new Date().toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
@@ -78,27 +118,48 @@ export function PrintVoucherSheet({ vouchers, profile, onClose }: PrintVoucherSh
               margin: "0 auto",
             }}
           >
-            {vouchers.map((v, i) => (
-              <div
-                key={i}
-                className="voucher-card bg-white border border-slate-300 rounded p-2"
-                style={{ fontSize: "8pt", lineHeight: "1.35" }}
-              >
-                <p style={{ fontSize: "6pt", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Voucher Hotspot
-                </p>
-                <p style={{ fontSize: "6pt", color: "#d1d5db", marginBottom: "3px" }}>{now}</p>
-                <div style={{ borderTop: "1px solid #e5e7eb", marginBottom: "3px" }} />
-                <p style={{ fontSize: "10pt", fontWeight: "800", color: "#111827", letterSpacing: "0.02em" }}>
-                  {v.username}
-                </p>
-                <p style={{ fontSize: "7pt", color: "#6b7280", marginBottom: "3px" }}>
-                  {v.password}
-                </p>
-                <div style={{ borderTop: "1px solid #e5e7eb", marginBottom: "2px" }} />
-                <p style={{ fontSize: "6pt", color: "#9ca3af" }}>{profile}</p>
-              </div>
-            ))}
+            {vouchers.map((v, i) => {
+              const qrSrc = qrMap[`${v.username}|${v.password}`]
+              return (
+                <div
+                  key={i}
+                  className="voucher-card bg-white border border-slate-300 rounded p-2"
+                  style={{ fontSize: "8pt", lineHeight: "1.35" }}
+                >
+                  <p style={{ fontSize: "6pt", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    Voucher Hotspot
+                  </p>
+                  <p style={{ fontSize: "6pt", color: "#d1d5db", marginBottom: "3px" }}>{now}</p>
+                  <div style={{ borderTop: "1px solid #e5e7eb", marginBottom: "3px" }} />
+
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: "10pt", fontWeight: "800", color: "#111827", letterSpacing: "0.02em", wordBreak: "break-all" }}>
+                        {v.username}
+                      </p>
+                      <p style={{ fontSize: "7pt", color: "#6b7280", wordBreak: "break-all" }}>
+                        {v.password}
+                      </p>
+                    </div>
+                    {qrSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={qrSrc}
+                        alt="QR"
+                        width={56}
+                        height={56}
+                        style={{ width: "56px", height: "56px", flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div style={{ width: "56px", height: "56px", background: "#f3f4f6", flexShrink: 0 }} />
+                    )}
+                  </div>
+
+                  <div style={{ borderTop: "1px solid #e5e7eb", marginTop: "3px", marginBottom: "2px" }} />
+                  <p style={{ fontSize: "6pt", color: "#9ca3af" }}>{profile}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

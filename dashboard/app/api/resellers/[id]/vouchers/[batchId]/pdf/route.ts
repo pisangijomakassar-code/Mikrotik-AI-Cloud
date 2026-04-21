@@ -1,11 +1,14 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { getVoucherBatch } from "@/lib/services/reseller.service"
+import { prisma } from "@/lib/db"
+import QRCode from "qrcode"
 
-function generateVoucherHTML(
+async function generateVoucherHTML(
   vouchers: { username: string; password: string }[],
   profile: string,
   createdAt: string | Date,
+  qrColor: string,
 ) {
   const date = new Date(createdAt).toLocaleDateString("id-ID", {
     day: "2-digit",
@@ -13,19 +16,36 @@ function generateVoucherHTML(
     year: "numeric",
   })
 
+  // Generate QR as data-URL for each voucher (fallback: empty string on error)
+  const qrDataUrls = await Promise.all(
+    vouchers.map((v) =>
+      QRCode.toDataURL(`${v.username}\n${v.password}`, {
+        margin: 0,
+        width: 120,
+        color: { dark: qrColor, light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      }).catch(() => ""),
+    ),
+  )
+
   const cards = vouchers
     .map(
-      (v) => `
+      (v, i) => `
     <div class="card">
       <div class="brand">MikroTik Hotspot</div>
       <div class="divider"></div>
-      <div class="field">
-        <span class="label">Username</span>
-        <span class="value">${v.username}</span>
-      </div>
-      <div class="field">
-        <span class="label">Password</span>
-        <span class="value">${v.password}</span>
+      <div class="body">
+        <div class="fields">
+          <div class="field">
+            <span class="label">Username</span>
+            <span class="value">${v.username}</span>
+          </div>
+          <div class="field">
+            <span class="label">Password</span>
+            <span class="value">${v.password}</span>
+          </div>
+        </div>
+        ${qrDataUrls[i] ? `<img src="${qrDataUrls[i]}" class="qr" alt="QR" />` : ""}
       </div>
       <div class="divider"></div>
       <div class="meta">
@@ -71,6 +91,15 @@ function generateVoucherHTML(
       background: #e2e8f0;
       margin: 8px 0;
     }
+    .body {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .fields {
+      flex: 1;
+      min-width: 0;
+    }
     .field {
       display: flex;
       justify-content: space-between;
@@ -89,6 +118,11 @@ function generateVoucherHTML(
       font-family: 'Courier New', monospace;
       color: #0f172a;
       letter-spacing: 2px;
+    }
+    .qr {
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
     }
     .meta {
       display: flex;
@@ -133,7 +167,15 @@ export async function GET(
     }
 
     const vouchers = batch.vouchers as { username: string; password: string }[]
-    const html = generateVoucherHTML(vouchers, batch.profile, batch.createdAt)
+
+    // Pull qrColor from VoucherProfileSetting if configured; else default black
+    const profileSetting = await prisma.voucherProfileSetting.findFirst({
+      where: { profileName: batch.profile },
+      select: { qrColor: true },
+    }).catch(() => null)
+    const qrColor = profileSetting?.qrColor ?? "#000000"
+
+    const html = await generateVoucherHTML(vouchers, batch.profile, batch.createdAt, qrColor)
 
     return new Response(html, {
       headers: {
