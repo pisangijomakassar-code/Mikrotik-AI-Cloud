@@ -244,6 +244,22 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_chat_completions()
             return
 
+        # Encrypt a router password (called by Next.js dashboard before saving to DB)
+        if path == "/encrypt-password":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length))
+                plaintext = body.get("password", "")
+                if not plaintext:
+                    _send_json(self, {"error": "password required"}, 400)
+                    return
+                from server import registry
+                encrypted = registry.crypto.encrypt(plaintext)
+                _send_json(self, {"encrypted": encrypted})
+            except Exception as e:
+                _send_json(self, {"error": str(e)}, 500)
+            return
+
         # Add hotspot user
         if path.startswith("/hotspot-user/"):
             remainder = path.split("/hotspot-user/")[1]
@@ -296,6 +312,15 @@ class HealthHandler(BaseHTTPRequestHandler):
             user_id = path.split("/send-telegram/")[1].strip("/")
             self._handle_send_telegram(user_id)
             return
+
+        # Hotspot cleanup (remove disabled or expired users)
+        if path.startswith("/hotspot-cleanup/"):
+            remainder = path.split("/hotspot-cleanup/")[1].strip("/")
+            parts = remainder.split("/")
+            if len(parts) == 2:
+                user_id, cleanup_type = parts[0], parts[1]
+                self._handle_hotspot_cleanup(user_id, cleanup_type)
+                return
 
         self.send_response(404)
         self.end_headers()
@@ -989,29 +1014,105 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     # ══════════════════════════════════════════════════════════════════
+    #  Hotspot cleanup
+    # ══════════════════════════════════════════════════════════════════
+
+    def _handle_hotspot_cleanup(self, user_id, cleanup_type):
+        """Remove disabled or expired hotspot users. cleanup_type: 'disabled' | 'expired'"""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            router = body.get("router", "")
+
+            if cleanup_type == "disabled":
+                result = remove_disabled_hotspot_users(user_id, router)
+            elif cleanup_type == "expired":
+                result = remove_expired_hotspot_users(user_id, router)
+            else:
+                _send_json(self, {"error": "cleanup_type must be 'disabled' or 'expired'"}, 400)
+                return
+
+            _send_json(self, result)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    # ══════════════════════════════════════════════════════════════════
     #  Telegram messaging
     # ══════════════════════════════════════════════════════════════════
 
     def _handle_send_telegram(self, user_id):
-        """Send a Telegram message to one or more chat IDs."""
+        """Send a Telegram message (with optional photo) to one or more chat IDs.
+
+        Supports two content-types:
+        - application/json  → text-only (legacy)
+        - multipart/form-data → text + optional photo file
+        """
         import urllib.request
         import urllib.error
+        import email.parser
+        import io
 
         try:
+            content_type = self.headers.get("Content-Type", "")
             content_length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            raw = self.rfile.read(content_length) if content_length else b""
 
-            message = body.get("message", "")
+            photo_bytes = None
+            photo_filename = "photo.jpg"
+
+            if "multipart/form-data" in content_type:
+                # Parse multipart manually
+                boundary = None
+                for part in content_type.split(";"):
+                    part = part.strip()
+                    if part.startswith("boundary="):
+                        boundary = part[len("boundary="):].strip('"')
+                        break
+
+                if not boundary:
+                    _send_json(self, {"error": "Missing multipart boundary"}, 400)
+                    return
+
+                # Use email parser to decode multipart
+                msg_bytes = b"Content-Type: " + content_type.encode() + b"\r\n\r\n" + raw
+                msg = email.parser.BytesParser().parsebytes(msg_bytes)
+                fields: dict = {}
+                for part in msg.get_payload():  # type: ignore[union-attr]
+                    cd = part.get("Content-Disposition", "")
+                    name = None
+                    filename = None
+                    for seg in cd.split(";"):
+                        seg = seg.strip()
+                        if seg.startswith('name='):
+                            name = seg[5:].strip('"')
+                        elif seg.startswith('filename='):
+                            filename = seg[9:].strip('"')
+                    if name:
+                        payload = part.get_payload(decode=True)
+                        if filename:
+                            photo_bytes = payload
+                            photo_filename = filename
+                        else:
+                            fields[name] = (payload or b"").decode("utf-8", errors="replace")
+
+                message = fields.get("message", "")
+                chat_ids_raw = fields.get("chatIds", "")
+                chat_id_single = fields.get("chatId", "")
+                chat_ids = [c for c in chat_ids_raw.split(",") if c] if chat_ids_raw else []
+                if not chat_ids and chat_id_single:
+                    chat_ids = [chat_id_single]
+            else:
+                body = json.loads(raw) if raw else {}
+                message = body.get("message", "")
+                chat_ids = body.get("chatIds", [])
+                if not chat_ids:
+                    single = body.get("chatId")
+                    if single:
+                        chat_ids = [single]
+
             if not message:
                 _send_json(self, {"error": "message is required"}, 400)
                 return
-
-            # Support single chatId or multiple chatIds
-            chat_ids = body.get("chatIds", [])
-            if not chat_ids:
-                single = body.get("chatId")
-                if single:
-                    chat_ids = [single]
             if not chat_ids:
                 _send_json(self, {"error": "chatId or chatIds is required"}, 400)
                 return
@@ -1025,17 +1126,50 @@ class HealthHandler(BaseHTTPRequestHandler):
             failed = 0
             for chat_id in chat_ids:
                 try:
-                    payload = json.dumps({
-                        "chat_id": chat_id,
-                        "text": message,
-                        "parse_mode": "HTML",
-                    }).encode()
+                    if photo_bytes:
+                        # sendPhoto with caption
+                        boundary_mp = b"----TGBoundary"
+                        parts = []
+                        parts.append(
+                            b"--" + boundary_mp + b"\r\n"
+                            b'Content-Disposition: form-data; name="chat_id"\r\n\r\n' +
+                            chat_id.encode() + b"\r\n"
+                        )
+                        parts.append(
+                            b"--" + boundary_mp + b"\r\n"
+                            b'Content-Disposition: form-data; name="caption"\r\n\r\n' +
+                            message.encode() + b"\r\n"
+                        )
+                        parts.append(
+                            b"--" + boundary_mp + b"\r\n"
+                            b'Content-Disposition: form-data; name="parse_mode"\r\n\r\nHTML\r\n'
+                        )
+                        parts.append(
+                            b"--" + boundary_mp + b"\r\n"
+                            b'Content-Disposition: form-data; name="photo"; filename="' +
+                            photo_filename.encode() + b'"\r\n'
+                            b'Content-Type: image/jpeg\r\n\r\n' +
+                            photo_bytes + b"\r\n"
+                        )
+                        parts.append(b"--" + boundary_mp + b"--\r\n")
+                        body_mp = b"".join(parts)
+                        req = urllib.request.Request(
+                            f"https://api.telegram.org/bot{token}/sendPhoto",
+                            data=body_mp,
+                            headers={"Content-Type": f"multipart/form-data; boundary={boundary_mp.decode()}"},
+                        )
+                    else:
+                        payload = json.dumps({
+                            "chat_id": chat_id,
+                            "text": message,
+                            "parse_mode": "HTML",
+                        }).encode()
+                        req = urllib.request.Request(
+                            f"https://api.telegram.org/bot{token}/sendMessage",
+                            data=payload,
+                            headers={"Content-Type": "application/json"},
+                        )
 
-                    req = urllib.request.Request(
-                        f"https://api.telegram.org/bot{token}/sendMessage",
-                        data=payload,
-                        headers={"Content-Type": "application/json"},
-                    )
                     with urllib.request.urlopen(req, timeout=10) as resp:
                         resp.read()
                     sent += 1

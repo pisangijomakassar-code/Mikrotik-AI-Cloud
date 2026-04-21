@@ -26,9 +26,23 @@ class CredentialStore:
         return self._fernet.encrypt(plaintext.encode()).decode()
 
     def decrypt(self, token: str) -> str:
-        """Decrypt base64 token → plaintext string."""
-        return self._fernet.decrypt(token.encode()).decode()
+        """Decrypt base64 token → plaintext string.
+
+        Falls back to returning the token as-is when it is not a valid
+        Fernet ciphertext (e.g. a password stored in plain-text directly
+        in the database by the Next.js dashboard before this fix).
+        """
+        try:
+            return self._fernet.decrypt(token.encode()).decode()
+        except Exception:
+            # Not a valid Fernet token — treat as plain-text password
+            return token
 
     def is_encrypted(self, value) -> bool:
-        """Check if a password value is encrypted (dict format) or plain text."""
-        return isinstance(value, dict) and value.get("encrypted") is True
+        """Return True when value looks like a Fernet ciphertext."""
+        if isinstance(value, dict):
+            return value.get("encrypted") is True
+        if isinstance(value, str):
+            # Fernet tokens always start with 'gAAAAA' (base64-url of version byte)
+            return value.startswith("gAAAAA")
+        return False
