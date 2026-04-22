@@ -6,7 +6,6 @@ import { useHotspotUsers, useHotspotProfiles, useRemoveHotspotUser, useEnableHot
 import { AddHotspotUserDialog } from "@/components/dialogs/add-hotspot-user-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TableSkeleton } from "@/components/table-skeleton"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -140,17 +139,16 @@ export default function HotspotUsersPage() {
             className="w-full bg-[#131b2e] border border-white/5 rounded-lg text-xs pl-9 pr-3 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
           />
         </div>
-        <Select value={profileFilter || "__all__"} onValueChange={(v) => setProfileFilter(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-xs text-[#dae2fd] w-[150px]">
-            <SelectValue placeholder="Semua Profile" />
-          </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border border-white/10 text-[#dae2fd] z-50">
-            <SelectItem value="__all__">Semua Profile</SelectItem>
-            {profiles?.map((p) => (
-              <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <select
+          value={profileFilter}
+          onChange={(e) => setProfileFilter(e.target.value)}
+          className="bg-[#131b2e] border border-white/5 rounded-lg text-xs text-[#dae2fd] px-3 py-2 cursor-pointer outline-none focus:ring-1 focus:ring-[#4cd7f6] min-w-[140px]"
+        >
+          <option value="">Semua Profile</option>
+          {profiles?.map((p) => (
+            <option key={p.name} value={p.name} className="bg-[#131b2e]">{p.name}</option>
+          ))}
+        </select>
         <div className="relative flex-1 min-w-[160px] max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
           <Input
