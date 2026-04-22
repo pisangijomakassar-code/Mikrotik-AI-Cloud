@@ -16,7 +16,7 @@ export default function HotspotActivePage() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Active Sessions</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
@@ -39,13 +39,13 @@ export default function HotspotActivePage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">User</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">IP Address</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">MAC Address</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Uptime</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Bytes In</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Bytes Out</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">User</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">IP Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">MAC Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Uptime</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Bytes In</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Bytes Out</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -53,7 +53,7 @@ export default function HotspotActivePage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
+                      <td key={j} className="px-3 py-1.5 md:px-4 md:py-2">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
                     ))}
@@ -72,27 +72,27 @@ export default function HotspotActivePage() {
               ) : (
                 sessions.map((session, idx) => (
                   <tr key={`${session.user}-${session.macAddress}-${idx}`} className="hover:bg-white/5 transition-colors">
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{session.user}</span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-xs md:text-sm text-cyan-400">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-xs md:text-sm text-cyan-400">
                       {session.address}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-xs text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-xs text-slate-400 hidden md:table-cell">
                       {session.macAddress}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-xs md:text-sm text-slate-400 font-mono-tech">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-slate-400 font-mono-tech">
                       {session.uptime}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 hidden md:table-cell">
                       {session.server}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4ae176] font-mono-tech">
                         {formatBytes(session.bytesIn)}
                       </span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-mono-tech">
                         {formatBytes(session.bytesOut)}
                       </span>

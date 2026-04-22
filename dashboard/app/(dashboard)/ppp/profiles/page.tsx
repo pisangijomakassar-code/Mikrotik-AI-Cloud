@@ -8,7 +8,7 @@ export default function PPPProfilesPage() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">PPP Profiles</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
@@ -24,10 +24,10 @@ export default function PPPProfilesPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Local Address</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Remote Address</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Rate Limit</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Local Address</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Remote Address</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Rate Limit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -35,7 +35,7 @@ export default function PPPProfilesPage() {
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 4 }).map((_, j) => (
-                      <td key={j} className="px-6 py-5">
+                      <td key={j} className="px-4 py-2">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
                     ))}
@@ -54,16 +54,16 @@ export default function PPPProfilesPage() {
               ) : (
                 profiles.map((profile: Record<string, unknown>) => (
                   <tr key={profile.name as string} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-2">
                       <span className="text-sm font-bold text-[#dae2fd]">{profile.name as string}</span>
                     </td>
-                    <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
+                    <td className="px-4 py-2 font-mono-tech text-sm text-slate-400">
                       {(profile.localAddress as string) || "--"}
                     </td>
-                    <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
+                    <td className="px-4 py-2 font-mono-tech text-sm text-slate-400">
                       {(profile.remoteAddress as string) || "--"}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-2">
                       {(profile.rateLimit as string) ? (
                         <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-mono-tech">
                           {profile.rateLimit as string}

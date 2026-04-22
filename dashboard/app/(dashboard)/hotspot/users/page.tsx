@@ -14,6 +14,7 @@ import { toast } from "sonner"
 export default function HotspotUsersPage() {
   const [search, setSearch] = useState("")
   const [profileFilter, setProfileFilter] = useState("")
+  const [commentSearch, setCommentSearch] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [cleaningUp, setCleaningUp] = useState<"disabled" | "expired" | null>(null)
 
@@ -49,7 +50,8 @@ export default function HotspotUsersPage() {
   const filteredUsers = users?.filter((u) => {
     const matchesSearch = !search || u.name.toLowerCase().includes(search.toLowerCase())
     const matchesProfile = !profileFilter || u.profile === profileFilter
-    return matchesSearch && matchesProfile
+    const matchesComment = !commentSearch || (u.comment || "").toLowerCase().includes(commentSearch.toLowerCase())
+    return matchesSearch && matchesProfile && matchesComment
   })
 
   function handleToggleStatus(username: string, isDisabled: boolean) {
@@ -75,7 +77,7 @@ export default function HotspotUsersPage() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Hotspot Users</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
@@ -127,28 +129,38 @@ export default function HotspotUsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
           <Input
             type="text"
-            placeholder="Search by username..."
+            placeholder="Cari username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#131b2e] border border-white/5 rounded-lg text-sm pl-10 pr-4 py-2.5 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
+            className="w-full bg-[#131b2e] border border-white/5 rounded-lg text-xs pl-9 pr-3 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
           />
         </div>
         <Select value={profileFilter || "__all__"} onValueChange={(v) => setProfileFilter(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-sm text-[#dae2fd] w-[180px]">
-            <SelectValue placeholder="All Profiles" />
+          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-xs text-[#dae2fd] w-[150px] py-2 h-auto">
+            <SelectValue placeholder="Semua Profile" />
           </SelectTrigger>
           <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
-            <SelectItem value="__all__">All Profiles</SelectItem>
+            <SelectItem value="__all__">Semua Profile</SelectItem>
             {profiles?.map((p) => (
               <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+          <Input
+            type="text"
+            placeholder="Cari comment..."
+            value={commentSearch}
+            onChange={(e) => setCommentSearch(e.target.value)}
+            className="w-full bg-[#131b2e] border border-white/5 rounded-lg text-xs pl-9 pr-3 py-2 text-[#dae2fd] placeholder:text-slate-500 outline-none focus:ring-1 focus:ring-[#4cd7f6]"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -157,13 +169,13 @@ export default function HotspotUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Limit Uptime</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Limit Uptime</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -182,21 +194,21 @@ export default function HotspotUsersPage() {
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.name} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{user.name}</span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium">
                         {user.profile || "--"}
                       </span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 hidden md:table-cell">
                       {user.server || "all"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
                       {user.limitUptime || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <div
                         className={cn(
                           "w-10 h-5 rounded-full relative p-1 cursor-pointer transition-colors",
@@ -214,10 +226,10 @@ export default function HotspotUsersPage() {
                         />
                       </div>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 max-w-[200px] truncate hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 max-w-[200px] truncate hidden md:table-cell">
                       {user.comment || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-right">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-right">
                       <ConfirmDialog
                         trigger={
                           <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">

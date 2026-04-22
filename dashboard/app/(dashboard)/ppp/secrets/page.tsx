@@ -31,7 +31,7 @@ export default function PPPSecretsPage() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">PPP Users</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
@@ -70,14 +70,14 @@ export default function PPPSecretsPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Local Address</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Remote Address</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Local Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Remote Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -98,24 +98,24 @@ export default function PPPSecretsPage() {
                   const disabled = secret.disabled === true || secret.disabled === "true"
                   return (
                     <tr key={secret.name as string} className="hover:bg-white/5 transition-colors group">
-                      <td className="px-3 py-3 md:px-6 md:py-5">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2">
                         <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{secret.name as string}</span>
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2">
                         <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium uppercase">
                           {(secret.service as string) || "any"}
                         </span>
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5 text-xs md:text-sm text-slate-400">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-slate-400">
                         {(secret.profile as string) || "--"}
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
                         {(secret["local-address"] as string) || "--"}
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-sm text-slate-400 hidden md:table-cell">
                         {(secret["remote-address"] as string) || "--"}
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2">
                         {disabled ? (
                           <span className="text-xs px-2.5 py-1 rounded-full bg-[#93000a]/20 text-[#ffb4ab] font-medium">
                             Disabled
@@ -126,10 +126,10 @@ export default function PPPSecretsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 max-w-[160px] truncate hidden md:table-cell">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 max-w-[160px] truncate hidden md:table-cell">
                         {(secret.comment as string) || "--"}
                       </td>
-                      <td className="px-3 py-3 md:px-6 md:py-5 text-right">
+                      <td className="px-3 py-1.5 md:px-4 md:py-2 text-right">
                         <ConfirmDialog
                           trigger={
                             <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">

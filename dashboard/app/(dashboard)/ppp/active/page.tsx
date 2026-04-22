@@ -18,7 +18,7 @@ export default function PPPActivePage() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Active PPP Sessions</h2>
           <p className="text-[#bcc9cd] flex items-center gap-2">
@@ -41,13 +41,13 @@ export default function PPPActivePage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Caller ID</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Address</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Uptime</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Encoding</th>
-                <th className="px-3 py-3 md:px-6 md:py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Caller ID</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Uptime</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Encoding</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -55,7 +55,7 @@ export default function PPPActivePage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-3 py-3 md:px-6 md:py-5">
+                      <td key={j} className="px-3 py-1.5 md:px-4 md:py-2">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
                     ))}
@@ -74,27 +74,27 @@ export default function PPPActivePage() {
               ) : (
                 sessions.map((session: Record<string, unknown>, idx: number) => (
                   <tr key={`${session.name}-${idx}`} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{session.name as string}</span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium uppercase">
                         {(session.service as string) || "--"}
                       </span>
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-xs text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-xs text-slate-400 hidden md:table-cell">
                       {(session["caller-id"] as string) || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-xs md:text-sm text-cyan-400">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 font-mono-tech text-xs md:text-sm text-cyan-400">
                       {(session.address as string) || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-xs md:text-sm text-slate-400 font-mono-tech">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm text-slate-400 font-mono-tech">
                       {(session.uptime as string) || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-xs text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-xs text-slate-400 hidden md:table-cell">
                       {(session.encoding as string) || "--"}
                     </td>
-                    <td className="px-3 py-3 md:px-6 md:py-5 text-right">
+                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-right">
                       <ConfirmDialog
                         trigger={
                           <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
