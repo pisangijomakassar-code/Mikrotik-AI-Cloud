@@ -11,35 +11,37 @@ export interface HotspotUser {
   disabled: boolean
   server?: string
   address?: string
-  "mac-address"?: string
+  macAddress?: string
   comment?: string
-  "limit-uptime"?: string
-  "limit-bytes-total"?: string
+  limitUptime?: string
+  limitBytesTotal?: string
   uptime?: string
-  "bytes-in"?: number
-  "bytes-out"?: number
+  bytesIn?: number
+  bytesOut?: number
 }
 
 export interface HotspotActiveSession {
   user: string
   address: string
-  "mac-address": string
+  macAddress: string
   server: string
   uptime: string
-  "bytes-in"?: number
-  "bytes-out"?: number
-  "idle-time"?: string
-  "login-by"?: string
+  bytesIn?: number
+  bytesOut?: number
+  idleTime?: string
+  loginBy?: string
 }
 
 export interface HotspotProfile {
   name: string
-  "rate-limit"?: string
-  "shared-users"?: string
-  "session-timeout"?: string
-  "idle-timeout"?: string
-  "keepalive-timeout"?: string
-  "address-pool"?: string
+  rateLimit?: string
+  sharedUsers?: number
+  sessionTimeout?: string
+  idleTimeout?: string
+  keepaliveTimeout?: string
+  addressPool?: string
+  /** Injected by /api/hotspot/profiles from VoucherProfileSetting */
+  price?: number
 }
 
 export interface HotspotStats {
@@ -58,6 +60,8 @@ export interface AddHotspotUserInput {
   comment?: string
   "limit-uptime"?: string
   "limit-bytes-total"?: string
+  "limit-bytes-in"?: string
+  "limit-bytes-out"?: string
 }
 
 // --- Fetch helpers ---
@@ -77,7 +81,7 @@ async function fetchHotspotActive(router?: string): Promise<HotspotActiveSession
 async function fetchHotspotProfiles(router?: string): Promise<HotspotProfile[]> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   const data = await apiClient.get<{ profiles?: HotspotProfile[] } & HotspotProfile[]>(`/api/hotspot/profiles${qs}`)
-  return (data as { profiles?: HotspotProfile[] }).profiles ?? data
+  return (data as { profiles?: HotspotProfile[] }).profiles ?? (data as HotspotProfile[])
 }
 
 async function fetchHotspotStats(router?: string): Promise<HotspotStats> {

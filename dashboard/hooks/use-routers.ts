@@ -107,6 +107,18 @@ export function useCreateRouter() {
   })
 }
 
+export function useUpdateRouter() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateRouterInput> & { password?: string } }) => {
+      return apiClient.patch(`/api/routers/${id}`, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routers"] })
+    },
+  })
+}
+
 export function useDeleteRouter() {
   const queryClient = useQueryClient()
   return useMutation({

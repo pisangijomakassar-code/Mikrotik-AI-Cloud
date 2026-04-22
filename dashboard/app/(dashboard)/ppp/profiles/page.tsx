@@ -58,15 +58,15 @@ export default function PPPProfilesPage() {
                       <span className="text-sm font-bold text-[#dae2fd]">{profile.name as string}</span>
                     </td>
                     <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
-                      {(profile["local-address"] as string) || "--"}
+                      {(profile.localAddress as string) || "--"}
                     </td>
                     <td className="px-6 py-5 font-mono-tech text-sm text-slate-400">
-                      {(profile["remote-address"] as string) || "--"}
+                      {(profile.remoteAddress as string) || "--"}
                     </td>
                     <td className="px-6 py-5">
-                      {(profile["rate-limit"] as string) ? (
+                      {(profile.rateLimit as string) ? (
                         <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-mono-tech">
-                          {profile["rate-limit"] as string}
+                          {profile.rateLimit as string}
                         </span>
                       ) : (
                         <span className="text-sm text-slate-500">--</span>

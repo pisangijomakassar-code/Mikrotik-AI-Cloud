@@ -76,6 +76,25 @@ export async function createRouter(data: CreateRouterInput) {
   })
 }
 
+export async function updateRouter(id: string, data: Partial<CreateRouterInput>) {
+  const updateData: Record<string, unknown> = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.host !== undefined) updateData.host = data.host
+  if (data.port !== undefined) updateData.port = data.port
+  if (data.username !== undefined) updateData.username = data.username
+  if (data.label !== undefined) updateData.label = data.label ?? ""
+  if (data.isDefault !== undefined) updateData.isDefault = data.isDefault
+  if (data.password !== undefined) {
+    updateData.passwordEnc = await encryptPassword(data.password)
+  }
+
+  return prisma.router.update({
+    where: { id },
+    data: updateData,
+    include: { user: { select: { name: true } } },
+  })
+}
+
 export async function deleteRouter(id: string) {
   return prisma.router.delete({
     where: { id },

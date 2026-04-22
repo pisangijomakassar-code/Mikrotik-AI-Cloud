@@ -3,6 +3,11 @@
 import { UserCog, FileSliders } from "lucide-react"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
 
+function formatRupiah(amount: number): string {
+  if (!amount) return "--"
+  return `Rp ${amount.toLocaleString("id-ID")}`
+}
+
 export default function HotspotProfilesPage() {
   const { data: profiles, isLoading } = useHotspotProfiles()
 
@@ -28,13 +33,14 @@ export default function HotspotProfilesPage() {
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Rate Limit</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Shared Users</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Session Timeout</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Harga Voucher</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i}>
-                    {Array.from({ length: 4 }).map((_, j) => (
+                    {Array.from({ length: 5 }).map((_, j) => (
                       <td key={j} className="px-6 py-5">
                         <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
                       </td>
@@ -43,7 +49,7 @@ export default function HotspotProfilesPage() {
                 ))
               ) : !profiles?.length ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-16 text-center">
+                  <td colSpan={5} className="px-8 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <FileSliders className="h-10 w-10 text-slate-500/50" />
                       <p className="text-sm text-slate-400">No hotspot profiles found</p>
@@ -58,19 +64,28 @@ export default function HotspotProfilesPage() {
                       <span className="text-sm font-bold text-[#dae2fd]">{profile.name}</span>
                     </td>
                     <td className="px-6 py-5">
-                      {profile["rate-limit"] ? (
+                      {profile.rateLimit ? (
                         <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-mono-tech">
-                          {profile["rate-limit"]}
+                          {profile.rateLimit}
                         </span>
                       ) : (
                         <span className="text-sm text-slate-500">--</span>
                       )}
                     </td>
                     <td className="px-6 py-5 text-sm text-slate-400">
-                      {profile["shared-users"] || "--"}
+                      {profile.sharedUsers ?? "--"}
                     </td>
                     <td className="px-6 py-5 text-sm text-slate-400 font-mono-tech">
-                      {profile["session-timeout"] || "--"}
+                      {profile.sessionTimeout || "--"}
+                    </td>
+                    <td className="px-6 py-5">
+                      {profile.price ? (
+                        <span className="text-xs px-2.5 py-1 rounded-lg bg-[#4ae176]/10 text-[#4ae176] font-bold">
+                          {formatRupiah(profile.price)}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-slate-500">--</span>
+                      )}
                     </td>
                   </tr>
                 ))

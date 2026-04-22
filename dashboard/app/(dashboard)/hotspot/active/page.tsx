@@ -71,7 +71,7 @@ export default function HotspotActivePage() {
                 </tr>
               ) : (
                 sessions.map((session, idx) => (
-                  <tr key={`${session.user}-${session["mac-address"]}-${idx}`} className="hover:bg-white/5 transition-colors">
+                  <tr key={`${session.user}-${session.macAddress}-${idx}`} className="hover:bg-white/5 transition-colors">
                     <td className="px-3 py-3 md:px-6 md:py-5">
                       <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{session.user}</span>
                     </td>
@@ -79,7 +79,7 @@ export default function HotspotActivePage() {
                       {session.address}
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5 font-mono-tech text-xs text-slate-400 hidden md:table-cell">
-                      {session["mac-address"]}
+                      {session.macAddress}
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5 text-xs md:text-sm text-slate-400 font-mono-tech">
                       {session.uptime}
@@ -89,12 +89,12 @@ export default function HotspotActivePage() {
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4ae176] font-mono-tech">
-                        {formatBytes(session["bytes-in"])}
+                        {formatBytes(session.bytesIn)}
                       </span>
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-mono-tech">
-                        {formatBytes(session["bytes-out"])}
+                        {formatBytes(session.bytesOut)}
                       </span>
                     </td>
                   </tr>

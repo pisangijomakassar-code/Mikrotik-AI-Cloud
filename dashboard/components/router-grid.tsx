@@ -3,7 +3,9 @@
 import { useState } from "react"
 import { Router, Users, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
 import { useRouters, useDeleteRouter } from "@/hooks/use-routers"
+import type { RouterData } from "@/hooks/use-routers"
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { EditRouterDialog } from "@/components/edit-router-dialog"
 import { TunnelStatusBadge } from "@/components/tunnel-status-badge"
 import { TunnelManageDialog } from "@/components/tunnel-manage-dialog"
 import type { TunnelStatus, TunnelMethod } from "@/lib/types"
@@ -16,6 +18,7 @@ export function RouterGrid() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [ownerFilter, setOwnerFilter] = useState("")
+  const [editingRouter, setEditingRouter] = useState<RouterData | null>(null)
   const { data: routers, isLoading } = useRouters(search || undefined)
 
   const onlineCount = routers?.filter((r) => r.health?.status === "online").length ?? 0
@@ -251,7 +254,7 @@ export function RouterGrid() {
                           )}
                           <button
                             className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-primary transition-colors flex items-center justify-center"
-                            onClick={() => toast.info("Edit router coming soon")}
+                            onClick={() => setEditingRouter(router)}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -299,6 +302,14 @@ export function RouterGrid() {
         </div>
       </div>
 
+      {/* Edit Router Dialog */}
+      {editingRouter && (
+        <EditRouterDialog
+          router={editingRouter}
+          open={!!editingRouter}
+          onOpenChange={(open) => { if (!open) setEditingRouter(null) }}
+        />
+      )}
     </div>
   )
 }

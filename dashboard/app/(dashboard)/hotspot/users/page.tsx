@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Wifi, PlusCircle, Trash2, Search, UserX } from "lucide-react"
+import { Wifi, PlusCircle, Trash2, Search, UserX, UserMinus, Clock } from "lucide-react"
 import { useHotspotUsers, useHotspotProfiles, useRemoveHotspotUser, useEnableHotspotUser, useDisableHotspotUser } from "@/hooks/use-hotspot"
 import { AddHotspotUserDialog } from "@/components/dialogs/add-hotspot-user-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -15,12 +15,36 @@ export default function HotspotUsersPage() {
   const [search, setSearch] = useState("")
   const [profileFilter, setProfileFilter] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [cleaningUp, setCleaningUp] = useState<"disabled" | "expired" | null>(null)
 
-  const { data: users, isLoading } = useHotspotUsers()
+  const { data: users, isLoading, refetch } = useHotspotUsers()
   const { data: profiles } = useHotspotProfiles()
   const removeUser = useRemoveHotspotUser()
   const enableUser = useEnableHotspotUser()
   const disableUser = useDisableHotspotUser()
+
+  async function handleCleanup(type: "disabled" | "expired") {
+    setCleaningUp(type)
+    try {
+      const res = await fetch("/api/hotspot/users/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Gagal cleanup")
+      if (data.count === 0) {
+        toast.info(data.message || `Tidak ada user ${type === "disabled" ? "disabled" : "expired"} ditemukan`)
+      } else {
+        toast.success(`${data.count} user dihapus`)
+        refetch()
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal cleanup")
+    } finally {
+      setCleaningUp(null)
+    }
+  }
 
   const filteredUsers = users?.filter((u) => {
     const matchesSearch = !search || u.name.toLowerCase().includes(search.toLowerCase())
@@ -59,7 +83,39 @@ export default function HotspotUsersPage() {
             Manage hotspot user accounts and access control.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <ConfirmDialog
+            trigger={
+              <button
+                disabled={!!cleaningUp}
+                className="flex items-center gap-2 bg-[#131b2e] border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-[#1e2a42] hover:text-[#ffb4ab] transition-all disabled:opacity-50"
+              >
+                <UserMinus className="h-4 w-4" />
+                {cleaningUp === "disabled" ? "Menghapus..." : "Hapus Disabled"}
+              </button>
+            }
+            title="Hapus Semua User Disabled?"
+            description="Semua hotspot user yang berstatus disabled akan dihapus permanen dari router. Tindakan ini tidak dapat dibatalkan."
+            confirmText="Hapus Sekarang"
+            variant="destructive"
+            onConfirm={() => handleCleanup("disabled")}
+          />
+          <ConfirmDialog
+            trigger={
+              <button
+                disabled={!!cleaningUp}
+                className="flex items-center gap-2 bg-[#131b2e] border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-[#1e2a42] hover:text-[#ffb4ab] transition-all disabled:opacity-50"
+              >
+                <Clock className="h-4 w-4" />
+                {cleaningUp === "expired" ? "Menghapus..." : "Hapus Expired"}
+              </button>
+            }
+            title="Hapus Semua User Expired?"
+            description="Semua hotspot user yang telah melebihi limit uptime atau kuota akan dihapus permanen dari router. Tindakan ini tidak dapat dibatalkan."
+            confirmText="Hapus Sekarang"
+            variant="destructive"
+            onConfirm={() => handleCleanup("expired")}
+          />
           <button
             onClick={() => setShowAddDialog(true)}
             className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
@@ -138,7 +194,7 @@ export default function HotspotUsersPage() {
                       {user.server || "all"}
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
-                      {user["limit-uptime"] || "--"}
+                      {user.limitUptime || "--"}
                     </td>
                     <td className="px-3 py-3 md:px-6 md:py-5">
                       <div
