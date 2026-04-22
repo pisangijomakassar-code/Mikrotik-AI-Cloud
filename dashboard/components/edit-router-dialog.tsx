@@ -17,7 +17,7 @@ interface EditRouterDialogProps {
 export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialogProps) {
   const [name, setName] = useState(router.name)
   const [host, setHost] = useState(router.host)
-  const [port, setPort] = useState(String(router.port))
+  const [port, setPort] = useState(String(router.port || 8728))
   const [username, setUsername] = useState(router.username)
   const [password, setPassword] = useState("")
   const [label, setLabel] = useState(router.label ?? "")
@@ -32,7 +32,7 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
   useEffect(() => {
     setName(router.name)
     setHost(router.host)
-    setPort(String(router.port))
+    setPort(String(router.port || 8728))
     setUsername(router.username)
     setPassword("")
     setLabel(router.label ?? "")
