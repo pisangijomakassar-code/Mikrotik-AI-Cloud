@@ -141,10 +141,10 @@ export default function HotspotUsersPage() {
           />
         </div>
         <Select value={profileFilter || "__all__"} onValueChange={(v) => setProfileFilter(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-xs text-[#dae2fd] w-[150px] py-2 h-auto">
+          <SelectTrigger className="bg-[#131b2e] border border-white/5 rounded-lg text-xs text-[#dae2fd] w-[150px]">
             <SelectValue placeholder="Semua Profile" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+          <SelectContent className="bg-[#131b2e] border border-white/10 text-[#dae2fd] z-50">
             <SelectItem value="__all__">Semua Profile</SelectItem>
             {profiles?.map((p) => (
               <SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>
