@@ -169,13 +169,13 @@ export default function HotspotUsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-900/50">
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Limit Uptime</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Username</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Server</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Limit Uptime</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Status</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Comment</th>
+                <th className="px-3 py-1 md:px-4 md:py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -194,21 +194,21 @@ export default function HotspotUsersPage() {
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.name} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-3 py-1.5 md:px-4 md:py-2">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5">
                       <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{user.name}</span>
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium">
                         {user.profile || "--"}
                       </span>
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 hidden md:table-cell">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5 text-sm text-slate-400 hidden md:table-cell">
                       {user.server || "all"}
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5 text-sm text-slate-400 font-mono-tech hidden md:table-cell">
                       {user.limitUptime || "--"}
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5">
                       <div
                         className={cn(
                           "w-10 h-5 rounded-full relative p-1 cursor-pointer transition-colors",
@@ -226,10 +226,10 @@ export default function HotspotUsersPage() {
                         />
                       </div>
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-sm text-slate-400 max-w-[200px] truncate hidden md:table-cell">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5 text-sm text-slate-400 max-w-[200px] truncate hidden md:table-cell">
                       {user.comment || "--"}
                     </td>
-                    <td className="px-3 py-1.5 md:px-4 md:py-2 text-right">
+                    <td className="px-3 py-1 md:px-4 md:py-1.5 text-right">
                       <ConfirmDialog
                         trigger={
                           <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
