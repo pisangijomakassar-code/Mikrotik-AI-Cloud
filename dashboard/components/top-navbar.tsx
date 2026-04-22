@@ -51,7 +51,7 @@ export function TopNavBar() {
           <Bell className="h-5 w-5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-[#ffb4ab] rounded-full border-2 border-background" />
         </button>
-        <ThemeToggle />
+        {/* ThemeToggle hidden — app uses dark mode only (hardcoded colors) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
