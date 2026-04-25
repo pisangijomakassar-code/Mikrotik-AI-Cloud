@@ -15,6 +15,7 @@ import {
   type VoucherTypeData,
   type VoucherTypeInput,
 } from "@/hooks/use-voucher-types"
+import { useHotspotProfiles, useHotspotServers } from "@/hooks/use-hotspot"
 
 const TYPE_CHAR_OPTIONS = [
   "Random abcd",
@@ -55,6 +56,8 @@ export default function VouchersSettingsPage() {
   const createVt = useCreateVoucherType()
   const updateVt = useUpdateVoucherType()
   const deleteVt = useDeleteVoucherType()
+  const { data: hotspotProfiles } = useHotspotProfiles()
+  const { data: hotspotServers } = useHotspotServers()
 
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -288,11 +291,29 @@ export default function VouchersSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className={lbl}>Server</label>
-                  <Input className={inp} placeholder="all" value={form.server} onChange={(e) => setForm((f) => ({ ...f, server: e.target.value }))} />
+                  <select
+                    className={inp}
+                    value={form.server}
+                    onChange={(e) => setForm((f) => ({ ...f, server: e.target.value }))}
+                  >
+                    <option value="all">all (semua server)</option>
+                    {(hotspotServers ?? []).map((s) => (
+                      <option key={s.name} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className={lbl}>Profile Hotspot</label>
-                  <Input className={inp} placeholder="default" value={form.profile} onChange={(e) => setForm((f) => ({ ...f, profile: e.target.value }))} />
+                  <select
+                    className={inp}
+                    value={form.profile}
+                    onChange={(e) => setForm((f) => ({ ...f, profile: e.target.value }))}
+                  >
+                    <option value="">— Pilih Profile —</option>
+                    {(hotspotProfiles ?? []).map((p) => (
+                      <option key={p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

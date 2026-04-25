@@ -200,6 +200,13 @@ class HealthHandler(BaseHTTPRequestHandler):
                 self._handle_hotspot_profile_get(parts[0], parts[1], router_name)
             return
 
+        # Hotspot servers list
+        if path.startswith("/hotspot-servers/"):
+            user_id = path.split("/hotspot-servers/")[1]
+            router_name = params.get("router", [None])[0]
+            self._handle_hotspot_servers(user_id, router_name)
+            return
+
         # Hotspot stats (aggregated counts)
         if path.startswith("/hotspot-stats/"):
             user_id = path.split("/hotspot-stats/")[1]
@@ -621,6 +628,29 @@ class HealthHandler(BaseHTTPRequestHandler):
                 result = {
                     "router": conn.get("name", ""),
                     "profiles": profiles_data,
+                }
+            _send_json(self, result)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_hotspot_servers(self, user_id, router_name=None):
+        """List configured hotspot servers (ip hotspot)."""
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                servers = list(api.path("ip", "hotspot").select())
+                result = {
+                    "router": conn.get("name", ""),
+                    "servers": [
+                        {
+                            "name": s.get("name", ""),
+                            "interface": s.get("interface", ""),
+                            "disabled": s.get("disabled", "false"),
+                        }
+                        for s in servers
+                        if s.get("name")
+                    ],
                 }
             _send_json(self, result)
         except Exception as e:

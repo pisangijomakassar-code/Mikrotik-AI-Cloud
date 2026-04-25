@@ -59,6 +59,12 @@ export interface HotspotProfileInput {
   router?: string
 }
 
+export interface HotspotServer {
+  name: string
+  interface: string
+  disabled: string
+}
+
 export interface HotspotStats {
   totalUsers?: number
   activeSessions?: number
@@ -99,6 +105,12 @@ async function fetchHotspotProfiles(router?: string): Promise<HotspotProfile[]> 
   return (data as { profiles?: HotspotProfile[] }).profiles ?? (data as HotspotProfile[])
 }
 
+async function fetchHotspotServers(router?: string): Promise<HotspotServer[]> {
+  const qs = router ? `?router=${encodeURIComponent(router)}` : ""
+  const data = await apiClient.get<{ servers?: HotspotServer[] }>(`/api/hotspot/servers${qs}`)
+  return data.servers ?? []
+}
+
 async function fetchHotspotStats(router?: string): Promise<HotspotStats> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   return apiClient.get(`/api/hotspot/stats${qs}`)
@@ -125,6 +137,13 @@ export function useHotspotProfiles(router?: string) {
   return useQuery({
     queryKey: ["hotspot-profiles", router],
     queryFn: () => fetchHotspotProfiles(router),
+  })
+}
+
+export function useHotspotServers(router?: string) {
+  return useQuery({
+    queryKey: ["hotspot-servers", router],
+    queryFn: () => fetchHotspotServers(router),
   })
 }
 
