@@ -5,7 +5,8 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-ENV NODE_OPTIONS="--max-old-space-size=512"
+ARG NODE_OPTIONS=--max-old-space-size=512
+ENV NODE_OPTIONS=$NODE_OPTIONS
 # Dummy DATABASE_URL for build (Prisma needs it at import time, not actual connection)
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 COPY --from=deps /app/node_modules ./node_modules

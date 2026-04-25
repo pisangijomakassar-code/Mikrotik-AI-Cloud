@@ -8,9 +8,53 @@ concurrency:
   group: deploy-vps
   cancel-in-progress: true
 
+env:
+  REGISTRY: ghcr.io
+  DASHBOARD_IMAGE: ghcr.io/${{ github.repository }}-dashboard
+  AGENT_IMAGE: ghcr.io/${{ github.repository }}-agent
+
 jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./dashboard
+          push: true
+          tags: ${{ env.DASHBOARD_IMAGE }}:latest
+          build-args: |
+            NODE_OPTIONS=--max-old-space-size=2048
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push agent image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.AGENT_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     runs-on: ubuntu-latest
+    needs: build-push
     steps:
       - uses: actions/checkout@v4
 
@@ -18,29 +62,29 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          DASHBOARD_IMAGE: ${{ env.DASHBOARD_IMAGE }}
+          AGENT_IMAGE: ${{ env.AGENT_IMAGE }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GH_TOKEN
-          command_timeout: 30m
+          envs: GH_TOKEN,GITHUB_ACTOR,DASHBOARD_IMAGE,AGENT_IMAGE
+          command_timeout: 15m
           script: |
             set -e
-
             APP_DIR=/opt/mikrotik-ai-agent
 
-            # Ensure swap exists (prevents OOM during builds on low-RAM VPS)
+            # Ensure swap exists
             if [ ! -f /swapfile ]; then
-              fallocate -l 2G /swapfile
+              fallocate -l 1G /swapfile
               chmod 600 /swapfile
               mkswap /swapfile
               swapon /swapfile
               echo '/swapfile none swap sw 0 0' >> /etc/fstab
-              echo "Swap 2GB created"
             fi
-            swapon --show || true
 
-            # Clone or pull
+            # Clone or pull latest code
             if [ -d "$APP_DIR/.git" ]; then
               cd $APP_DIR
               git fetch origin
@@ -56,47 +100,37 @@ jobs:
               cd $APP_DIR
             fi
 
-            # Create .env if not exists
-            if [ ! -f .env ]; then
-              cp .env.example .env
-              echo "WARNING: .env created from template - edit with real credentials"
-            fi
-
+            cd $APP_DIR
             mkdir -p data
 
-            # Stop ALL containers before building (free up RAM for build)
+            if [ ! -f .env ]; then
+              cp .env.example .env
+              echo "WARNING: .env created from template"
+            fi
+
+            # Login to GHCR and pull pre-built images
+            echo "${GH_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+            docker pull ${DASHBOARD_IMAGE}:latest
+            docker pull ${AGENT_IMAGE}:latest
+
+            # Stop old containers
             docker compose down --remove-orphans || true
-            docker rm -f mikrotik-db mikrotik-dashboard mikrotik-agent 2>/dev/null || true
 
-            # Build images one at a time to limit RAM usage
-            echo "Building mikrotik-agent..."
-            docker compose build mikrotik-agent
-
-            echo "Building dashboard..."
-            DOCKER_BUILDKIT=1 docker compose build --build-arg NODE_OPTIONS="--max-old-space-size=512" dashboard
-
-            # Prune old images to free disk
-            docker image prune -f || true
-
-            # Start services in order
+            # Start services (no build needed — images already pulled)
             echo "Starting postgres..."
             docker compose up -d postgres
             sleep 10
 
-            echo "Starting dashboard..."
-            docker compose up -d dashboard
-            sleep 5
+            echo "Starting dashboard and agent..."
+            docker compose up -d dashboard mikrotik-agent
 
-            echo "Starting mikrotik-agent..."
-            docker compose up -d mikrotik-agent
-
-            # Run database migrations
-            echo "Running migrations..."
-            docker compose exec -T dashboard npx prisma migrate deploy 2>/dev/null || echo "Migration skipped (first run needs manual setup)"
-
-            # Seed admin user (upsert — safe to re-run, reads ADMIN_EMAIL + ADMIN_PASSWORD from .env)
-            echo "Seeding admin user..."
+            # Run migrations and seed
+            sleep 8
+            docker compose exec -T dashboard npx prisma migrate deploy 2>/dev/null || echo "Migration skipped"
             docker compose exec -T dashboard npx prisma db seed 2>/dev/null || echo "Seed skipped"
+
+            # Prune old images
+            docker image prune -f || true
 
             echo "---"
             docker compose ps

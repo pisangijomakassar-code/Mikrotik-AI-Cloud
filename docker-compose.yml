@@ -36,9 +36,7 @@ services:
 
   dashboard:
     container_name: mikrotik-dashboard
-    build:
-      context: ./dashboard
-      dockerfile: Dockerfile
+    image: ghcr.io/codevjs/mikrotik-ai-agent-dashboard:latest
     env_file: .env
     environment:
       DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
@@ -68,9 +66,7 @@ services:
 
   mikrotik-agent:
     container_name: mikrotik-agent
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/codevjs/mikrotik-ai-agent-agent:latest
     env_file: .env
     environment:
       DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
