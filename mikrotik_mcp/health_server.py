@@ -785,6 +785,7 @@ class HealthHandler(BaseHTTPRequestHandler):
             price_per_unit = int(body.get("price_per_unit") or body.get("pricePerUnit") or 0)
             limit_uptime = body.get("limitUptime") or body.get("limit_uptime") or ""
             comment_tmpl = body.get("comment") or ""
+            type_login = body.get("typeLogin") or body.get("type_login") or "Username = Password"
 
             # Charset based on typeChar
             type_char = (body.get("typeChar") or body.get("type_char") or "Random abcd").lower()
@@ -809,7 +810,10 @@ class HealthHandler(BaseHTTPRequestHandler):
                 resource = api.path("ip", "hotspot", "user")
                 for _ in range(count):
                     uname = prefix + "".join(random.choices(charset, k=usr_len))
-                    pwd = "".join(random.choices(charset, k=pwd_len))
+                    if type_login == "Username = Password":
+                        pwd = uname
+                    else:
+                        pwd = "".join(random.choices(charset, k=pwd_len))
 
                     add_params = {
                         "name": uname,

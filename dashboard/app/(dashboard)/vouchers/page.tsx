@@ -90,6 +90,7 @@ export default function GenerateVoucherPage() {
           usernameLength: charLen,
           server: selectedType.server !== "all" ? selectedType.server : "",
           typeChar,
+          typeLogin,
           limitUptime: selectedType.limitUptime !== "0" ? selectedType.limitUptime : "",
           resellerId: resellerId || null,
           pricePerUnit: selectedType.harga,
