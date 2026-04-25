@@ -11,6 +11,7 @@ import {
   useTopUpSaldo, useTopDownSaldo,
   type ResellerData,
 } from "@/hooks/use-resellers"
+import { useVoucherTypes } from "@/hooks/use-voucher-types"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { AddResellerDialog } from "@/components/dialogs/add-reseller-dialog"
 import { TableSkeleton } from "@/components/table-skeleton"
@@ -22,6 +23,7 @@ import Link from "next/link"
 
 export default function ResellersPage() {
   const { data: resellers, isLoading } = useResellers()
+  const { data: voucherTypes } = useVoucherTypes()
   const updateReseller = useUpdateReseller()
   const deleteReseller = useDeleteReseller()
   const topUpSaldo = useTopUpSaldo()
@@ -66,6 +68,14 @@ export default function ResellersPage() {
   const [proofImageUrl, setProofImageUrl] = useState("")
   const [proofPreview, setProofPreview] = useState<string | null>(null)
   const [showProofModal, setShowProofModal] = useState(false)
+
+  const voucherGroups = useMemo(() => {
+    const groups = new Set<string>(["default"])
+    for (const vt of voucherTypes ?? []) {
+      vt.voucherGroup.split(",").map((g) => g.trim()).filter(Boolean).forEach((g) => groups.add(g))
+    }
+    return Array.from(groups)
+  }, [voucherTypes])
 
   // Filter + Sort + Paginate
   const filteredSorted = useMemo(() => {
@@ -360,7 +370,15 @@ export default function ResellersPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className={labelCls}>Grup Voucher</label>
-                    <Input className={inputCls} value={editVoucherGroup} onChange={(e) => setEditVoucherGroup(e.target.value)} placeholder="default" />
+                    <select
+                      value={editVoucherGroup}
+                      onChange={(e) => setEditVoucherGroup(e.target.value)}
+                      className="w-full bg-muted border-none rounded-lg py-2.5 px-4 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      {voucherGroups.map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="space-y-1.5">

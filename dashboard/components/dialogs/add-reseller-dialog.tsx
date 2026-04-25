@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { X } from "lucide-react"
 import { toast } from "sonner"
 import { addResellerSchema, type AddResellerFormData } from "@/lib/schemas"
 import { useCreateReseller } from "@/hooks/use-resellers"
+import { useVoucherTypes } from "@/hooks/use-voucher-types"
 import { Input } from "@/components/ui/input"
 
 interface AddResellerDialogProps {
@@ -16,6 +17,15 @@ interface AddResellerDialogProps {
 
 export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps) {
   const createReseller = useCreateReseller()
+  const { data: voucherTypes } = useVoucherTypes()
+
+  const voucherGroups = useMemo(() => {
+    const groups = new Set<string>(["default"])
+    for (const vt of voucherTypes ?? []) {
+      vt.voucherGroup.split(",").map((g) => g.trim()).filter(Boolean).forEach((g) => groups.add(g))
+    }
+    return Array.from(groups)
+  }, [voucherTypes])
 
   const {
     register,
@@ -139,11 +149,14 @@ export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Grup Voucher</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="default"
+                <select
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                   {...register("voucherGroup")}
-                />
+                >
+                  {voucherGroups.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
