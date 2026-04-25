@@ -20,8 +20,7 @@ const TYPE_CHAR_OPTIONS = [
 
 const TYPE_LOGIN_OPTIONS = [
   "Username & Password",
-  "Username Only",
-  "Password Only",
+  "Username = Password",
 ]
 
 interface GeneratedVoucher { username: string; password: string }
@@ -36,7 +35,7 @@ export default function GenerateVoucherPage() {
   const [routerName, setRouterName] = useState("")
   const [count, setCount] = useState(10)
   const [typeChar, setTypeChar] = useState("Random abcd")
-  const [typeLogin, setTypeLogin] = useState("Username & Password")
+  const [typeLogin, setTypeLogin] = useState("Username = Password")
   const [prefix, setPrefix] = useState("")
   const [charLen, setCharLen] = useState(6)
 

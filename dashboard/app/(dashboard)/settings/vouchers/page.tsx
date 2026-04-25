@@ -26,8 +26,7 @@ const TYPE_CHAR_OPTIONS = [
 
 const TYPE_LOGIN_OPTIONS = [
   "Username & Password",
-  "Username Only",
-  "Password Only",
+  "Username = Password",
 ]
 
 const VOUCHER_GROUPS = ["default", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -44,7 +43,7 @@ const EMPTY: VoucherTypeInput = {
   limitQuotaUl: 0,
   limitQuotaTotal: 0,
   typeChar: "Random abcd",
-  typeLogin: "Username & Password",
+  typeLogin: "Username = Password",
   prefix: "",
   panjangKarakter: 6,
   voucherGroup: "default",

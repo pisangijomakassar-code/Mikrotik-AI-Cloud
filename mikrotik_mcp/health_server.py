@@ -584,18 +584,43 @@ class HealthHandler(BaseHTTPRequestHandler):
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name)
             with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                profiles = list(api.path("ip", "hotspot", "user", "profile"))
-                result = {
-                    "router": conn.get("name", ""),
-                    "profiles": [
+                # Try dedicated profile path first; fall back to unique names from user list
+                try:
+                    raw = list(api.path("ip", "hotspot", "user", "profile").select())
+                    profiles_data = [
                         {
                             "name": p.get("name", ""),
                             "rateLimit": p.get("rate-limit", ""),
                             "sharedUsers": p.get("shared-users", ""),
                             "sessionTimeout": p.get("session-timeout", ""),
+                            "idleTimeout": p.get("idle-timeout", ""),
+                            "addressPool": p.get("address-pool", ""),
+                            "onLogin": p.get("on-login", ""),
                         }
-                        for p in profiles
+                        for p in raw
+                        if p.get("name", "") not in ("", "default")
                     ]
+                except Exception:
+                    # Fallback: extract unique profile names from hotspot users
+                    users = list(api.path("ip", "hotspot", "user").select())
+                    seen = set()
+                    profiles_data = []
+                    for u in users:
+                        pname = u.get("profile", "")
+                        if pname and pname not in seen:
+                            seen.add(pname)
+                            profiles_data.append({
+                                "name": pname,
+                                "rateLimit": "",
+                                "sharedUsers": "",
+                                "sessionTimeout": "",
+                                "idleTimeout": "",
+                                "addressPool": "",
+                                "onLogin": "",
+                            })
+                result = {
+                    "router": conn.get("name", ""),
+                    "profiles": profiles_data,
                 }
             _send_json(self, result)
         except Exception as e:
