@@ -60,7 +60,7 @@ export function NetworkThroughput() {
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-card rounded-lg p-4 border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <ArrowUp className="h-3.5 w-3.5 text-[#4ae176]" />
+                <ArrowUp className="h-3.5 w-3.5 text-tertiary" />
                 <span className="text-[10px] text-muted-foreground/70 uppercase font-bold">Upload</span>
               </div>
               <span className="text-lg font-bold text-foreground font-mono">{formatBytes(totalTx)}</span>
@@ -107,7 +107,7 @@ export function NetworkThroughput() {
                   </div>
                   <div className="flex items-center gap-3 text-[10px] text-muted-foreground w-40 justify-end">
                     <span>
-                      <ArrowUp className="h-2.5 w-2.5 inline text-[#4ae176]" /> {formatBytes(iface.txBytes)}
+                      <ArrowUp className="h-2.5 w-2.5 inline text-tertiary" /> {formatBytes(iface.txBytes)}
                     </span>
                     <span>
                       <ArrowDown className="h-2.5 w-2.5 inline text-primary" /> {formatBytes(iface.rxBytes)}

@@ -80,7 +80,7 @@ export function TopNavBar() {
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="text-xs gap-2 cursor-pointer focus:bg-[#ffb4ab]/10 focus:text-[#ffb4ab]"
+              className="text-xs gap-2 cursor-pointer focus:bg-[#ffb4ab]/10 focus:text-destructive"
             >
               <LogOut className="h-3.5 w-3.5" />
               Sign Out

@@ -23,10 +23,32 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
   const [label, setLabel] = useState(router.label ?? "")
   const [isDefault, setIsDefault] = useState(router.isDefault)
 
+  // MikroTik DNS settings
+  const [dnsHotspot, setDnsHotspot] = useState(router.dnsHotspot ?? "")
+
+  // Telegram bot integration (optional)
+  const [telegramOwnerUsername, setTelegramOwnerUsername] = useState(router.telegramOwnerUsername ?? "")
+  const [telegramOwnerId, setTelegramOwnerId] = useState(router.telegramOwnerId ?? "")
+  const [botToken, setBotToken] = useState("")
+  const [botUsername, setBotUsername] = useState(router.botUsername ?? "")
+
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "failed">("idle")
   const [testMessage, setTestMessage] = useState("")
 
   const updateRouter = useUpdateRouter()
+
+  /** Split "host:port" input into separate host + port fields on blur */
+  function handleHostBlur() {
+    const trimmed = host.trim()
+    const lastColon = trimmed.lastIndexOf(":")
+    if (lastColon === -1) return
+    const potentialPort = trimmed.slice(lastColon + 1)
+    const portNum = parseInt(potentialPort, 10)
+    if (potentialPort && !isNaN(portNum) && portNum >= 1 && portNum <= 65535) {
+      setHost(trimmed.slice(0, lastColon))
+      setPort(potentialPort)
+    }
+  }
 
   // Reset form when router changes
   useEffect(() => {
@@ -37,12 +59,21 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
     setPassword("")
     setLabel(router.label ?? "")
     setIsDefault(router.isDefault)
+    setDnsHotspot(router.dnsHotspot ?? "")
+    setTelegramOwnerUsername(router.telegramOwnerUsername ?? "")
+    setTelegramOwnerId(router.telegramOwnerId ?? "")
+    setBotToken("")
+    setBotUsername(router.botUsername ?? "")
     setTestStatus("idle")
     setTestMessage("")
   }, [router])
 
   async function handleTestConnection() {
     if (!host.trim() || !port) { toast.error("Isi host dan port dulu"); return }
+    if (!username.trim() || !password) {
+      toast.error("Isi username dan password baru untuk test login ke MikroTik")
+      return
+    }
     setTestStatus("testing")
     setTestMessage("")
     try {
@@ -53,7 +84,7 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
           host: host.trim(),
           port,
           username: username.trim(),
-          password: password || undefined, // send undefined so backend skips auth test if blank
+          password,
         }),
       })
       const data = await res.json()
@@ -84,9 +115,15 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
       username: username.trim(),
       label: label.trim() || "",
       isDefault,
+      dnsHotspot: dnsHotspot.trim(),
+      telegramOwnerUsername: telegramOwnerUsername.trim(),
+      telegramOwnerId: telegramOwnerId.trim(),
+      botUsername: botUsername.trim(),
     }
     // Only send password if user typed a new one
     if (password) payload.password = password
+    // Only send botToken if user typed a new one (empty = keep existing)
+    if (botToken) payload.botToken = botToken
 
     updateRouter.mutate(
       { id: router.id, data: payload },
@@ -148,8 +185,10 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Host / IP Address</label>
                 <Input
                   className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                  placeholder="192.168.88.1 atau host:port"
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
+                  onBlur={handleHostBlur}
                   required
                 />
               </div>
@@ -161,32 +200,6 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
                   onChange={(e) => setPort(e.target.value)}
                 />
               </div>
-            </div>
-
-            {/* Test Connection */}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleTestConnection}
-                disabled={testStatus === "testing" || !host.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary transition-all disabled:opacity-50"
-              >
-                {testStatus === "testing" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : testStatus === "success" ? (
-                  <Wifi className="h-4 w-4 text-[#4ae176]" />
-                ) : testStatus === "failed" ? (
-                  <WifiOff className="h-4 w-4 text-red-400" />
-                ) : (
-                  <Wifi className="h-4 w-4" />
-                )}
-                {testStatus === "testing" ? "Mengecek..." : "Test Koneksi"}
-              </button>
-              {testMessage && (
-                <span className={cn("text-xs", testStatus === "success" ? "text-[#4ae176]" : "text-red-400")}>
-                  {testMessage}
-                </span>
-              )}
             </div>
 
             {/* Credentials */}
@@ -214,6 +227,116 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
               </div>
             </div>
 
+            {/* Test Connection (below credentials, tests full login) */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={testStatus === "testing" || !host.trim() || !username.trim() || !password}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary transition-all disabled:opacity-50"
+              >
+                {testStatus === "testing" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : testStatus === "success" ? (
+                  <Wifi className="h-4 w-4 text-tertiary" />
+                ) : testStatus === "failed" ? (
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                ) : (
+                  <Wifi className="h-4 w-4" />
+                )}
+                {testStatus === "testing" ? "Mengecek login..." : "Test Koneksi (Login ke MikroTik)"}
+              </button>
+              {!password && (
+                <span className="text-xs text-muted-foreground/60">
+                  Isi password baru dulu untuk test login
+                </span>
+              )}
+              {testMessage && (
+                <span className={cn("text-xs", testStatus === "success" ? "text-tertiary" : "text-red-400")}>
+                  {testMessage}
+                </span>
+              )}
+            </div>
+
+            {/* ── MikroTik DNS ── */}
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">MikroTik DNS</h4>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                  DNS Hotspot <span className="text-muted-foreground/40 normal-case">(Opsional)</span>
+                </label>
+                <Input
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                  placeholder="e.g. toko.net"
+                  type="text"
+                  value={dnsHotspot}
+                  onChange={(e) => setDnsHotspot(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* ── Owner (Telegram) ── */}
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Owner (Telegram)</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    Username Owner <span className="text-muted-foreground/40 normal-case">(Opsional)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="@BubudPisjo"
+                    type="text"
+                    value={telegramOwnerUsername}
+                    onChange={(e) => setTelegramOwnerUsername(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    ID Telegram Owner <span className="text-muted-foreground/40 normal-case">(Opsional)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="86340875"
+                    type="text"
+                    value={telegramOwnerId}
+                    onChange={(e) => setTelegramOwnerId(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Bot Settings ── */}
+            <div className="pt-4 border-t border-border">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Bot Settings</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    Token Bot Baru <span className="text-muted-foreground/40 normal-case">(kosongkan = tidak diubah)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="Isi jika ingin ganti token"
+                    type="password"
+                    value={botToken}
+                    onChange={(e) => setBotToken(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    Username Bot <span className="text-muted-foreground/40 normal-case">(Opsional)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="ummiwifi_bot"
+                    type="text"
+                    value={botUsername}
+                    onChange={(e) => setBotUsername(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Default Toggle */}
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
               <span className="text-xs text-muted-foreground">Jadikan router utama (default)</span>
@@ -234,7 +357,7 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
             <button
               type="submit"
               disabled={updateRouter.isPending}
-              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
               {updateRouter.isPending ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

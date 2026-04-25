@@ -33,6 +33,9 @@ export async function createReseller(userId: string, data: CreateResellerInput) 
       phone: data.phone ?? "",
       telegramId: data.telegramId ?? "",
       balance: data.balance ?? 0,
+      discount: data.discount ?? 0,
+      voucherGroup: data.voucherGroup ?? "default",
+      uplink: data.uplink ?? "",
       userId,
     },
   })
@@ -83,6 +86,7 @@ export async function topUpSaldo(
         balanceBefore,
         balanceAfter,
         description: input.description ?? `Top up Rp ${input.amount.toLocaleString("id-ID")}`,
+        proofImageUrl: input.proofImageUrl ?? "",
       },
     })
   })

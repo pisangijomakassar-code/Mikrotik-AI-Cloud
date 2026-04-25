@@ -19,6 +19,13 @@ import {
   MessageSquare,
   BotMessageSquare,
   Cable,
+  SlidersHorizontal,
+  BarChart3,
+  History,
+  Ticket,
+  Zap,
+  Webhook,
+  MessageSquareText,
 } from "lucide-react"
 
 export interface NavItem {
@@ -64,8 +71,15 @@ export const navGroups: NavGroup[] = [
     label: "Reseller",
     items: [
       { label: "Reseller List", href: "/resellers", icon: Store },
+      { label: "History Transaksi", href: "/resellers/transactions", icon: History },
+      { label: "Generate Voucher", href: "/vouchers", icon: Zap },
       { label: "Voucher History", href: "/resellers/vouchers", icon: Receipt },
       { label: "Reseller Bot", href: "/resellers/bot", icon: BotMessageSquare },
+      { label: "Voucher Profiles", href: "/settings/voucher-profiles", icon: SlidersHorizontal },
+      { label: "Jenis Voucher", href: "/settings/vouchers", icon: Ticket },
+      { label: "Webhook Config", href: "/settings/webhook", icon: Webhook },
+      { label: "Bot Text", href: "/settings/bot-text", icon: MessageSquareText },
+      { label: "Laporan", href: "/reports", icon: BarChart3 },
     ],
   },
   {

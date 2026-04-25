@@ -50,18 +50,18 @@ function formatDate(dateStr: string) {
 
 function statusIcon(status: string) {
   switch (status) {
-    case "PAID": return <CheckCircle className="h-3.5 w-3.5 text-[#4ae176]" />
+    case "PAID": return <CheckCircle className="h-3.5 w-3.5 text-tertiary" />
     case "PENDING": return <Clock className="h-3.5 w-3.5 text-amber-400" />
-    case "OVERDUE": return <AlertTriangle className="h-3.5 w-3.5 text-[#ffb4ab]" />
+    case "OVERDUE": return <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
     default: return <FileText className="h-3.5 w-3.5 text-slate-400" />
   }
 }
 
 function statusColor(status: string) {
   switch (status) {
-    case "PAID": return "text-[#4ae176] bg-[#4ae176]/10"
+    case "PAID": return "text-tertiary bg-tertiary/10"
     case "PENDING": return "text-amber-400 bg-amber-400/10"
-    case "OVERDUE": return "text-[#ffb4ab] bg-[#ffb4ab]/10"
+    case "OVERDUE": return "text-destructive bg-destructive/10"
     default: return "text-slate-400 bg-slate-400/10"
   }
 }
@@ -81,7 +81,7 @@ export default function PlanPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     )
   }
@@ -105,9 +105,9 @@ export default function PlanPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Plan & Billing</h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <CreditCard className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Plan & Billing</h2>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <CreditCard className="h-[18px] w-[18px] text-primary shrink-0" />
             Manage your subscription and monitor usage.
           </p>
         </div>
@@ -116,13 +116,13 @@ export default function PlanPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Current Plan */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
             <div className="flex items-center justify-between mb-6">
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Plan</span>
               <span className={cn(
                 "px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase border",
                 subscription.status === "ACTIVE"
-                  ? "bg-[#4ae176]/10 text-[#4ae176] border-[#4ae176]/20"
+                  ? "bg-tertiary/10 text-tertiary border-tertiary/20"
                   : "bg-amber-400/10 text-amber-400 border-amber-400/20"
               )}>
                 {subscription.status}
@@ -140,21 +140,21 @@ export default function PlanPage() {
             <div className="space-y-3">
               {planInfo.features.map((f) => (
                 <div key={f} className="flex items-center gap-2 text-sm text-slate-300">
-                  <CheckCircle className="h-3.5 w-3.5 text-[#4ae176] shrink-0" />
+                  <CheckCircle className="h-3.5 w-3.5 text-tertiary shrink-0" />
                   {f}
                 </div>
               ))}
             </div>
 
             {subscription.plan !== "PREMIUM" && (
-              <button className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-linear-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:brightness-110 transition-all">
+              <button className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-linear-to-r from-primary to-primary-container text-primary-foreground hover:brightness-110 transition-all">
                 Upgrade Plan
               </button>
             )}
           </div>
 
           {/* All Plans */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Available Plans</span>
             <div className="mt-4 space-y-3">
               {Object.entries(PLAN_LIMITS).map(([key, plan]) => (
@@ -163,14 +163,14 @@ export default function PlanPage() {
                   className={cn(
                     "p-3 rounded-xl border transition-colors",
                     key === subscription.plan
-                      ? "border-[#4cd7f6]/30 bg-[#4cd7f6]/5"
-                      : "border-white/5 hover:border-white/10"
+                      ? "border-primary/30 bg-primary/5"
+                      : "border-border/20 hover:border-white/10"
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <span className={cn("text-sm font-bold", plan.color)}>{plan.label}</span>
                     {key === subscription.plan && (
-                      <span className="text-[10px] text-[#4cd7f6] font-bold">CURRENT</span>
+                      <span className="text-[10px] text-primary font-bold">CURRENT</span>
                     )}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">{plan.features[0]}</p>
@@ -183,10 +183,10 @@ export default function PlanPage() {
         {/* Usage & Invoices */}
         <div className="lg:col-span-2 space-y-6">
           {/* Token Usage Overview */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-[#4cd7f6]" />
+                <Zap className="h-4 w-4 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Token Usage</span>
               </div>
               <span className="text-xs text-slate-500">Today&apos;s usage</span>
@@ -194,7 +194,7 @@ export default function PlanPage() {
 
             <div className="grid grid-cols-3 gap-6 mb-6">
               <div>
-                <p className="text-2xl font-headline font-bold text-[#dae2fd]">
+                <p className="text-2xl font-headline font-bold text-foreground">
                   {totalTokens.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">
@@ -202,13 +202,13 @@ export default function PlanPage() {
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-headline font-bold text-[#4cd7f6]">
+                <p className="text-2xl font-headline font-bold text-primary">
                   {usage.totalRequests.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">total requests</p>
               </div>
               <div>
-                <p className="text-2xl font-headline font-bold text-[#dae2fd]">
+                <p className="text-2xl font-headline font-bold text-foreground">
                   {usagePercent}%
                 </p>
                 <p className="text-[10px] text-slate-500 mt-1">quota used</p>
@@ -216,11 +216,11 @@ export default function PlanPage() {
             </div>
 
             {/* Progress bar */}
-            <div className="w-full h-2 bg-[#222a3d] rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
-                  usagePercent > 90 ? "bg-[#ffb4ab]" : usagePercent > 70 ? "bg-amber-400" : "bg-[#4cd7f6]"
+                  usagePercent > 90 ? "bg-destructive" : usagePercent > 70 ? "bg-amber-400" : "bg-primary"
                 )}
                 style={{ width: `${usagePercent}%` }}
               />
@@ -228,9 +228,9 @@ export default function PlanPage() {
           </div>
 
           {/* Daily Usage Chart */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
             <div className="flex items-center gap-2 mb-6">
-              <TrendingUp className="h-4 w-4 text-[#4cd7f6]" />
+              <TrendingUp className="h-4 w-4 text-primary" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Daily Usage (Last 7 Days)</span>
             </div>
 
@@ -245,7 +245,7 @@ export default function PlanPage() {
                       <span className="text-[9px] text-slate-500 font-mono">{total.toLocaleString()}</span>
                       <div className="w-full flex flex-col justify-end" style={{ height: "100px" }}>
                         <div
-                          className="w-full bg-[#4cd7f6]/60 rounded-t-lg transition-all hover:bg-[#4cd7f6] cursor-default"
+                          className="w-full bg-primary/60 rounded-t-lg transition-all hover:bg-primary cursor-default"
                           style={{ height: `${height}%` }}
                           title={`${day.count} requests, ${total.toLocaleString()} tokens`}
                         />
@@ -263,10 +263,10 @@ export default function PlanPage() {
           </div>
 
           {/* Invoices */}
-          <div className="bg-[#131b2e] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5">
+          <div className="bg-surface-low rounded-2xl border border-border/20 overflow-hidden">
+            <div className="px-6 py-4 border-b border-border/20">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#4cd7f6]" />
+                <FileText className="h-4 w-4 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Invoices</span>
               </div>
             </div>
@@ -281,15 +281,15 @@ export default function PlanPage() {
                     <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-border/20">
                   {invoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-3 text-xs font-mono text-[#4cd7f6]">{inv.number.slice(0, 12)}...</td>
+                      <td className="px-6 py-3 text-xs font-mono text-primary">{inv.number.slice(0, 12)}...</td>
                       <td className="px-6 py-3 text-xs text-slate-400">
                         {formatDate(inv.periodStart)} - {formatDate(inv.periodEnd)}
                       </td>
                       <td className="px-6 py-3 text-xs text-slate-300 font-mono">{inv.tokensUsed.toLocaleString()}</td>
-                      <td className="px-6 py-3 text-xs text-[#dae2fd] font-bold">{formatCurrency(inv.amount, inv.currency)}</td>
+                      <td className="px-6 py-3 text-xs text-foreground font-bold">{formatCurrency(inv.amount, inv.currency)}</td>
                       <td className="px-6 py-3">
                         <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", statusColor(inv.status))}>
                           {statusIcon(inv.status)}

@@ -132,7 +132,7 @@ export function RouterGrid() {
                               )} />
                               <span className={cn(
                                 "text-[10px] uppercase font-bold tracking-tighter",
-                                status === "online" ? "text-[#4ae176]" : "text-[#ffb4ab]"
+                                status === "online" ? "text-tertiary" : "text-destructive"
                               )}>
                                 {status === "online" ? "Online" : "Offline"}
                               </span>
@@ -260,7 +260,7 @@ export function RouterGrid() {
                           </button>
                           <ConfirmDialog
                             trigger={
-                              <button className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                              <button className="w-8 h-8 rounded-lg hover:bg-muted/40 text-muted-foreground/70 hover:text-destructive transition-colors flex items-center justify-center">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             }

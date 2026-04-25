@@ -60,7 +60,7 @@ export function RecipientSelector({
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer ${
               mode === "single"
                 ? "bg-[#06b6d4] text-[#00424f]"
-                : "bg-[#2d3449] text-slate-400 hover:text-slate-200"
+                : "bg-surface-highest text-slate-400 hover:text-slate-200"
             }`}
           >
             <User className="h-4 w-4" />
@@ -71,7 +71,7 @@ export function RecipientSelector({
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer ${
               mode === "broadcast"
                 ? "bg-[#06b6d4] text-[#00424f]"
-                : "bg-[#2d3449] text-slate-400 hover:text-slate-200"
+                : "bg-surface-highest text-slate-400 hover:text-slate-200"
             }`}
           >
             <Users className="h-4 w-4" />
@@ -96,10 +96,10 @@ export function RecipientSelector({
                 if (value && value !== "__none__") onCustomChatIdChange("")
               }}
             >
-              <SelectTrigger className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 cursor-pointer h-auto">
+              <SelectTrigger className="w-full bg-surface-highest border-none rounded-lg py-3 px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 cursor-pointer h-auto">
                 <SelectValue placeholder="-- Select a reseller --" />
               </SelectTrigger>
-              <SelectContent className="bg-[#2d3449] border-white/10">
+              <SelectContent className="bg-surface-highest border-white/10">
                 <SelectItem value="__none__" className="text-slate-400">-- Select a reseller --</SelectItem>
                 {resellersLoading && (
                   <SelectItem value="__loading__" disabled>Loading...</SelectItem>
@@ -114,11 +114,11 @@ export function RecipientSelector({
 
             {/* Divider */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/5" />
+              <div className="flex-1 h-px bg-muted/30" />
               <span className="text-[10px] text-slate-500 uppercase tracking-widest">
                 or
               </span>
-              <div className="flex-1 h-px bg-white/5" />
+              <div className="flex-1 h-px bg-muted/30" />
             </div>
 
             {/* Custom Chat ID */}
@@ -130,7 +130,7 @@ export function RecipientSelector({
                 if (e.target.value) onResellerChange("")
               }}
               placeholder="Enter custom Telegram Chat ID"
-              className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40"
+              className="w-full bg-surface-highest border-none rounded-lg py-3 px-4 text-sm text-foreground placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40"
             />
           </div>
         ) : (
@@ -142,7 +142,7 @@ export function RecipientSelector({
             >
               {selectedBroadcastIds.length === resellerList.length &&
               resellerList.length > 0 ? (
-                <CheckSquare className="h-4 w-4 text-[#4cd7f6]" />
+                <CheckSquare className="h-4 w-4 text-primary" />
               ) : (
                 <Square className="h-4 w-4" />
               )}
@@ -165,15 +165,15 @@ export function RecipientSelector({
                   <button
                     key={r.id}
                     onClick={() => onToggleBroadcastId(r.id)}
-                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-[#2d3449]/60 transition-colors text-left cursor-pointer"
+                    className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-surface-highest/60 transition-colors text-left cursor-pointer"
                   >
                     {selectedBroadcastIds.includes(r.id) ? (
-                      <CheckSquare className="h-4 w-4 text-[#4cd7f6] flex-shrink-0" />
+                      <CheckSquare className="h-4 w-4 text-primary flex-shrink-0" />
                     ) : (
                       <Square className="h-4 w-4 text-slate-500 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm text-[#dae2fd] font-medium truncate block">
+                      <span className="text-sm text-foreground font-medium truncate block">
                         {r.name}
                       </span>
                       <span className="text-[10px] text-slate-500 font-mono-tech">

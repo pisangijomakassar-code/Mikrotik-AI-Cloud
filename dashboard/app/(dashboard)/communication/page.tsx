@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import {
   MessageSquare,
   Send,
   Loader2,
+  ImagePlus,
+  X,
 } from "lucide-react"
 import { useSendTelegram } from "@/hooks/use-telegram"
 import { useResellers } from "@/hooks/use-resellers"
@@ -36,6 +38,26 @@ export default function CommunicationPage() {
   const [customChatId, setCustomChatId] = useState("")
   const [selectedBroadcastIds, setSelectedBroadcastIds] = useState<string[]>([])
   const [message, setMessage] = useState("")
+  const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setPhoto(file)
+    if (file) {
+      const url = URL.createObjectURL(file)
+      setPhotoPreview(url)
+    } else {
+      setPhotoPreview(null)
+    }
+  }
+
+  function removePhoto() {
+    setPhoto(null)
+    setPhotoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
 
   const { data: resellers, isLoading: resellersLoading } = useResellers()
   const sendMutation = useSendTelegram()
@@ -84,39 +106,26 @@ export default function CommunicationPage() {
     const chatIds = getRecipientChatIds()
     if (chatIds.length === 0 || !message.trim()) return
 
-    if (chatIds.length === 1) {
-      sendMutation.mutate(
-        { chatId: chatIds[0], message: message.trim() },
-        {
-          onSuccess: () => {
-            toast.success("Pesan terkirim ke 1 penerima")
-            setMessage("")
-          },
-          onError: (err) => {
-            toast.error(err.message || "Gagal mengirim pesan")
-          },
-        }
-      )
-    } else {
-      sendMutation.mutate(
-        { chatIds, message: message.trim() },
-        {
-          onSuccess: () => {
-            toast.success(`Pesan terkirim ke ${chatIds.length} penerima`)
-            setMessage("")
-          },
-          onError: (err) => {
-            toast.error(err.message || "Gagal mengirim pesan")
-          },
-        }
-      )
-    }
+    const payload = chatIds.length === 1
+      ? { chatId: chatIds[0], message: message.trim(), photo }
+      : { chatIds, message: message.trim(), photo }
+
+    sendMutation.mutate(payload, {
+      onSuccess: () => {
+        toast.success(`Pesan terkirim ke ${chatIds.length} penerima`)
+        setMessage("")
+        removePhoto()
+      },
+      onError: (err) => {
+        toast.error(err.message || "Gagal mengirim pesan")
+      },
+    })
   }
 
   if (planLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     )
   }
@@ -125,13 +134,13 @@ export default function CommunicationPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-6">
         <MessageSquare className="h-16 w-16 text-slate-600" />
-        <h2 className="text-2xl font-headline font-bold text-[#dae2fd]">Premium Feature</h2>
+        <h2 className="text-2xl font-headline font-bold text-foreground">Premium Feature</h2>
         <p className="text-slate-400 text-center max-w-md">
           Communication panel tersedia hanya untuk plan Premium. Upgrade untuk mengirim pesan ke reseller via Telegram.
         </p>
         <a
           href="/plan"
-          className="px-6 py-3 rounded-lg text-sm font-bold bg-linear-to-r from-[#4cd7f6] to-[#06b6d4] text-[#003640] hover:brightness-110 transition-all"
+          className="px-6 py-3 rounded-lg text-sm font-bold bg-linear-to-r from-primary to-primary-container text-primary-foreground hover:brightness-110 transition-all"
         >
           Upgrade ke Premium
         </a>
@@ -144,8 +153,8 @@ export default function CommunicationPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <MessageSquare className="h-8 w-8 text-[#4cd7f6]" />
-          <h1 className="text-4xl font-headline font-bold text-[#dae2fd]">
+          <MessageSquare className="h-8 w-8 text-primary" />
+          <h1 className="text-4xl font-headline font-bold text-foreground">
             Communication
           </h1>
         </div>
@@ -179,10 +188,44 @@ export default function CommunicationPage() {
               onSelectAllBroadcast={selectAllBroadcast}
             />
 
+            {/* Photo upload */}
+            <div className="mb-5">
+              <label className="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-widest mb-3 block">
+                Foto (opsional)
+              </label>
+              {photoPreview ? (
+                <div className="relative w-fit">
+                  <img src={photoPreview} alt="preview" className="max-h-40 rounded-xl border border-white/10 object-cover" />
+                  <button
+                    onClick={removePhoto}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-primary-foreground flex items-center justify-center hover:brightness-110 transition-all"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-white/20 text-slate-400 hover:border-primary/50 hover:text-primary text-sm transition-all"
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  Pilih Foto
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </div>
+
             {/* Message textarea */}
             <div className="mb-6">
               <label className="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-widest mb-3 block">
-                Message
+                {photo ? "Caption" : "Message"}
               </label>
               <Textarea
                 value={message}
@@ -193,7 +236,7 @@ export default function CommunicationPage() {
                 }}
                 placeholder="Ketik pesan Anda..."
                 rows={8}
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 text-sm text-[#dae2fd] placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 resize-none"
+                className="w-full bg-surface-highest border-none rounded-lg py-3 px-4 text-sm text-foreground placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#4cd7f6]/40 resize-none"
               />
               <div className="flex justify-end mt-1">
                 <span
@@ -212,7 +255,7 @@ export default function CommunicationPage() {
             <button
               onClick={handleSend}
               disabled={!canSend || sendMutation.isPending}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[#06b6d4] hover:bg-[#4cd7f6] text-[#00424f]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-headline font-bold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-primary-container hover:bg-primary text-primary-foreground"
             >
               {sendMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -249,13 +292,13 @@ export default function CommunicationPage() {
                 <button
                   key={template.label}
                   onClick={() => setMessage(template.content)}
-                  className="flex items-center gap-3 w-full p-3 rounded-xl bg-[#2d3449]/50 hover:bg-[#2d3449] border border-white/5 hover:border-[#4cd7f6]/20 transition-all duration-200 text-left cursor-pointer group"
+                  className="flex items-center gap-3 w-full p-3 rounded-xl bg-surface-highest/50 hover:bg-surface-highest border border-border/20 hover:border-primary/20 transition-all duration-200 text-left cursor-pointer group"
                 >
-                  <div className="p-2 rounded-lg bg-[#4cd7f6]/10 group-hover:bg-[#4cd7f6]/20 transition-colors">
-                    <template.icon className="h-4 w-4 text-[#4cd7f6]" />
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <template.icon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <span className="text-sm text-[#dae2fd] font-medium block">
+                    <span className="text-sm text-foreground font-medium block">
                       {template.label}
                     </span>
                     <span className="text-[10px] text-slate-500 line-clamp-1">
@@ -267,27 +310,33 @@ export default function CommunicationPage() {
             </div>
 
             {/* Recipient summary */}
-            <div className="mt-6 pt-4 border-t border-white/5">
+            <div className="mt-6 pt-4 border-t border-border/20">
               <h3 className="text-[10px] font-headline font-bold text-slate-400 uppercase tracking-widest mb-3">
                 Send Summary
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Mode</span>
-                  <span className="text-[#dae2fd] font-medium">
+                  <span className="text-foreground font-medium">
                     {mode === "single" ? "Single" : "Broadcast"}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Recipients</span>
-                  <span className="text-[#4cd7f6] font-bold">
+                  <span className="text-primary font-bold">
                     {getRecipientChatIds().length}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500">Message length</span>
-                  <span className="text-[#dae2fd] font-mono-tech">
+                  <span className="text-foreground font-mono-tech">
                     {message.length}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-500">Foto</span>
+                  <span className={photo ? "text-tertiary font-bold" : "text-slate-500"}>
+                    {photo ? photo.name.slice(0, 16) + (photo.name.length > 16 ? "…" : "") : "Tidak ada"}
                   </span>
                 </div>
               </div>

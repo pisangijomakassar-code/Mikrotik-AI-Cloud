@@ -74,6 +74,42 @@ def format_rp(amount: int) -> str:
     return f"Rp {amount:,.0f}".replace(",", ".")
 
 
+BOT_TEXT_DEFAULTS = {
+    "bot_text_welcome": "Halo {name}! Saldo: {saldo}",
+    "bot_text_not_registered": "Anda belum terdaftar. Hubungi admin untuk didaftarkan.",
+    "bot_text_saldo": "Saldo Anda: {saldo}",
+    "bot_text_buy_confirm": "Konfirmasi beli voucher {nama}?\nHarga: {harga}\nSaldo setelah: {saldo_setelah}",
+    "bot_text_buy_success": "✅ Voucher berhasil dibeli!\nUsername: {username}\nPassword: {password}\nSisa saldo: {saldo}",
+    "bot_text_deposit_info": "Pilih nominal deposit:",
+    "bot_text_deposit_req": "Permintaan deposit {nominal} telah dikirim ke admin.",
+    "bot_text_deposit_sent": "✅ Deposit {nominal} berhasil dikonfirmasi. Saldo baru: {saldo}",
+}
+
+
+def _get_bot_texts() -> dict:
+    """Load custom bot texts from SystemSetting, falling back to defaults."""
+    if not DATABASE_URL:
+        return BOT_TEXT_DEFAULTS.copy()
+    import psycopg2
+    import psycopg2.extras
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.autocommit = True
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            'SELECT key, value FROM "SystemSetting" WHERE key LIKE \'bot_text_%\''
+        )
+        rows = {r["key"]: r["value"] for r in cur.fetchall()}
+        cur.close()
+        conn.close()
+        result = BOT_TEXT_DEFAULTS.copy()
+        result.update(rows)
+        return result
+    except Exception as exc:
+        logger.warning("Failed to load bot texts from DB, using defaults: %s", exc)
+        return BOT_TEXT_DEFAULTS.copy()
+
+
 def _get_users_with_bot_token() -> list[dict]:
     """Query all User rows that have a non-null resellerBotToken."""
     if not DATABASE_URL:
@@ -123,6 +159,15 @@ class ResellerBot:
         self.bot_token = bot_token
         self.owner_telegram_id = owner_telegram_id
         self.vdb = vdb
+        self.texts = _get_bot_texts()
+
+    def t(self, key: str, **kwargs) -> str:
+        """Get bot text for key, formatted with kwargs."""
+        tmpl = self.texts.get(key, BOT_TEXT_DEFAULTS.get(key, key))
+        try:
+            return tmpl.format(**kwargs)
+        except KeyError:
+            return tmpl
 
     # ── Keyboard helpers ──────────────────────────────────────
 
@@ -157,15 +202,13 @@ class ResellerBot:
             return
 
         if not reseller:
-            await update.message.reply_text(
-                "Anda belum terdaftar. Hubungi admin untuk didaftarkan."
-            )
+            await update.message.reply_text(self.t("bot_text_not_registered"))
             return
 
         balance = reseller.get("balance", 0)
         name = reseller.get("name", "Reseller")
         await update.message.reply_text(
-            f"Halo {name}! Saldo: {format_rp(balance)}",
+            self.t("bot_text_welcome", name=name, saldo=format_rp(balance)),
             reply_markup=self._main_menu_keyboard(),
         )
 

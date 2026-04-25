@@ -39,6 +39,13 @@ export interface CreateRouterInput {
   label?: string;
   isDefault?: boolean;
   userId: string;
+  // MikroTik DNS settings
+  dnsHotspot?: string;
+  // Telegram bot integration (optional)
+  telegramOwnerUsername?: string;
+  telegramOwnerId?: string;
+  botToken?: string;
+  botUsername?: string;
 }
 
 export interface LogFilter {
@@ -74,6 +81,9 @@ export interface CreateResellerInput {
   phone?: string;
   telegramId?: string;
   balance?: number;
+  discount?: number;
+  voucherGroup?: string;
+  uplink?: string;
 }
 
 export interface UpdateResellerInput {
@@ -81,11 +91,15 @@ export interface UpdateResellerInput {
   phone?: string;
   telegramId?: string;
   status?: "ACTIVE" | "INACTIVE";
+  discount?: number;
+  voucherGroup?: string;
+  uplink?: string;
 }
 
 export interface SaldoOperationInput {
   amount: number;
   description?: string;
+  proofImageUrl?: string;
 }
 
 export interface GenerateVouchersInput {
@@ -96,6 +110,10 @@ export interface GenerateVouchersInput {
   prefix?: string;
   passwordLength?: number;
   usernameLength?: number;
+  charType?: string;
+  loginType?: string;
+  limitUptime?: string;
+  limitBytesTotal?: string;
   server?: string;
 }
 
@@ -187,7 +205,7 @@ export interface PPPProfile {
 
 // ── Tunnel Types ──
 
-export type TunnelMethod = 'CLOUDFLARE' | 'SSTP'
+export type TunnelMethod = 'CLOUDFLARE' | 'SSTP' | 'OVPN' | 'WIREGUARD'
 export type TunnelStatus = 'PENDING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR'
 export type ConnectionMethod = 'DIRECT' | 'TUNNEL'
 export type TunnelServiceName = 'api' | 'winbox' | 'ssh' | 'webfig' | 'api-ssl'
@@ -215,6 +233,12 @@ export interface Tunnel {
   updatedAt: string
   routerId: string
   ports: TunnelPort[]
+  // WireGuard / OVPN shared fields
+  winboxPort: number | null
+  subnetOctet: number | null
+  routerOctet: number | null
+  wgClientPubKey: string | null
+  wgServerPubKey: string | null
 }
 
 export const TUNNEL_SERVICES: { serviceName: TunnelServiceName; remotePort: number; label: string; defaultEnabled: boolean }[] = [

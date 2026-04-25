@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Cloud, Shield, X, CheckCircle2, MessageCircle } from "lucide-react"
+import { Cloud, Shield, X, CheckCircle2, MessageCircle, Network, Wifi } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ const METHOD_OPTIONS = [
     value: "CLOUDFLARE" as TunnelMethod,
     icon: <Cloud className="h-4 w-4" />,
     title: "Cloudflare Tunnel",
-    description: "Router di balik NAT, mendukung Docker container",
+    description: "Via Cloudflare Zero Trust — Docker container di RouterOS 7",
     badge: "RouterOS 7+",
     color: "text-primary border-primary/50 bg-primary/8",
     badgeColor: "bg-primary/10 text-primary",
@@ -36,7 +36,7 @@ const METHOD_OPTIONS = [
     value: "SSTP" as TunnelMethod,
     icon: <Shield className="h-4 w-4" />,
     title: "SSTP VPN",
-    description: "Router di balik NAT, SSTP built-in tanpa Docker",
+    description: "Via SoftEther VPN — SSTP built-in tanpa Docker",
     badge: "RouterOS 6",
     color: "text-amber-400 border-amber-400/50 bg-amber-400/8",
     badgeColor: "bg-amber-400/10 text-amber-400",
@@ -44,6 +44,34 @@ const METHOD_OPTIONS = [
       "Tidak perlu Docker atau container support",
       "SSTP client built-in di RouterOS 6.x",
       "Cocok untuk RB750, RB951, RB2011, dll",
+    ],
+  },
+  {
+    value: "OVPN" as TunnelMethod,
+    icon: <Network className="h-4 w-4" />,
+    title: "OpenVPN TCP",
+    description: "OpenVPN TCP, untuk RouterOS 6 — tanpa Docker",
+    badge: "RouterOS 6",
+    color: "text-orange-400 border-orange-400/50 bg-orange-400/8",
+    badgeColor: "bg-orange-400/10 text-orange-400",
+    features: [
+      "OpenVPN client built-in di RouterOS 6.x",
+      "TCP mode — lebih stabil di jaringan NAT/firewall",
+      "Mendapat IP VPN dan port Winbox khusus",
+    ],
+  },
+  {
+    value: "WIREGUARD" as TunnelMethod,
+    icon: <Wifi className="h-4 w-4" />,
+    title: "WireGuard UDP",
+    description: "WireGuard UDP, untuk RouterOS 7 — lebih ringan",
+    badge: "RouterOS 7",
+    color: "text-emerald-400 border-emerald-400/50 bg-emerald-400/8",
+    badgeColor: "bg-emerald-400/10 text-emerald-400",
+    features: [
+      "WireGuard built-in di RouterOS 7.x",
+      "UDP — performa lebih tinggi, latensi lebih rendah",
+      "Mendapat IP VPN dan port Winbox khusus",
     ],
   },
 ]
@@ -290,6 +318,28 @@ export function TunnelActivateDialog({
               </p>
             </div>
           )}
+
+          {/* OVPN note */}
+          {method === "OVPN" && (
+            <div className="p-3 bg-orange-400/5 border border-orange-400/10 rounded-xl space-y-1">
+              <p className="text-[11px] text-orange-400 font-semibold">OpenVPN TCP (RouterOS 6)</p>
+              <p className="text-[11px] text-orange-400/80">
+                Setelah diaktifkan, salin script RouterOS CLI yang diberikan dan jalankan di terminal router.
+                Port Winbox akan diteruskan otomatis oleh server.
+              </p>
+            </div>
+          )}
+
+          {/* WIREGUARD note */}
+          {method === "WIREGUARD" && (
+            <div className="p-3 bg-emerald-400/5 border border-emerald-400/10 rounded-xl space-y-1">
+              <p className="text-[11px] text-emerald-400 font-semibold">WireGuard UDP (RouterOS 7)</p>
+              <p className="text-[11px] text-emerald-400/80">
+                Setelah diaktifkan, salin script RouterOS CLI yang diberikan dan jalankan di terminal router.
+                Port Winbox akan diteruskan otomatis oleh server.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -305,7 +355,7 @@ export function TunnelActivateDialog({
             type="button"
             onClick={handleActivate}
             disabled={createTunnel.isPending}
-            className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+            className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
           >
             {createTunnel.isPending ? "Mengaktifkan..." : "Aktifkan Tunnel"}
           </button>

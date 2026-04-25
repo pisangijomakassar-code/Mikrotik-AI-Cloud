@@ -160,17 +160,34 @@ function loginTLS(host: string, port: number, username: string, password: string
 
 // ── API Route ─────────────────────────────────────────────────────────────────
 
+/** Parse "host:port" string — returns clean hostname and resolved port */
+function parseHostPort(rawHost: string, rawPort: string): { host: string; port: string } {
+  const trimmed = rawHost.trim()
+  const lastColon = trimmed.lastIndexOf(":")
+  if (lastColon !== -1) {
+    const potentialPort = trimmed.slice(lastColon + 1)
+    const portNum = parseInt(potentialPort, 10)
+    if (potentialPort && !isNaN(portNum) && portNum >= 1 && portNum <= 65535) {
+      return { host: trimmed.slice(0, lastColon), port: potentialPort }
+    }
+  }
+  return { host: trimmed, port: rawPort }
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth()
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const body = await request.json()
-    const { host, port, username, password } = body
+    const raw = body as { host?: string; port?: string; username?: string; password?: string }
 
-    if (!host || !port) {
+    if (!raw.host || !raw.port) {
       return Response.json({ error: "Host dan port wajib diisi" }, { status: 400 })
     }
+
+    const { host, port } = parseHostPort(raw.host, raw.port)
+    const { username, password } = raw
 
     // No credentials — TCP only
     if (!username || !password) {

@@ -10,6 +10,8 @@ datasource db {
 enum TunnelMethod {
   CLOUDFLARE
   SSTP
+  OVPN
+  WIREGUARD
 }
 
 enum TunnelStatus {
@@ -49,14 +51,16 @@ model User {
   updatedAt     DateTime   @updatedAt
   lastActiveAt  DateTime?
 
-  routers          Router[]
-  activityLogs     ActivityLog[]
-  subscription     Subscription?
-  tokenUsages      TokenUsage[]
-  invoices         Invoice[]
-  resellers        Reseller[]
-  voucherBatches   VoucherBatch[]
-  resellerBotToken String?
+  routers                Router[]
+  activityLogs           ActivityLog[]
+  subscription           Subscription?
+  tokenUsages            TokenUsage[]
+  invoices               Invoice[]
+  resellers              Reseller[]
+  voucherBatches         VoucherBatch[]
+  voucherProfileSettings VoucherProfileSetting[]
+  voucherTypes           VoucherType[]
+  resellerBotToken       String?
 
   @@index([telegramId])
   @@index([status])
@@ -77,6 +81,15 @@ model Router {
   lastSeen        DateTime?
   connectionMethod ConnectionMethod @default(DIRECT)
   tunnel           Tunnel?
+
+  // MikroTik DNS settings (for hotspot landing)
+  dnsHotspot      String    @default("")
+
+  // Telegram bot integration (optional, for per-router notifications)
+  telegramOwnerUsername String @default("")
+  telegramOwnerId       String @default("")
+  botToken              String @default("") // Fernet-encrypted when saved (same as password)
+  botUsername           String @default("")
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -100,6 +113,14 @@ model Tunnel {
   vpnUsername           String?
   vpnPassword           String?      // encrypted
   vpnAssignedIp         String?      // e.g. 10.10.0.5
+
+  // WireGuard / OVPN shared fields
+  winboxPort            Int?         // external port on VPS for Winbox forwarding (e.g. 18291)
+  subnetOctet           Int?         // customer /24 subnet index (10.8.X.0 or 10.9.X.0)
+  routerOctet           Int?         // router IP within subnet (10.8.X.Y)
+  wgClientPrivKey       String?      // WG client private key (Fernet encrypted)
+  wgClientPubKey        String?      // WG client public key (for server peer config)
+  wgServerPubKey        String?      // WG server public key (shown to user in script)
 
   // Common
   routerLanIp           String       @default("192.168.88.1")
@@ -246,14 +267,17 @@ enum SaldoTransactionType {
 }
 
 model Reseller {
-  id         String         @id @default(cuid())
-  name       String
-  phone      String         @default("")
-  telegramId String         @default("")
-  balance    Int            @default(0)
-  status     ResellerStatus @default(ACTIVE)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  name         String
+  phone        String         @default("")
+  telegramId   String         @default("")
+  balance      Int            @default(0)
+  discount     Int            @default(0)   // Diskon (%)
+  voucherGroup String         @default("default") // Grup Voucher
+  uplink       String         @default("")  // ID upline reseller (opsional)
+  status       ResellerStatus @default(ACTIVE)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -266,19 +290,72 @@ model Reseller {
 }
 
 model SaldoTransaction {
-  id            String               @id @default(cuid())
-  type          SaldoTransactionType
-  amount        Int
-  balanceBefore Int
-  balanceAfter  Int
-  description   String               @default("")
-  createdAt     DateTime             @default(now())
+  id              String               @id @default(cuid())
+  type            SaldoTransactionType
+  amount          Int
+  balanceBefore   Int
+  balanceAfter    Int
+  description     String               @default("")
+  // Voucher purchase details (for history table)
+  hargaVoucher    Int                  @default(0)
+  voucherUsername String               @default("")
+  voucherPassword String               @default("")
+  voucherInfo     String               @default("") // e.g. profile name / package
+  proofImageUrl   String               @default("") // URL bukti transfer/deposit
+  createdAt       DateTime             @default(now())
 
   resellerId String
   reseller   Reseller @relation(fields: [resellerId], references: [id], onDelete: Cascade)
 
   @@index([resellerId])
   @@index([createdAt])
+}
+
+model VoucherProfileSetting {
+  id          String   @id @default(cuid())
+  profileName String
+  price       Int      @default(0)
+  charType    String   @default("alphanumeric")
+  charLength  Int      @default(6)
+  loginType   String   @default("separate")
+  limitUptime String?
+  limitQuota  String?
+  qrColor     String   @default("#000000")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, profileName])
+  @@index([userId])
+}
+
+model VoucherType {
+  id               String   @id @default(cuid())
+  namaVoucher      String
+  deskripsi        String   @default("")
+  harga            Int      @default(0)
+  markUp           Int      @default(0)
+  server           String   @default("all")
+  profile          String   @default("")
+  limitUptime      String   @default("0")
+  limitQuotaDl     Int      @default(0)
+  limitQuotaUl     Int      @default(0)
+  limitQuotaTotal  Int      @default(0)
+  typeChar         String   @default("Random abcd")
+  typeLogin        String   @default("Username & Password")
+  prefix           String   @default("")
+  panjangKarakter  Int      @default(6)
+  voucherGroup     String   @default("default") // comma-separated: "default,1,2"
+  voucherColor     String   @default("#ffffff")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VoucherBatch {

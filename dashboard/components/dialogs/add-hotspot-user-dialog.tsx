@@ -33,6 +33,9 @@ export function AddHotspotUserDialog({ open, onOpenChange }: AddHotspotUserDialo
       profile: "",
       server: "",
       limitUptime: "",
+      limitBytesTotal: "",
+      limitBytesIn: "",
+      limitBytesOut: "",
       comment: "",
     },
   })
@@ -49,11 +52,14 @@ export function AddHotspotUserDialog({ open, onOpenChange }: AddHotspotUserDialo
         profile: data.profile || undefined,
         server: data.server || undefined,
         "limit-uptime": data.limitUptime || undefined,
+        "limit-bytes-total": data.limitBytesTotal || undefined,
+        "limit-bytes-in": data.limitBytesIn || undefined,
+        "limit-bytes-out": data.limitBytesOut || undefined,
         comment: data.comment || undefined,
       },
       {
         onSuccess: () => {
-          toast.success("Hotspot user added successfully")
+          toast.success("Hotspot user berhasil ditambahkan")
           reset()
           onOpenChange(false)
         },
@@ -69,50 +75,41 @@ export function AddHotspotUserDialog({ open, onOpenChange }: AddHotspotUserDialo
     onOpenChange(false)
   }
 
+  const inputClass = "w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+  const labelClass = "text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1"
+
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-background/60 backdrop-blur-md">
-      <div className="w-full max-w-xl mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-8 border-b border-border flex items-center justify-between">
+      <div className="w-full max-w-xl mx-4 md:mx-0 bg-card border border-border rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="p-4 md:p-8 border-b border-border flex items-center justify-between shrink-0">
           <div>
-            <h3 className="text-2xl font-headline font-bold text-foreground">Add Hotspot User</h3>
-            <p className="text-sm text-muted-foreground/70">Create a new hotspot user account.</p>
+            <h3 className="text-2xl font-headline font-bold text-foreground">Tambah Hotspot User</h3>
+            <p className="text-sm text-muted-foreground/70">Buat akun hotspot user baru.</p>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-muted-foreground/70 hover:text-foreground transition-colors"
-          >
+          <button onClick={handleClose} className="text-muted-foreground/70 hover:text-foreground transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="p-4 md:p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-4 md:p-8 space-y-5 overflow-y-auto flex-1">
+            {/* Username & Password */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Username</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="e.g. user01"
-                  type="text"
-                  {...register("username")}
-                />
-                {errors.username?.message && (
-                  <p className="text-xs text-red-400 ml-1">{errors.username.message}</p>
-                )}
+                <label className={labelClass}>Username *</label>
+                <Input className={inputClass} placeholder="e.g. user01" {...register("username")} />
+                {errors.username?.message && <p className="text-xs text-destructive ml-1">{errors.username.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Password</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="User password"
-                  type="password"
-                  {...register("password")}
-                />
+                <label className={labelClass}>Password</label>
+                <Input className={inputClass} placeholder="Password user" type="password" {...register("password")} />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+
+            {/* Profile & Server */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Profile</label>
+                <label className={labelClass}>Profile</label>
                 <Select value={profileValue || "__default__"} onValueChange={(v) => setValue("profile", v === "__default__" ? "" : v)}>
                   <SelectTrigger className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm text-foreground">
                     <SelectValue placeholder="Default" />
@@ -126,51 +123,53 @@ export function AddHotspotUserDialog({ open, onOpenChange }: AddHotspotUserDialo
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Server</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="all (default)"
-                  type="text"
-                  {...register("server")}
-                />
+                <label className={labelClass}>Server</label>
+                <Input className={inputClass} placeholder="all (default)" {...register("server")} />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+
+            {/* Limit Uptime & Comment */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Limit Uptime</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="e.g. 1h30m"
-                  type="text"
-                  {...register("limitUptime")}
-                />
+                <label className={labelClass}>Limit Uptime</label>
+                <Input className={inputClass} placeholder="e.g. 1h30m, 1d" {...register("limitUptime")} />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Comment</label>
-                <Input
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="Optional note"
-                  type="text"
-                  {...register("comment")}
-                />
+                <label className={labelClass}>Komentar</label>
+                <Input className={inputClass} placeholder="Catatan opsional" {...register("comment")} />
+              </div>
+            </div>
+
+            {/* Quota section */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1 border-t border-border pt-3">Limit Kuota</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className={labelClass}>Total Kuota</label>
+                  <Input className={inputClass} placeholder="e.g. 1G, 500M" {...register("limitBytesTotal")} />
+                </div>
+                <div className="space-y-2">
+                  <label className={labelClass}>Limit Download</label>
+                  <Input className={inputClass} placeholder="e.g. 500M" {...register("limitBytesIn")} />
+                </div>
+                <div className="space-y-2">
+                  <label className={labelClass}>Limit Upload</label>
+                  <Input className={inputClass} placeholder="e.g. 100M" {...register("limitBytesOut")} />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
-            >
-              Cancel
+          <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4 shrink-0">
+            <button type="button" onClick={handleClose} className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors">
+              Batal
             </button>
             <button
               type="submit"
               disabled={addUser.isPending}
-              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
-              {addUser.isPending ? "Adding..." : "Add User"}
+              {addUser.isPending ? "Menambahkan..." : "Tambah User"}
             </button>
           </div>
         </form>

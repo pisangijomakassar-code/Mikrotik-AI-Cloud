@@ -92,7 +92,7 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
                   {...register("name")}
                 />
                 {errors.name?.message && (
-                  <p className="text-xs text-[#ffb4ab] ml-1">{errors.name.message}</p>
+                  <p className="text-xs text-destructive ml-1">{errors.name.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -104,7 +104,7 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
                   {...register("password")}
                 />
                 {errors.password?.message && (
-                  <p className="text-xs text-[#ffb4ab] ml-1">{errors.password.message}</p>
+                  <p className="text-xs text-destructive ml-1">{errors.password.message}</p>
                 )}
               </div>
             </div>
@@ -182,7 +182,7 @@ export function AddPPPSecretDialog({ open, onOpenChange }: AddPPPSecretDialogPro
             <button
               type="submit"
               disabled={addSecret.isPending}
-              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
               {addSecret.isPending ? "Adding..." : "Add Secret"}
             </button>

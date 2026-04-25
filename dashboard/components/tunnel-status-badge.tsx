@@ -24,19 +24,19 @@ const STATUS_CONFIG: Record<
     dot: "bg-[#4ae176]",
     label: "Terhubung",
     bg: "bg-[#4ae176]/10",
-    text: "text-[#4ae176]",
+    text: "text-tertiary",
   },
   DISCONNECTED: {
     dot: "bg-[#ffb4ab]",
     label: "Terputus",
     bg: "bg-[#ffb4ab]/10",
-    text: "text-[#ffb4ab]",
+    text: "text-destructive",
   },
   ERROR: {
     dot: "bg-[#ffb4ab]",
     label: "Error",
     bg: "bg-[#ffb4ab]/10",
-    text: "text-[#ffb4ab]",
+    text: "text-destructive",
   },
   NONE: {
     dot: "bg-slate-500",
@@ -48,7 +48,9 @@ const STATUS_CONFIG: Record<
 
 const METHOD_LABEL: Record<TunnelMethod, string> = {
   CLOUDFLARE: "Cloudflare",
-  SSTP: "SSTP VPN",
+  SSTP: "SSTP",
+  OVPN: "OpenVPN",
+  WIREGUARD: "WireGuard",
 }
 
 export function TunnelStatusBadge({

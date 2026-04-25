@@ -20,43 +20,43 @@ export default function PPPActivePage() {
     <div>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Active PPP Sessions</h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Activity className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Active PPP Sessions</h2>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <Activity className="h-[18px] w-[18px] text-primary shrink-0" />
             Monitor and manage active PPP connections.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-4 py-2 bg-[#131b2e] border border-white/5 rounded-lg">
-            <Radio className="h-3 w-3 text-[#4ae176] animate-pulse" />
-            <span className="text-xs font-bold text-[#4ae176]">Live</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-surface-low border border-border/20 rounded-lg">
+            <Radio className="h-3 w-3 text-tertiary animate-pulse" />
+            <span className="text-xs font-bold text-tertiary">Live</span>
             <span className="text-[10px] text-slate-500 ml-1">Auto-refresh 30s</span>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
+      <div className="bg-surface-low rounded-3xl border border-border/20 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50">
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Name</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Service</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Caller ID</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Address</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Uptime</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 hidden md:table-cell">Encoding</th>
-                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 text-right">Actions</th>
+              <tr className="bg-surface-lowest/80">
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Name</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Service</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20 hidden md:table-cell">Caller ID</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Address</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Uptime</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20 hidden md:table-cell">Encoding</th>
+                <th className="px-3 py-2 md:px-4 md:py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border/20">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-3 py-1.5 md:px-4 md:py-2">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                        <div className="h-4 w-20 animate-pulse rounded bg-muted" />
                       </td>
                     ))}
                   </tr>
@@ -73,12 +73,12 @@ export default function PPPActivePage() {
                 </tr>
               ) : (
                 sessions.map((session: Record<string, unknown>, idx: number) => (
-                  <tr key={`${session.name}-${idx}`} className="hover:bg-white/5 transition-colors group">
+                  <tr key={`${session.name}-${idx}`} className="hover:bg-muted/50 transition-colors group">
                     <td className="px-3 py-1.5 md:px-4 md:py-2">
-                      <span className="text-xs md:text-sm font-bold text-[#dae2fd]">{session.name as string}</span>
+                      <span className="text-xs md:text-sm font-bold text-foreground">{session.name as string}</span>
                     </td>
                     <td className="px-3 py-1.5 md:px-4 md:py-2">
-                      <span className="text-xs px-2.5 py-1 rounded-lg bg-[#222a3d] text-[#4cd7f6] font-medium uppercase">
+                      <span className="text-xs px-2.5 py-1 rounded-lg bg-muted text-primary font-medium uppercase">
                         {(session.service as string) || "--"}
                       </span>
                     </td>
@@ -97,7 +97,7 @@ export default function PPPActivePage() {
                     <td className="px-3 py-1.5 md:px-4 md:py-2 text-right">
                       <ConfirmDialog
                         trigger={
-                          <button className="w-8 h-8 rounded-lg hover:bg-white/10 text-slate-500 hover:text-[#ffb4ab] transition-colors flex items-center justify-center">
+                          <button className="w-8 h-8 rounded-lg hover:bg-muted text-slate-500 hover:text-destructive transition-colors flex items-center justify-center">
                             <LogOut className="h-4 w-4" />
                           </button>
                         }
@@ -119,7 +119,7 @@ export default function PPPActivePage() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
+        <div className="px-6 py-4 bg-surface-lowest/80 flex items-center justify-between border-t border-border/20">
           <span className="text-[10px] md:text-xs text-slate-500">
             {sessions?.length ?? 0} active session{(sessions?.length ?? 0) !== 1 ? "s" : ""}
           </span>

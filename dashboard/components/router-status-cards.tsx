@@ -63,8 +63,8 @@ export function RouterStatusCards() {
                 className={cn(
                   "text-[9px] font-bold px-2 py-0.5 rounded-lg border",
                   isOnline
-                    ? "bg-[#4ae176]/10 text-[#4ae176] border-[#4ae176]/20"
-                    : "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20"
+                    ? "bg-[#4ae176]/10 text-tertiary border-[#4ae176]/20"
+                    : "bg-[#ffb4ab]/10 text-destructive border-[#ffb4ab]/20"
                 )}
               >
                 {isOnline ? "ONLINE" : "OFFLINE"}

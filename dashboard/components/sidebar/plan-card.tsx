@@ -46,7 +46,7 @@ export function PlanCard() {
       <Link href="/plan" className="block">
         <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors">
           <div className="flex items-center gap-3 mb-3">
-            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "PREMIUM" ? "text-[#4ae176]" : planInfo?.plan === "PRO" ? "text-[#4cd7f6]" : "text-muted-foreground")} />
+            <Sparkles className={cn("h-5 w-5", planInfo?.plan === "PREMIUM" ? "text-tertiary" : planInfo?.plan === "PRO" ? "text-primary" : "text-muted-foreground")} />
             <span className="text-xs font-headline font-bold text-foreground">
               {planInfo ? `AI AGENT ${planInfo.plan}` : "AI AGENT"}
             </span>

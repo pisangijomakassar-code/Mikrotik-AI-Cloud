@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { createCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
 import { createSstpTunnel } from "@/lib/services/sstp-tunnel.service"
+import { createWireguardTunnel } from "@/lib/services/wg-tunnel.service"
+import { createOvpnTunnel } from "@/lib/services/ovpn-tunnel.service"
 import { TUNNEL_SERVICES } from "@/lib/types"
 import { PLAN_LIMITS, type PlanKey } from "@/lib/constants/plan-limits"
 
@@ -155,7 +157,80 @@ export async function POST(request: NextRequest) {
       return Response.json(tunnel, { status: 201 })
     }
 
-    return Response.json({ error: "Invalid method. Use CLOUDFLARE or SSTP." }, { status: 400 })
+    if (method === "OVPN") {
+      const { username, password, vpnIp, winboxPort, subnetOctet, routerOctet } =
+        await createOvpnTunnel(router.id, prisma)
+
+      const tunnel = await prisma.tunnel.create({
+        data: {
+          method: "OVPN",
+          vpnUsername: username,
+          vpnPassword: password,
+          vpnAssignedIp: vpnIp,
+          winboxPort,
+          subnetOctet,
+          routerOctet,
+          routerLanIp: lanIp,
+          routerId: router.id,
+          ports: {
+            create: TUNNEL_SERVICES.filter(s =>
+              allowedTunnelPorts.includes(s.serviceName)
+            ).map((s) => ({
+              serviceName: s.serviceName,
+              remotePort: s.remotePort,
+              enabled: true,
+            })),
+          },
+        },
+        include: { ports: true },
+      })
+
+      await prisma.router.update({
+        where: { id: router.id },
+        data: { connectionMethod: "TUNNEL" },
+      })
+
+      return Response.json(tunnel, { status: 201 })
+    }
+
+    if (method === "WIREGUARD") {
+      const { clientPrivKey, clientPubKey, serverPubKey, vpnIp, winboxPort, subnetOctet, routerOctet } =
+        await createWireguardTunnel(router.id, prisma)
+
+      const tunnel = await prisma.tunnel.create({
+        data: {
+          method: "WIREGUARD",
+          vpnAssignedIp: vpnIp,
+          winboxPort,
+          subnetOctet,
+          routerOctet,
+          wgClientPrivKey: clientPrivKey,
+          wgClientPubKey: clientPubKey,
+          wgServerPubKey: serverPubKey,
+          routerLanIp: lanIp,
+          routerId: router.id,
+          ports: {
+            create: TUNNEL_SERVICES.filter(s =>
+              allowedTunnelPorts.includes(s.serviceName)
+            ).map((s) => ({
+              serviceName: s.serviceName,
+              remotePort: s.remotePort,
+              enabled: true,
+            })),
+          },
+        },
+        include: { ports: true },
+      })
+
+      await prisma.router.update({
+        where: { id: router.id },
+        data: { connectionMethod: "TUNNEL" },
+      })
+
+      return Response.json(tunnel, { status: 201 })
+    }
+
+    return Response.json({ error: "Invalid method. Use CLOUDFLARE, SSTP, OVPN or WIREGUARD." }, { status: 400 })
   } catch (error: unknown) {
     console.error("Failed to create tunnel:", error)
     const message = error instanceof Error ? error.message : "Failed to create tunnel"

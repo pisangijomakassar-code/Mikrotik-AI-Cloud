@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api-client"
 
 export interface HotspotUser {
   name: string
+  password?: string
   profile: string
   disabled: boolean
   server?: string
@@ -35,13 +36,27 @@ export interface HotspotActiveSession {
 export interface HotspotProfile {
   name: string
   rateLimit?: string
-  sharedUsers?: number
+  sharedUsers?: number | string
   sessionTimeout?: string
   idleTimeout?: string
   keepaliveTimeout?: string
   addressPool?: string
+  onLogin?: string
+  onLogout?: string
   /** Injected by /api/hotspot/profiles from VoucherProfileSetting */
   price?: number
+}
+
+export interface HotspotProfileInput {
+  name: string
+  rateLimit?: string
+  sharedUsers?: number
+  sessionTimeout?: string
+  idleTimeout?: string
+  addressPool?: string
+  onLogin?: string
+  onLogout?: string
+  router?: string
 }
 
 export interface HotspotStats {
@@ -172,5 +187,30 @@ export function useDisableHotspotUser() {
       queryClient.invalidateQueries({ queryKey: ["hotspot-users"] })
       queryClient.invalidateQueries({ queryKey: ["hotspot-stats"] })
     },
+  })
+}
+
+export function useAddHotspotProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: HotspotProfileInput) => apiClient.post("/api/hotspot/profiles", data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hotspot-profiles"] }),
+  })
+}
+
+export function useUpdateHotspotProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, ...data }: HotspotProfileInput & { name: string }) =>
+      apiClient.put(`/api/hotspot/profiles/${encodeURIComponent(name)}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hotspot-profiles"] }),
+  })
+}
+
+export function useDeleteHotspotProfile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => apiClient.delete(`/api/hotspot/profiles/${encodeURIComponent(name)}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["hotspot-profiles"] }),
   })
 }

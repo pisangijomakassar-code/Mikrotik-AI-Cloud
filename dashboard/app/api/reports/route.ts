@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const from = searchParams.get("from")
   const to = searchParams.get("to")
+  const resellerIdFilter = searchParams.get("resellerId")
 
   const dateFilter = from && to
     ? { gte: new Date(from), lte: new Date(to + "T23:59:59.999Z") }
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         ...(dateFilter ? { createdAt: dateFilter } : {}),
+        ...(resellerIdFilter ? { resellerId: resellerIdFilter } : {}),
       },
       select: {
         id: true,
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
       where: {
         reseller: { userId: session.user.id },
         ...(dateFilter ? { createdAt: dateFilter } : {}),
+        ...(resellerIdFilter ? { resellerId: resellerIdFilter } : {}),
       },
       select: {
         id: true,

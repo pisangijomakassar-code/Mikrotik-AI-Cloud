@@ -82,8 +82,8 @@ export function DashboardVoucherGenerate() {
       }}
     >
       <div className="flex items-center gap-2 mb-4">
-        <Ticket className="h-5 w-5 shrink-0 text-[#4cd7f6]" />
-        <h3 className="text-sm font-headline font-bold text-[#dae2fd] uppercase tracking-widest">
+        <Ticket className="h-5 w-5 shrink-0 text-primary" />
+        <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">
           Quick Voucher
         </h3>
       </div>
@@ -95,7 +95,7 @@ export function DashboardVoucherGenerate() {
             Profile
           </label>
           <Select value={profile} onValueChange={setProfile} disabled={profilesLoading}>
-            <SelectTrigger className="bg-[#131b2e] border-white/10 text-slate-200 h-9">
+            <SelectTrigger className="bg-surface-low border-white/10 text-slate-200 h-9">
               <SelectValue placeholder={profilesLoading ? "Loading..." : "Select profile"} />
             </SelectTrigger>
             <SelectContent>
@@ -118,7 +118,7 @@ export function DashboardVoucherGenerate() {
             max={50}
             value={count}
             onChange={(e) => setCount(Number(e.target.value))}
-            className="bg-[#131b2e] border-white/10 text-slate-200 h-9"
+            className="bg-surface-low border-white/10 text-slate-200 h-9"
           />
         </div>
 
@@ -130,7 +130,7 @@ export function DashboardVoucherGenerate() {
             value={prefix}
             onChange={(e) => setPrefix(e.target.value)}
             placeholder="Prefix"
-            className="bg-[#131b2e] border-white/10 text-slate-200 h-9"
+            className="bg-surface-low border-white/10 text-slate-200 h-9"
           />
         </div>
 
@@ -154,16 +154,16 @@ export function DashboardVoucherGenerate() {
           {vouchers.map((v, i) => (
             <div
               key={`${v.username}-${i}`}
-              className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#131b2e] border border-white/5"
+              className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-low border border-border/20"
             >
               <span className="font-mono text-sm text-slate-300">
-                <span className="text-[#4cd7f6]">{v.username}</span>
+                <span className="text-primary">{v.username}</span>
                 <span className="text-slate-600 mx-2">/</span>
                 <span className="text-emerald-400">{v.password}</span>
               </span>
               <button
                 onClick={() => handleCopy(i, v)}
-                className="p-1 rounded hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-1 rounded hover:bg-muted/50 transition-colors cursor-pointer"
                 title="Copy credentials"
               >
                 {copiedIdx === i ? (

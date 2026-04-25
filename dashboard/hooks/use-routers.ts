@@ -14,6 +14,13 @@ export interface RouterData {
   isDefault: boolean
   userId: string
   createdAt: string
+  // MikroTik DNS settings
+  dnsHotspot?: string
+  // Telegram bot integration (optional)
+  telegramOwnerUsername?: string
+  telegramOwnerId?: string
+  botUsername?: string
+  // Note: botToken is NOT returned from API for security
   user?: { name: string }
   health?: {
     status: "online" | "offline" | "warning"

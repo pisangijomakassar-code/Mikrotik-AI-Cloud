@@ -9,13 +9,13 @@ import { cn } from "@/lib/utils"
 
 function getTopicStyle(topics: string) {
   if (topics.includes("error") || topics.includes("critical"))
-    return { icon: <AlertTriangle className="h-3 w-3" />, color: "text-[#ffb4ab]", bg: "bg-[#ffb4ab]/10" }
+    return { icon: <AlertTriangle className="h-3 w-3" />, color: "text-destructive", bg: "bg-[#ffb4ab]/10" }
   if (topics.includes("warning"))
     return { icon: <AlertTriangle className="h-3 w-3" />, color: "text-amber-400", bg: "bg-amber-400/10" }
   if (topics.includes("firewall"))
     return { icon: <Shield className="h-3 w-3" />, color: "text-primary", bg: "bg-primary/10" }
   if (topics.includes("wireless") || topics.includes("dhcp"))
-    return { icon: <Wifi className="h-3 w-3" />, color: "text-[#4ae176]", bg: "bg-[#4ae176]/10" }
+    return { icon: <Wifi className="h-3 w-3" />, color: "text-tertiary", bg: "bg-[#4ae176]/10" }
   return { icon: <Info className="h-3 w-3" />, color: "text-muted-foreground", bg: "bg-muted/40" }
 }
 

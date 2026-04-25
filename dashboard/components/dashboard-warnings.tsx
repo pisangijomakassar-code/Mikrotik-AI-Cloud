@@ -70,9 +70,9 @@ export function DashboardWarnings() {
       {warnings.length === 0 ? (
         <div className="flex items-center gap-3 py-3">
           <div className="p-2 rounded-lg bg-[#4ae176]/10">
-            <CheckCircle className="h-5 w-5 text-[#4ae176]" />
+            <CheckCircle className="h-5 w-5 text-tertiary" />
           </div>
-          <span className="text-sm text-[#4ae176] font-medium">
+          <span className="text-sm text-tertiary font-medium">
             All systems normal
           </span>
         </div>
@@ -96,7 +96,7 @@ export function DashboardWarnings() {
               <AlertTriangle
                 className={`h-4 w-4 flex-shrink-0 ${
                   warning.level === "critical"
-                    ? "text-[#ffb4ab]"
+                    ? "text-destructive"
                     : "text-amber-400"
                 }`}
               />
@@ -104,7 +104,7 @@ export function DashboardWarnings() {
               <span
                 className={`ml-auto text-[9px] font-bold px-2 py-0.5 rounded-lg border flex-shrink-0 ${
                   warning.level === "critical"
-                    ? "bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/20"
+                    ? "bg-[#ffb4ab]/10 text-destructive border-[#ffb4ab]/20"
                     : "bg-amber-400/10 text-amber-400 border-amber-400/20"
                 }`}
               >

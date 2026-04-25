@@ -58,6 +58,7 @@ export async function getRouter(id: string) {
 
 export async function createRouter(data: CreateRouterInput) {
   const encryptedPassword = await encryptPassword(data.password)
+  const encryptedBotToken = data.botToken ? await encryptPassword(data.botToken) : ""
 
   return prisma.router.create({
     data: {
@@ -69,6 +70,11 @@ export async function createRouter(data: CreateRouterInput) {
       label: data.label ?? "",
       isDefault: data.isDefault ?? false,
       userId: data.userId,
+      dnsHotspot: data.dnsHotspot ?? "",
+      telegramOwnerUsername: data.telegramOwnerUsername ?? "",
+      telegramOwnerId: data.telegramOwnerId ?? "",
+      botToken: encryptedBotToken,
+      botUsername: data.botUsername ?? "",
     },
     include: {
       user: { select: { name: true } },
@@ -86,6 +92,14 @@ export async function updateRouter(id: string, data: Partial<CreateRouterInput>)
   if (data.isDefault !== undefined) updateData.isDefault = data.isDefault
   if (data.password !== undefined) {
     updateData.passwordEnc = await encryptPassword(data.password)
+  }
+  if (data.dnsHotspot !== undefined) updateData.dnsHotspot = data.dnsHotspot
+  if (data.telegramOwnerUsername !== undefined) updateData.telegramOwnerUsername = data.telegramOwnerUsername
+  if (data.telegramOwnerId !== undefined) updateData.telegramOwnerId = data.telegramOwnerId
+  if (data.botUsername !== undefined) updateData.botUsername = data.botUsername
+  if (data.botToken !== undefined) {
+    // Encrypt non-empty tokens; empty string = clear the token
+    updateData.botToken = data.botToken ? await encryptPassword(data.botToken) : ""
   }
 
   return prisma.router.update({

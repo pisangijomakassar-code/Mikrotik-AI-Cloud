@@ -53,7 +53,7 @@ export function ConfirmDialog({
             className={cn(
               "rounded-lg font-semibold",
               variant === "destructive"
-                ? "bg-[#93000a]/80 text-[#ffb4ab] hover:bg-[#93000a]"
+                ? "bg-[#93000a]/80 text-destructive hover:bg-[#93000a]"
                 : "bg-[#06b6d4] text-primary-foreground hover:bg-[#4cd7f6]"
             )}
           >

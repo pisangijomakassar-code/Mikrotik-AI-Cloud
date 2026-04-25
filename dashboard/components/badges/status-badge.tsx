@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils"
 
 const statusStyles: Record<string, string> = {
-  ACTIVE: "bg-[#4ae176]/15 text-[#4ae176]",
+  ACTIVE: "bg-[#4ae176]/15 text-tertiary",
   INACTIVE: "bg-slate-700/50 text-slate-400",
-  ONLINE: "bg-[#4ae176]/15 text-[#4ae176]",
+  ONLINE: "bg-[#4ae176]/15 text-tertiary",
   OFFLINE: "bg-slate-700/50 text-slate-400",
-  ENABLED: "bg-[#4ae176]/10 text-[#4ae176]",
-  DISABLED: "bg-[#93000a]/20 text-[#ffb4ab]",
+  ENABLED: "bg-[#4ae176]/10 text-tertiary",
+  DISABLED: "bg-[#93000a]/20 text-destructive",
 }
 
 export function StatusBadge({

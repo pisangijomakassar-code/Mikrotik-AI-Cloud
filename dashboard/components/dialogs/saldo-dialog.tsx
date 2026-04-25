@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { saldoSchema, type SaldoFormData } from "@/lib/schemas/reseller.schema"
 import { useTopUpSaldo, useTopDownSaldo } from "@/hooks/use-resellers"
 
+const PRESET_AMOUNTS = [10000, 25000, 50000, 100000, 200000]
+
 interface SaldoDialogProps {
   type: "topup" | "topdown"
   resellerId: string
@@ -34,10 +36,18 @@ export function SaldoDialog({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<SaldoFormData>({
     resolver: zodResolver(saldoSchema),
   })
+
+  const watchedAmount = watch("amount")
+  const parsedAmount = parseInt(watchedAmount) || 0
+  const balanceAfter = type === "topup"
+    ? currentBalance + parsedAmount
+    : currentBalance - parsedAmount
 
   if (!open) return null
 
@@ -77,7 +87,7 @@ export function SaldoDialog({
               {type === "topup" ? "Top Up Saldo" : "Top Down Saldo"}
             </h3>
             <p className="text-sm text-muted-foreground/70">
-              {resellerName} — Current: {formatRupiah(currentBalance)}
+              {resellerName} — Saldo saat ini: {formatRupiah(currentBalance)}
             </p>
           </div>
           <button
@@ -88,9 +98,34 @@ export function SaldoDialog({
           </button>
         </div>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="p-4 md:p-8 space-y-6">
+          <div className="p-4 md:p-8 space-y-5">
+            {/* Preset amount buttons */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Amount (Rp) *</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Nominal Cepat</label>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_AMOUNTS.map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => setValue("amount", String(amount), { shouldValidate: true })}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-mono-tech font-bold border transition-all",
+                      parsedAmount === amount
+                        ? type === "topup"
+                          ? "bg-[#4ae176]/20 border-[#4ae176]/50 text-tertiary"
+                          : "bg-[#ffb4ab]/20 border-[#ffb4ab]/50 text-destructive"
+                        : "bg-muted border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    )}
+                  >
+                    {formatRupiah(amount)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Amount input */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Jumlah (Rp) *</label>
               <Input
                 className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm font-mono-tech focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="100000"
@@ -99,25 +134,51 @@ export function SaldoDialog({
                 {...register("amount")}
               />
               {errors.amount?.message && (
-                <p className="text-xs text-[#ffb4ab] ml-1">{errors.amount.message}</p>
+                <p className="text-xs text-destructive ml-1">{errors.amount.message}</p>
               )}
             </div>
+
+            {/* Description */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Description (optional)</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Keterangan (opsional)</label>
               <Input
                 className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
                 placeholder="e.g. Transfer BCA"
                 {...register("description")}
               />
             </div>
+
+            {/* Balance preview */}
+            {parsedAmount > 0 && (
+              <div className="bg-muted/50 rounded-xl border border-border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Saldo saat ini</span>
+                  <span className="font-bold text-foreground">{formatRupiah(currentBalance)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{type === "topup" ? "Ditambahkan" : "Dikurangi"}</span>
+                  <span className={cn("font-bold", type === "topup" ? "text-tertiary" : "text-destructive")}>
+                    {type === "topup" ? "+" : "-"}{formatRupiah(parsedAmount)}
+                  </span>
+                </div>
+                <div className="border-t border-border my-1" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Saldo setelah</span>
+                  <span className={cn("font-bold", balanceAfter >= 0 ? "text-tertiary" : "text-destructive")}>
+                    {formatRupiah(balanceAfter)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
+
           <div className="p-4 md:p-8 bg-muted/50 flex items-center justify-end gap-4">
             <button
               type="button"
               onClick={handleClose}
               className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-headline font-bold transition-colors"
             >
-              Cancel
+              Batal
             </button>
             <button
               type="submit"
@@ -125,12 +186,12 @@ export function SaldoDialog({
               className={cn(
                 "font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70",
                 type === "topup"
-                  ? "bg-linear-to-br from-[#4ae176] to-[#22c55e] text-[#003640]"
-                  : "bg-linear-to-br from-[#ffb4ab] to-[#ef4444] text-[#003640]"
+                  ? "bg-linear-to-br from-tertiary to-tertiary-container text-primary-foreground"
+                  : "bg-linear-to-br from-[#ffb4ab] to-[#ef4444] text-primary-foreground"
               )}
             >
               {(topUpSaldo.isPending || topDownSaldo.isPending)
-                ? "Processing..."
+                ? "Memproses..."
                 : type === "topup"
                   ? "Top Up"
                   : "Top Down"}

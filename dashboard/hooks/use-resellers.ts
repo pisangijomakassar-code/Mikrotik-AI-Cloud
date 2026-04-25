@@ -10,24 +10,52 @@ import type {
   PaginatedResult,
 } from "@/lib/types"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Reseller = Record<string, any>
+export interface ResellerData {
+  id: string
+  name: string
+  phone: string
+  telegramId: string
+  balance: number
+  discount: number
+  voucherGroup: string
+  uplink: string
+  status: "ACTIVE" | "INACTIVE"
+  createdAt: string
+  updatedAt: string
+  _count?: { voucherBatches: number }
+}
+
+export interface TransactionData {
+  id: string
+  type: "TOP_UP" | "TOP_DOWN" | "VOUCHER_PURCHASE"
+  amount: number
+  balanceBefore: number
+  balanceAfter: number
+  description: string
+  hargaVoucher: number
+  voucherUsername: string
+  voucherPassword: string
+  voucherInfo: string
+  proofImageUrl: string
+  createdAt: string
+}
 
 // ── Fetch helpers ──
 
-async function fetchResellers(): Promise<Reseller[]> {
-  return apiClient.get<Reseller[]>("/api/resellers")
+async function fetchResellers(): Promise<ResellerData[]> {
+  return apiClient.get<ResellerData[]>("/api/resellers")
 }
 
-async function fetchReseller(id: string): Promise<Reseller> {
-  return apiClient.get<Reseller>(`/api/resellers/${id}`)
+async function fetchReseller(id: string): Promise<ResellerData> {
+  return apiClient.get<ResellerData>(`/api/resellers/${id}`)
 }
 
-async function fetchVoucherBatches(resellerId?: string): Promise<Reseller[]> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchVoucherBatches(resellerId?: string): Promise<Record<string, any>[]> {
   const url = resellerId
     ? `/api/resellers/${resellerId}/vouchers`
     : "/api/vouchers"
-  return apiClient.get<Reseller[]>(url)
+  return apiClient.get<Record<string, unknown>[]>(url)
 }
 
 async function fetchTransactions(
@@ -43,14 +71,14 @@ async function fetchTransactions(
 // ── Queries ──
 
 export function useResellers() {
-  return useQuery({
+  return useQuery<ResellerData[]>({
     queryKey: ["resellers"],
     queryFn: fetchResellers,
   })
 }
 
 export function useReseller(id: string) {
-  return useQuery({
+  return useQuery<ResellerData>({
     queryKey: ["reseller-detail", id],
     queryFn: () => fetchReseller(id),
     enabled: !!id,
@@ -82,7 +110,7 @@ export function useCreateReseller() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: CreateResellerInput) => {
-      return apiClient.post("/api/resellers", data)
+      return apiClient.post<ResellerData>("/api/resellers", data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })
@@ -100,7 +128,7 @@ export function useUpdateReseller() {
       id: string
       data: UpdateResellerInput
     }) => {
-      return apiClient.patch(`/api/resellers/${id}`, data)
+      return apiClient.patch<ResellerData>(`/api/resellers/${id}`, data)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })

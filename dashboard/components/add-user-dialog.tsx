@@ -59,7 +59,7 @@ export function AddUserDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
+        className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_32px_rgba(76,215,246,0.15)] hover:scale-[1.02] transition-transform"
       >
         <UserPlus className="h-5 w-5" />
         Add User
@@ -150,7 +150,7 @@ export function AddUserDialog() {
                       {showToken ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
-                  <p className="text-[10px] text-[#4ae176]/70 italic flex items-center gap-1 mt-1">
+                  <p className="text-[10px] text-tertiary/70 italic flex items-center gap-1 mt-1">
                     <Info className="h-3 w-3" /> Encrypted at rest using AES-256
                   </p>
                 </div>
@@ -191,7 +191,7 @@ export function AddUserDialog() {
                 <button
                   type="submit"
                   disabled={createUser.isPending}
-                  className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                  className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
                   {createUser.isPending ? "Creating..." : "Authorize User"}
                 </button>

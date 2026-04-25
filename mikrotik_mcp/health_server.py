@@ -187,11 +187,17 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_hotspot_active(user_id, router_name)
             return
 
-        # Hotspot profiles
+        # Hotspot profiles (list)
         if path.startswith("/hotspot-profiles/"):
-            user_id = path.split("/hotspot-profiles/")[1]
+            remainder = path.split("/hotspot-profiles/")[1].strip("/")
+            parts = remainder.split("/")
             router_name = params.get("router", [None])[0]
-            self._handle_hotspot_profiles(user_id, router_name)
+            if len(parts) == 1:
+                # GET /hotspot-profiles/{user_id}
+                self._handle_hotspot_profiles(parts[0], router_name)
+            elif len(parts) == 2:
+                # GET /hotspot-profiles/{user_id}/{name}
+                self._handle_hotspot_profile_get(parts[0], parts[1], router_name)
             return
 
         # Hotspot stats (aggregated counts)
@@ -273,6 +279,19 @@ class HealthHandler(BaseHTTPRequestHandler):
                 self._handle_hotspot_user_toggle(parts[0], parts[1], parts[2])
                 return
 
+        # Hotspot profile CRUD
+        if path.startswith("/hotspot-profile/"):
+            remainder = path.split("/hotspot-profile/")[1].strip("/")
+            parts = remainder.split("/")
+            if len(parts) == 1:
+                # POST /hotspot-profile/{user_id} — add
+                self._handle_hotspot_profile_add(parts[0])
+                return
+            elif len(parts) == 2:
+                # POST /hotspot-profile/{user_id}/{name} — update
+                self._handle_hotspot_profile_update(parts[0], parts[1])
+                return
+
         # Generate vouchers
         if path.startswith("/generate-vouchers/"):
             user_id = path.split("/generate-vouchers/")[1].strip("/")
@@ -299,6 +318,14 @@ class HealthHandler(BaseHTTPRequestHandler):
         # VPN user management (SSTP tunnel — create or delete SoftEther user)
         if path == "/vpn-user":
             self._handle_vpn_user()
+            return
+
+        if path == "/wg-peer":
+            self._handle_wg_peer(None)
+            return
+
+        if path == "/ovpn-user":
+            self._handle_ovpn_user(None)
             return
 
         # AI insight
@@ -336,6 +363,14 @@ class HealthHandler(BaseHTTPRequestHandler):
             parts = remainder.split("/")
             if len(parts) == 2:
                 self._handle_hotspot_user_delete(parts[0], parts[1])
+                return
+
+        # DELETE /hotspot-profile/{user_id}/{name}
+        if path.startswith("/hotspot-profile/"):
+            remainder = path.split("/hotspot-profile/")[1].strip("/")
+            parts = remainder.split("/")
+            if len(parts) == 2:
+                self._handle_hotspot_profile_delete(parts[0], parts[1])
                 return
 
         # DELETE /ppp-secret/{user_id}/{name}
@@ -500,8 +535,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                     "users": [
                         {
                             "name": u.get("name", ""),
+                            "password": u.get("password", ""),
                             "profile": u.get("profile", ""),
                             "server": u.get("server", ""),
+                            "macAddress": u.get("mac-address", ""),
+                            "address": u.get("address", ""),
                             "limitUptime": u.get("limit-uptime", ""),
                             "limitBytesTotal": u.get("limit-bytes-total", ""),
                             "disabled": u.get("disabled", "false"),
@@ -690,8 +728,23 @@ class HealthHandler(BaseHTTPRequestHandler):
             router_name = body.get("router_name") or body.get("router") or ""
             reseller_id = body.get("reseller_id") or body.get("resellerId")
             price_per_unit = int(body.get("price_per_unit") or body.get("pricePerUnit") or 0)
+            limit_uptime = body.get("limitUptime") or body.get("limit_uptime") or ""
+            comment_tmpl = body.get("comment") or ""
 
-            charset = string.ascii_lowercase + string.digits
+            # Charset based on typeChar
+            type_char = (body.get("typeChar") or body.get("type_char") or "Random abcd").lower()
+            if "abcd1234" in type_char or "alphanumeric" in type_char:
+                charset = string.ascii_lowercase + string.digits
+            elif "abcd" in type_char and "1234" not in type_char:
+                charset = string.ascii_lowercase
+            elif "1234" in type_char and "abcd" not in type_char:
+                charset = string.digits
+            elif "ABCD1234" in (body.get("typeChar") or ""):
+                charset = string.ascii_uppercase + string.digits
+            elif "ABCD" in (body.get("typeChar") or ""):
+                charset = string.ascii_uppercase
+            else:
+                charset = string.ascii_lowercase + string.digits
 
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name or None)
@@ -710,6 +763,10 @@ class HealthHandler(BaseHTTPRequestHandler):
                     }
                     if server:
                         add_params["server"] = server
+                    if limit_uptime and limit_uptime != "0":
+                        add_params["limit-uptime"] = limit_uptime
+                    if comment_tmpl:
+                        add_params["comment"] = comment_tmpl
 
                     resource.add(**add_params)
                     vouchers.append({"username": uname, "password": pwd})
@@ -1288,6 +1345,239 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         else:
             _send_json(self, {"error": f"unknown action: {action!r}"}, 400)
+
+    def _handle_wg_peer(self, user_id):
+        """Manage WireGuard peers: add or delete."""
+        try:
+            import subprocess, json
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            action = body.get("action", "add")
+            pub_key = body.get("pubKey", "")
+            vpn_ip = body.get("vpnIp", "")
+
+            if action == "add":
+                if not pub_key or not vpn_ip:
+                    _send_json(self, {"error": "pubKey and vpnIp required"}, 400)
+                    return
+                # Add peer to WireGuard
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-wireguard", "wg", "set", "wg0",
+                     "peer", pub_key, "allowed-ips", f"{vpn_ip}/32",
+                     "persistent-keepalive", "25"],
+                    check=True, capture_output=True
+                )
+                # Persist config
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
+                    capture_output=True
+                )
+                _send_json(self, {"ok": True, "action": "added", "peer": pub_key})
+
+            elif action == "delete":
+                if not pub_key:
+                    _send_json(self, {"error": "pubKey required"}, 400)
+                    return
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-wireguard", "wg", "set", "wg0",
+                     "peer", pub_key, "remove"],
+                    check=True, capture_output=True
+                )
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
+                    capture_output=True
+                )
+                _send_json(self, {"ok": True, "action": "deleted", "peer": pub_key})
+            else:
+                _send_json(self, {"error": "action must be add or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_ovpn_user(self, user_id):
+        """Manage OpenVPN users: create or delete."""
+        try:
+            import subprocess, json, hashlib, os
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            action = body.get("action", "create")
+            username = body.get("username", "")
+            password = body.get("password", "")
+            vpn_ip = body.get("vpnIp", "")
+
+            if action == "create":
+                if not username or not password:
+                    _send_json(self, {"error": "username and password required"}, 400)
+                    return
+                # Hash password with SHA-256
+                pw_hash = hashlib.sha256(password.encode()).hexdigest()
+                # Write to users file in OpenVPN container
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"echo '{username}:{pw_hash}' >> /config/users.txt"],
+                    check=True, capture_output=True
+                )
+                # Write CCD file for static IP assignment
+                if vpn_ip:
+                    # CCD: ifconfig-push CLIENT_IP GATEWAY_IP
+                    gw_parts = vpn_ip.rsplit('.', 1)
+                    gateway_ip = gw_parts[0] + ".1"
+                    subprocess.run(
+                        ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                         f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} {gateway_ip}' > /config/ccd/{username}"],
+                        check=True, capture_output=True
+                    )
+                _send_json(self, {"ok": True, "action": "created", "username": username})
+
+            elif action == "delete":
+                if not username:
+                    _send_json(self, {"error": "username required"}, 400)
+                    return
+                # Remove from users file
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"sed -i '/^{username}:/d' /config/users.txt"],
+                    check=True, capture_output=True
+                )
+                # Remove CCD file
+                subprocess.run(
+                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"rm -f /config/ccd/{username}"],
+                    capture_output=True
+                )
+                _send_json(self, {"ok": True, "action": "deleted", "username": username})
+            else:
+                _send_json(self, {"error": "action must be create or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    # ══════════════════════════════════════════════════════════════════
+    #  Hotspot Profile CRUD
+    # ══════════════════════════════════════════════════════════════════
+
+    def _handle_hotspot_profile_add(self, user_id):
+        """Add a new hotspot user profile."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+
+            name = body.get("name")
+            if not name:
+                _send_json(self, {"error": "name is required"}, 400)
+                return
+
+            router_name = body.get("router")
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+
+            add_params = {"name": name}
+            if body.get("rateLimit"):
+                add_params["rate-limit"] = body["rateLimit"]
+            if body.get("sharedUsers"):
+                add_params["shared-users"] = str(body["sharedUsers"])
+            if body.get("sessionTimeout"):
+                add_params["session-timeout"] = body["sessionTimeout"]
+            if body.get("idleTimeout"):
+                add_params["idle-timeout"] = body["idleTimeout"]
+            if body.get("onLogin"):
+                add_params["on-login"] = body["onLogin"]
+            if body.get("onLogout"):
+                add_params["on-logout"] = body["onLogout"]
+            if body.get("addressPool"):
+                add_params["address-pool"] = body["addressPool"]
+
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                api.path("ip", "hotspot", "user", "profile").add(**add_params)
+
+            _send_json(self, {"status": "ok"})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_hotspot_profile_update(self, user_id, name):
+        """Update an existing hotspot user profile."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+
+            router_name = body.get("router")
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                resource = api.path("ip", "hotspot", "user", "profile")
+                item_id = None
+                for p in resource:
+                    if p.get("name") == name:
+                        item_id = p.get(".id")
+                        break
+                if not item_id:
+                    _send_json(self, {"error": f"Profile '{name}' not found"}, 404)
+                    return
+
+                update_params = {".id": item_id}
+                if "rateLimit" in body:
+                    update_params["rate-limit"] = body["rateLimit"]
+                if "sharedUsers" in body:
+                    update_params["shared-users"] = str(body["sharedUsers"])
+                if "sessionTimeout" in body:
+                    update_params["session-timeout"] = body["sessionTimeout"]
+                if "idleTimeout" in body:
+                    update_params["idle-timeout"] = body["idleTimeout"]
+                if "onLogin" in body:
+                    update_params["on-login"] = body["onLogin"]
+                if "onLogout" in body:
+                    update_params["on-logout"] = body["onLogout"]
+                if "addressPool" in body:
+                    update_params["address-pool"] = body["addressPool"]
+
+                resource.update(**update_params)
+
+            _send_json(self, {"status": "ok"})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_hotspot_profile_delete(self, user_id, name):
+        """Delete a hotspot user profile."""
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, None)
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                resource = api.path("ip", "hotspot", "user", "profile")
+                item_id = None
+                for p in resource:
+                    if p.get("name") == name:
+                        item_id = p.get(".id")
+                        break
+                if not item_id:
+                    _send_json(self, {"error": f"Profile '{name}' not found"}, 404)
+                    return
+                resource.remove(item_id)
+            _send_json(self, {"status": "ok"})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_hotspot_profile_get(self, user_id, name, router_name=None):
+        """Get full detail of one hotspot user profile (including on-login script)."""
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                profiles = list(api.path("ip", "hotspot", "user", "profile"))
+                for p in profiles:
+                    if p.get("name") == name:
+                        _send_json(self, {
+                            "name": p.get("name", ""),
+                            "rateLimit": p.get("rate-limit", ""),
+                            "sharedUsers": p.get("shared-users", ""),
+                            "sessionTimeout": p.get("session-timeout", ""),
+                            "idleTimeout": p.get("idle-timeout", ""),
+                            "onLogin": p.get("on-login", ""),
+                            "onLogout": p.get("on-logout", ""),
+                            "addressPool": p.get("address-pool", ""),
+                        })
+                        return
+                _send_json(self, {"error": f"Profile '{name}' not found"}, 404)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
 
     def log_message(self, format, *args):
         pass  # Suppress request logs

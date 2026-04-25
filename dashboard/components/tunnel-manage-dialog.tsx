@@ -55,22 +55,28 @@ export function TunnelManageDialog({
       <DialogTrigger asChild>
         <button
           title="Manage Tunnel"
-          className="w-8 h-8 rounded-lg hover:bg-muted/40 text-[#4cd7f6]/70 hover:text-[#4cd7f6] transition-colors flex items-center justify-center"
+          className="w-8 h-8 rounded-lg hover:bg-muted/40 text-primary/70 hover:text-primary transition-colors flex items-center justify-center"
         >
           <Network className="h-4 w-4" />
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl bg-[#0e1525] border-white/10 text-[#dae2fd] p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-white/5">
+      <DialogContent className="max-w-2xl bg-[#0e1525] border-white/10 text-foreground p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="text-base font-bold text-[#dae2fd] flex items-center gap-2">
-                <PlugZap className="h-4 w-4 text-[#4cd7f6]" />
+              <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                <PlugZap className="h-4 w-4 text-primary" />
                 Tunnel — {routerName}
               </DialogTitle>
               <p className="text-[11px] text-slate-500 mt-1">
-                {tunnelMethod === "CLOUDFLARE" ? "Cloudflare Tunnel (RouterOS 7+)" : "SSTP VPN (RouterOS 6)"}
+                {tunnelMethod === "CLOUDFLARE"
+                  ? "Cloudflare Tunnel (RouterOS 7+)"
+                  : tunnelMethod === "SSTP"
+                  ? "SSTP VPN (RouterOS 6)"
+                  : tunnelMethod === "OVPN"
+                  ? "OpenVPN TCP (RouterOS 6)"
+                  : "WireGuard UDP (RouterOS 7)"}
               </p>
             </div>
             <TunnelStatusBadge status={tunnelStatus} method={tunnelMethod} showMethod />
@@ -78,17 +84,17 @@ export function TunnelManageDialog({
         </DialogHeader>
 
         <Tabs defaultValue="ports" className="flex flex-col">
-          <TabsList className="mx-6 mt-4 mb-0 bg-[#131b2e] border border-white/5 self-start">
+          <TabsList className="mx-6 mt-4 mb-0 bg-surface-low border border-border/20 self-start">
             <TabsTrigger
               value="ports"
-              className="text-[11px] data-[state=active]:bg-[#222a3d] data-[state=active]:text-[#4cd7f6]"
+              className="text-[11px] data-[state=active]:bg-muted data-[state=active]:text-primary"
             >
               <Network className="h-3.5 w-3.5 mr-1.5" />
               Port Tunnel
             </TabsTrigger>
             <TabsTrigger
               value="setup"
-              className="text-[11px] data-[state=active]:bg-[#222a3d] data-[state=active]:text-[#4cd7f6]"
+              className="text-[11px] data-[state=active]:bg-muted data-[state=active]:text-primary"
             >
               <BookOpen className="h-3.5 w-3.5 mr-1.5" />
               Instruksi Setup
@@ -118,19 +124,19 @@ export function TunnelManageDialog({
         </Tabs>
 
         {/* Delete section */}
-        <div className="px-6 py-4 border-t border-white/5 mt-2">
+        <div className="px-6 py-4 border-t border-border/20 mt-2">
           {!confirmDelete ? (
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-2 text-[11px] font-bold text-[#ffb4ab]/70 hover:text-[#ffb4ab] transition-colors"
+              className="flex items-center gap-2 text-[11px] font-bold text-destructive/70 hover:text-destructive transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Hapus Tunnel
             </button>
           ) : (
             <div className="flex items-center gap-3 p-3 bg-[#ffb4ab]/5 border border-[#ffb4ab]/20 rounded-xl">
-              <AlertTriangle className="h-4 w-4 text-[#ffb4ab] shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
               <p className="text-[11px] text-slate-400 flex-1">
                 Tunnel akan dihapus permanen. Router kembali ke mode koneksi langsung.
               </p>
@@ -146,7 +152,7 @@ export function TunnelManageDialog({
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteTunnel.isPending}
-                  className="text-[11px] font-bold bg-[#ffb4ab]/15 text-[#ffb4ab] hover:bg-[#ffb4ab]/25 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  className="text-[11px] font-bold bg-[#ffb4ab]/15 text-destructive hover:bg-[#ffb4ab]/25 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {deleteTunnel.isPending ? "Menghapus..." : "Ya, Hapus"}
                 </button>

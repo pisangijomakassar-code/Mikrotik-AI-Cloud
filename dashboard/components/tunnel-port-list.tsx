@@ -77,9 +77,9 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
 
   return (
     <TooltipProvider>
-      <div className="rounded-xl border border-white/5 overflow-hidden">
+      <div className="rounded-xl border border-border/20 overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-2.5 bg-slate-900/50 border-b border-white/5 flex items-center justify-between">
+        <div className="px-4 py-2.5 bg-surface-lowest/80 border-b border-border/20 flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Port Tunnel
           </span>
@@ -107,7 +107,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border/20">
               {tunnel.ports.map((port) => {
                 const isRequired = port.serviceName === "api"
                 const isPlanLocked = !isRequired && !allowedTunnelPorts.includes(port.serviceName)
@@ -125,7 +125,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
                     {/* Service Name */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#dae2fd]">
+                        <span className="text-xs font-semibold text-foreground">
                           {SERVICE_LABEL[port.serviceName] ?? port.serviceName}
                         </span>
                         {isRequired && (
@@ -153,7 +153,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
 
                     {/* Port */}
                     <td className="px-4 py-3">
-                      <span className="font-mono-tech text-xs text-[#4cd7f6] bg-[#06b6d4]/10 px-2 py-0.5 rounded-lg">
+                      <span className="font-mono-tech text-xs text-primary bg-[#06b6d4]/10 px-2 py-0.5 rounded-lg">
                         {port.remotePort}
                       </span>
                     </td>
@@ -243,7 +243,7 @@ export function TunnelPortList({ tunnel, onTogglePort }: TunnelPortListProps) {
         {/* Free tier notice */}
         {plan === "FREE" && (
           <div className="px-4 py-2.5 bg-[#4cd7f6]/5 border-t border-[#4cd7f6]/10">
-            <p className="text-[10px] text-[#4cd7f6]/80">
+            <p className="text-[10px] text-primary/80">
               Plan Free hanya mendukung port API. Upgrade ke{" "}
               <span className="font-bold">Pro</span> atau{" "}
               <span className="font-bold">Premium</span> untuk port lainnya.

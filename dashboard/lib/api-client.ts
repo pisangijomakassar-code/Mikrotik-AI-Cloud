@@ -19,6 +19,14 @@ export const apiClient = {
     }).then((res) => handleResponse<T>(res))
   },
 
+  put<T = unknown>(url: string, data?: unknown): Promise<T> {
+    return fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+    }).then((res) => handleResponse<T>(res))
+  },
+
   patch<T = unknown>(url: string, data?: unknown): Promise<T> {
     return fetch(url, {
       method: "PATCH",

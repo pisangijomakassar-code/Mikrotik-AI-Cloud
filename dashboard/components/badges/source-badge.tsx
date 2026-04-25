@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils"
 
 const sourceStyles: Record<string, string> = {
-  dashboard: "bg-[#4cd7f6]/15 text-[#4cd7f6]",
-  nanobot: "bg-[#4ae176]/15 text-[#4ae176]",
+  dashboard: "bg-[#4cd7f6]/15 text-primary",
+  nanobot: "bg-[#4ae176]/15 text-tertiary",
   reseller_bot: "bg-[#a78bfa]/15 text-[#a78bfa]",
 }
 
@@ -23,9 +23,9 @@ export function SourceBadge({ source, className }: { source: string; className?:
 }
 
 const txTypeStyles: Record<string, string> = {
-  TOP_UP: "bg-[#4ae176]/15 text-[#4ae176]",
-  TOP_DOWN: "bg-[#ffb4ab]/15 text-[#ffb4ab]",
-  VOUCHER_PURCHASE: "bg-[#4cd7f6]/15 text-[#4cd7f6]",
+  TOP_UP: "bg-[#4ae176]/15 text-tertiary",
+  TOP_DOWN: "bg-[#ffb4ab]/15 text-destructive",
+  VOUCHER_PURCHASE: "bg-[#4cd7f6]/15 text-primary",
 }
 
 const txTypeLabels: Record<string, string> = {

@@ -81,7 +81,7 @@ export default function ChatPage() {
   return (
     <div className="fixed top-16 left-0 md:left-64 right-0 bottom-0 flex flex-col md:flex-row">
       {/* Chat */}
-      <section className="flex-1 flex flex-col border-r border-white/5 bg-slate-900 overflow-hidden">
+      <section className="flex-1 flex flex-col border-r border-border/20 bg-slate-900 overflow-hidden">
         {/* Scrollable chat history only */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide">
           {messages.map((msg, i) => msg.role === "assistant" ? (
@@ -92,17 +92,17 @@ export default function ChatPage() {
               <div className="p-4 rounded-2xl rounded-tl-none border border-white/10" style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(12px)" }}>
                 <div className="prose prose-invert prose-sm max-w-none
                   prose-p:text-slate-200 prose-p:leading-relaxed prose-p:my-1
-                  prose-headings:text-[#dae2fd] prose-headings:font-bold
+                  prose-headings:text-foreground prose-headings:font-bold
                   prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
                   prose-strong:text-white
-                  prose-code:text-[#4cd7f6] prose-code:bg-slate-950/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
-                  prose-pre:bg-[#0b1326] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-xl prose-pre:my-2
-                  prose-a:text-[#4cd7f6] prose-a:no-underline hover:prose-a:underline
+                  prose-code:text-primary prose-code:bg-slate-950/50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
+                  prose-pre:bg-background prose-pre:border prose-pre:border-border/20 prose-pre:rounded-xl prose-pre:my-2
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
                   prose-li:text-slate-200 prose-li:my-0
                   prose-ul:my-1 prose-ol:my-1
                   prose-table:text-xs
-                  prose-th:text-[#dae2fd] prose-th:px-3 prose-th:py-1.5 prose-th:bg-slate-900/50 prose-th:text-left
-                  prose-td:px-3 prose-td:py-1.5 prose-td:border-t prose-td:border-white/5
+                  prose-th:text-foreground prose-th:px-3 prose-th:py-1.5 prose-th:bg-surface-lowest/80 prose-th:text-left
+                  prose-td:px-3 prose-td:py-1.5 prose-td:border-t prose-td:border-border/20
                   prose-blockquote:border-l-[#4cd7f6] prose-blockquote:text-slate-300
                 ">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
@@ -139,7 +139,7 @@ export default function ChatPage() {
         </div>
 
         {/* Fixed bottom input - not scrollable */}
-        <div className="shrink-0 p-3 md:p-6 border-t border-white/5 bg-slate-900">
+        <div className="shrink-0 p-3 md:p-6 border-t border-border/20 bg-slate-900">
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             {[
               { icon: Heart, label: "Diagnose connection", prompt: "Diagnose connection issues" },
@@ -148,7 +148,7 @@ export default function ChatPage() {
               { icon: Shield, label: "Audit Firewall", prompt: "Audit firewall rules" },
               { icon: Wifi, label: "Hotspot users", prompt: "Show active hotspot users" },
             ].map(({ icon: Icon, label, prompt }) => (
-              <button key={label} onClick={() => setInput(prompt)} className="whitespace-nowrap px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-cyan-500/10 hover:border-cyan-500/50 transition-all text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-2">
+              <button key={label} onClick={() => setInput(prompt)} className="whitespace-nowrap px-4 py-2 rounded-full border border-white/10 bg-muted/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 transition-all text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-2">
                 <Icon className="h-3.5 w-3.5" />{label}
               </button>
             ))}
@@ -171,11 +171,11 @@ export default function ChatPage() {
       </section>
 
       {/* Right panel — Conversation History */}
-      <aside className="w-72 bg-slate-950/50 hidden lg:flex flex-col overflow-hidden border-l border-white/5">
-        <div className="p-4 border-b border-white/5">
+      <aside className="w-72 bg-slate-950/50 hidden lg:flex flex-col overflow-hidden border-l border-border/20">
+        <div className="p-4 border-b border-border/20">
           <button
             onClick={newConversation}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#131b2e] border border-white/5 text-xs font-bold text-[#4cd7f6] hover:bg-[#222a3d] transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-surface-low border border-border/20 text-xs font-bold text-primary hover:bg-muted transition-colors"
           >
             <Plus className="h-3.5 w-3.5" />
             New Chat
@@ -196,7 +196,7 @@ export default function ChatPage() {
                 className={cn(
                   "group/conv flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors relative",
                   activeId === conv.id
-                    ? "bg-[#222a3d] text-[#4cd7f6]"
+                    ? "bg-muted text-primary"
                     : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-300"
                 )}
                 onClick={() => setActiveId(conv.id)}
@@ -205,13 +205,13 @@ export default function ChatPage() {
                 {editingConvId === conv.id ? (
                   <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                     <input
-                      className="flex-1 bg-[#131b2e] border border-white/10 rounded px-1.5 py-0.5 text-xs text-[#dae2fd] outline-none focus:border-[#4cd7f6]"
+                      className="flex-1 bg-surface-low border border-white/10 rounded px-1.5 py-0.5 text-xs text-foreground outline-none focus:border-primary"
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setEditingConvId(null) }}
                       autoFocus
                     />
-                    <button onClick={saveRename} className="p-0.5 text-[#4ae176]">
+                    <button onClick={saveRename} className="p-0.5 text-tertiary">
                       <Check className="h-3 w-3" />
                     </button>
                     <button onClick={() => setEditingConvId(null)} className="p-0.5 text-slate-500 hover:text-slate-300">
@@ -227,13 +227,13 @@ export default function ChatPage() {
                     <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/conv:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => { e.stopPropagation(); startRename(conv.id, conv.title) }}
-                        className="p-1 text-slate-500 hover:text-[#4cd7f6] transition-colors"
+                        className="p-1 text-slate-500 hover:text-primary transition-colors"
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
-                        className="p-1 text-slate-500 hover:text-[#ffb4ab] transition-colors"
+                        className="p-1 text-slate-500 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -247,17 +247,17 @@ export default function ChatPage() {
 
         {/* Router status with CPU & Memory */}
         {defaultRouter && (
-          <div className="shrink-0 p-3 border-t border-white/5 space-y-2">
+          <div className="shrink-0 p-3 border-t border-border/20 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Router className="h-3 w-3 text-[#4cd7f6]" />
+                <Router className="h-3 w-3 text-primary" />
                 <span className="text-[10px] font-bold text-slate-400 truncate max-w-[120px]">{defaultRouter.name}</span>
               </div>
               <span className={cn(
                 "text-[9px] font-bold px-1.5 py-0.5 rounded",
                 defaultRouter.health?.status === "online"
-                  ? "bg-[#4ae176]/10 text-[#4ae176]"
-                  : "bg-[#ffb4ab]/10 text-[#ffb4ab]"
+                  ? "bg-tertiary/10 text-tertiary"
+                  : "bg-destructive/10 text-destructive"
               )}>
                 {defaultRouter.health?.status === "online" ? "ONLINE" : "OFFLINE"}
               </span>
@@ -269,9 +269,9 @@ export default function ChatPage() {
                     <span className="text-slate-500 flex items-center gap-1"><Cpu className="h-2.5 w-2.5" />CPU</span>
                     <span className="font-mono text-slate-400">{defaultRouter.health.cpuLoad}%</span>
                   </div>
-                  <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={cn("h-full rounded-full", defaultRouter.health.cpuLoad > 80 ? "bg-[#ffb4ab]" : defaultRouter.health.cpuLoad > 50 ? "bg-amber-400" : "bg-[#4cd7f6]")}
+                      className={cn("h-full rounded-full", defaultRouter.health.cpuLoad > 80 ? "bg-destructive" : defaultRouter.health.cpuLoad > 50 ? "bg-amber-400" : "bg-primary")}
                       style={{ width: `${defaultRouter.health.cpuLoad}%` }}
                     />
                   </div>
@@ -281,16 +281,16 @@ export default function ChatPage() {
                     <span className="text-slate-500 flex items-center gap-1"><HardDrive className="h-2.5 w-2.5" />MEM</span>
                     <span className="font-mono text-slate-400">{defaultRouter.health.memoryPercent}%</span>
                   </div>
-                  <div className="w-full h-1 bg-[#222a3d] rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={cn("h-full rounded-full", defaultRouter.health.memoryPercent > 80 ? "bg-[#ffb4ab]" : defaultRouter.health.memoryPercent > 50 ? "bg-amber-400" : "bg-[#4ae176]")}
+                      className={cn("h-full rounded-full", defaultRouter.health.memoryPercent > 80 ? "bg-destructive" : defaultRouter.health.memoryPercent > 50 ? "bg-amber-400" : "bg-tertiary")}
                       style={{ width: `${defaultRouter.health.memoryPercent}%` }}
                     />
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-[9px]">
                   <span className="text-slate-500 flex items-center gap-1"><Wifi className="h-2.5 w-2.5" />Clients</span>
-                  <span className="font-mono text-[#4cd7f6] font-bold">{defaultRouter.health.activeClients}</span>
+                  <span className="font-mono text-primary font-bold">{defaultRouter.health.activeClients}</span>
                 </div>
               </div>
             )}

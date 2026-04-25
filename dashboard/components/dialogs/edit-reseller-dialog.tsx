@@ -125,7 +125,7 @@ export function EditResellerDialog({ reseller, open, onOpenChange }: EditReselle
             <button
               type="submit"
               disabled={updateReseller.isPending}
-              className="bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+              className="bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
             >
               {updateReseller.isPending ? "Saving..." : "Save Changes"}
             </button>

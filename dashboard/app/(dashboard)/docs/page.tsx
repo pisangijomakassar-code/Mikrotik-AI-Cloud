@@ -60,9 +60,9 @@ export default function DocsPage() {
       {/* Header - consistent with user page */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Documentation</h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <BookOpen className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Documentation</h2>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <BookOpen className="h-[18px] w-[18px] text-primary shrink-0" />
             Guides, API reference, and administration docs for MikroTik AI Agent.
           </p>
         </div>
@@ -76,7 +76,7 @@ export default function DocsPage() {
           placeholder="Search documentation..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-[#131b2e] border border-white/5 rounded-xl text-sm text-[#dae2fd] placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]"
+          className="w-full pl-10 pr-4 py-2.5 bg-surface-low border border-border/20 rounded-xl text-sm text-foreground placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-[#4cd7f6]"
         />
         {search && (
           <button
@@ -89,7 +89,7 @@ export default function DocsPage() {
       </div>
 
       {/* Tabs - same style as user page */}
-      <div className="flex items-center gap-4 bg-[#131b2e] p-1.5 rounded-lg border border-white/5 w-fit">
+      <div className="flex items-center gap-4 bg-surface-low p-1.5 rounded-lg border border-border/20 w-fit">
         {DOCS.map((doc) => {
           const count = contents[doc.slug] ? highlightCount(contents[doc.slug]) : 0
           return (
@@ -100,14 +100,14 @@ export default function DocsPage() {
               className={cn(
                 "flex items-center gap-2 px-5 py-1.5 font-bold text-xs rounded-lg transition-colors",
                 activeTab === doc.slug
-                  ? "bg-[#222a3d] text-[#4cd7f6]"
+                  ? "bg-muted text-primary"
                   : "text-slate-500 hover:text-slate-300"
               )}
             >
               <doc.icon className="h-4 w-4" />
               {doc.label}
               {search && count > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] rounded-full font-bold">
+                <span className="ml-1 px-1.5 py-0.5 bg-primary/20 text-primary text-[10px] rounded-full font-bold">
                   {count}
                 </span>
               )}
@@ -122,26 +122,26 @@ export default function DocsPage() {
           <div key={doc.slug} className="mt-6">
             {loading[doc.slug] ? (
               <div className="flex items-center justify-center py-32">
-                <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
             ) : contents[doc.slug] ? (
               <article className="pt-4 pb-16">
                 <div className="prose prose-invert prose-cyan max-w-none
-                  prose-headings:font-headline prose-headings:text-[#dae2fd]
-                  prose-h1:text-3xl prose-h1:border-b prose-h1:border-white/5 prose-h1:pb-4 prose-h1:mb-8
+                  prose-headings:font-headline prose-headings:text-foreground
+                  prose-h1:text-3xl prose-h1:border-b prose-h1:border-border/20 prose-h1:pb-4 prose-h1:mb-8
                   prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4
                   prose-h3:text-lg prose-h3:text-cyan-400
                   prose-p:text-slate-300 prose-p:leading-relaxed
-                  prose-a:text-[#4cd7f6] prose-a:no-underline hover:prose-a:underline
-                  prose-code:text-[#4cd7f6] prose-code:bg-[#0b1326] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
-                  prose-pre:bg-[#0b1326] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-xl
-                  prose-strong:text-[#dae2fd]
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                  prose-code:text-primary prose-code:bg-background prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
+                  prose-pre:bg-background prose-pre:border prose-pre:border-border/20 prose-pre:rounded-xl
+                  prose-strong:text-foreground
                   prose-li:text-slate-300 prose-li:marker:text-cyan-800
                   prose-table:border-collapse
-                  prose-th:bg-[#0b1326] prose-th:text-[#dae2fd] prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:text-xs prose-th:uppercase prose-th:tracking-widest prose-th:font-bold
-                  prose-td:px-4 prose-td:py-2 prose-td:border-t prose-td:border-white/5 prose-td:text-slate-300
-                  prose-hr:border-white/5
-                  prose-blockquote:border-l-[#4cd7f6] prose-blockquote:bg-[#0b1326]/50 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
+                  prose-th:bg-background prose-th:text-foreground prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:text-xs prose-th:uppercase prose-th:tracking-widest prose-th:font-bold
+                  prose-td:px-4 prose-td:py-2 prose-td:border-t prose-td:border-border/20 prose-td:text-slate-300
+                  prose-hr:border-border/20
+                  prose-blockquote:border-l-[#4cd7f6] prose-blockquote:bg-background/50 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
                 ">
                   <MarkdownWithHighlight content={filterContent(contents[doc.slug])} search={search} />
                 </div>
@@ -208,7 +208,7 @@ function HighlightText({ text, search }: { text: string; search: string }) {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === search.toLowerCase() ? (
-          <mark key={i} className="bg-[#4cd7f6]/25 text-[#4cd7f6] rounded px-0.5">
+          <mark key={i} className="bg-primary/25 text-primary rounded px-0.5">
             {part}
           </mark>
         ) : (

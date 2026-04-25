@@ -22,7 +22,7 @@ export interface TunnelStatusResponse {
 }
 
 export interface TunnelSetupResponse {
-  method: "CLOUDFLARE" | "SSTP"
+  method: "CLOUDFLARE" | "SSTP" | "OVPN" | "WIREGUARD"
   // Cloudflare fields
   tunnelToken?: string
   cloudflareTunnelId?: string
@@ -33,8 +33,19 @@ export interface TunnelSetupResponse {
   vpnUsername?: string
   vpnPassword?: string
   sstpCommand?: string
+  // OVPN fields
+  username?: string
+  password?: string
+  // OVPN + WIREGUARD shared fields
+  vpnIp?: string | null
+  winboxPort?: number | null
+  vpsHost?: string
+  script?: string | null
+  // WIREGUARD fields
+  serverPubKey?: string | null
+  clientPubKey?: string | null
   // Common
-  routerLanIp: string
+  routerLanIp?: string
   ports: TunnelPort[]
 }
 
@@ -80,7 +91,7 @@ export function useTunnelSetup(routerId: string, enabled = true) {
 
 export interface CreateTunnelInput {
   routerId: string
-  method: "CLOUDFLARE" | "SSTP"
+  method: "CLOUDFLARE" | "SSTP" | "OVPN" | "WIREGUARD"
   routerLanIp?: string
   enabledPorts?: string[]
 }

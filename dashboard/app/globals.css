@@ -135,6 +135,19 @@
   --radius: var(--radius);
   --font-sans: var(--font-body);
   --font-mono: var(--font-technical);
+
+  /* Extended surface tokens exposed to Tailwind */
+  --color-surface: var(--surface);
+  --color-surface-container: var(--surface-container);
+  --color-surface-low: var(--surface-container-low);
+  --color-surface-high: var(--surface-container-high);
+  --color-surface-highest: var(--surface-container-highest);
+  --color-surface-lowest: var(--surface-container-lowest);
+  --color-surface-bright: var(--surface-bright);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
 }
 
 body {

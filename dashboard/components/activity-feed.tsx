@@ -6,10 +6,10 @@ import { useRouterLogs } from "@/hooks/use-router-data"
 import { cn } from "@/lib/utils"
 
 function getTopicIcon(topics: string) {
-  if (topics.includes("error") || topics.includes("critical")) return <AlertTriangle className="h-3 w-3 text-[#ffb4ab]" />
+  if (topics.includes("error") || topics.includes("critical")) return <AlertTriangle className="h-3 w-3 text-destructive" />
   if (topics.includes("warning")) return <AlertTriangle className="h-3 w-3 text-amber-400" />
   if (topics.includes("firewall")) return <Shield className="h-3 w-3 text-primary" />
-  if (topics.includes("wireless") || topics.includes("dhcp")) return <Wifi className="h-3 w-3 text-[#4ae176]" />
+  if (topics.includes("wireless") || topics.includes("dhcp")) return <Wifi className="h-3 w-3 text-tertiary" />
   return <Info className="h-3 w-3 text-muted-foreground/70" />
 }
 
@@ -41,7 +41,7 @@ export function ActivityFeed() {
           {routerLogs.data?.router && (
             <span className="text-[10px] text-muted-foreground/70">{routerLogs.data.router}</span>
           )}
-          <span className="px-2 py-0.5 bg-[#4ae176]/10 text-[10px] rounded-lg border border-[#4ae176]/20 text-[#4ae176] font-bold">
+          <span className="px-2 py-0.5 bg-[#4ae176]/10 text-[10px] rounded-lg border border-[#4ae176]/20 text-tertiary font-bold">
             LIVE
           </span>
         </div>

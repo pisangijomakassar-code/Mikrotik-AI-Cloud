@@ -86,16 +86,16 @@ export default function VoucherProfilesPage() {
     }
   }
 
-  const inputClass = "w-full bg-[#222a3d] border-none rounded-lg py-2.5 px-3 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-muted-foreground/50 text-foreground outline-none"
+  const inputClass = "w-full bg-muted border-none rounded-lg py-2.5 px-3 text-sm focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-muted-foreground/50 text-foreground outline-none"
   const labelClass = "text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-0.5"
 
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">Pengaturan Voucher per Profil</h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <SlidersHorizontal className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Pengaturan Voucher per Profil</h2>
+          <p className="text-muted-foreground flex items-center gap-2">
+            <SlidersHorizontal className="h-[18px] w-[18px] text-primary shrink-0" />
             Konfigurasi harga, karakter, dan limit untuk setiap profil hotspot.
           </p>
         </div>
@@ -103,7 +103,7 @@ export default function VoucherProfilesPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-32">
-          <Loader2 className="h-8 w-8 text-[#4cd7f6] animate-spin" />
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
         </div>
       ) : !hotspotProfiles?.length ? (
         <div className="text-center py-20 text-muted-foreground">
@@ -116,16 +116,16 @@ export default function VoucherProfilesPage() {
             const form = getForm(p.name)
             const isSaving = saving[p.name]
             return (
-              <div key={p.name} className="bg-[#131b2e] rounded-2xl border border-white/5 p-6">
+              <div key={p.name} className="bg-surface-low rounded-2xl border border-border/20 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-headline font-bold text-[#dae2fd]">{p.name}</h3>
+                    <h3 className="text-lg font-headline font-bold text-foreground">{p.name}</h3>
                     {p.rateLimit && <p className="text-xs text-slate-500 mt-0.5">{p.rateLimit}</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-slate-500">Harga saat ini</p>
-                    <p className="text-sm font-bold text-[#4ae176]">{formatRupiah(parseInt(form.price) || 0)}</p>
+                    <p className="text-sm font-bold text-tertiary">{formatRupiah(parseInt(form.price) || 0)}</p>
                   </div>
                 </div>
 
@@ -168,10 +168,10 @@ export default function VoucherProfilesPage() {
                     <div className="space-y-1.5">
                       <label className={labelClass}>Tipe Karakter</label>
                       <Select value={form.charType} onValueChange={(v) => updateForm(p.name, "charType", v)}>
-                        <SelectTrigger className="w-full bg-[#222a3d] border-none text-foreground text-sm">
+                        <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#222a3d] border-border text-foreground">
+                        <SelectContent className="bg-muted border-border text-foreground">
                           {CHAR_TYPES.map((t) => (
                             <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                           ))}
@@ -193,10 +193,10 @@ export default function VoucherProfilesPage() {
                     <div className="space-y-1.5">
                       <label className={labelClass}>Tipe Login</label>
                       <Select value={form.loginType} onValueChange={(v) => updateForm(p.name, "loginType", v)}>
-                        <SelectTrigger className="w-full bg-[#222a3d] border-none text-foreground text-sm">
+                        <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#222a3d] border-border text-foreground">
+                        <SelectContent className="bg-muted border-border text-foreground">
                           {LOGIN_TYPES.map((t) => (
                             <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                           ))}
@@ -210,7 +210,7 @@ export default function VoucherProfilesPage() {
                           type="color"
                           value={form.qrColor}
                           onChange={(e) => updateForm(p.name, "qrColor", e.target.value)}
-                          className="h-10 w-12 rounded-lg border-none bg-[#222a3d] cursor-pointer p-1"
+                          className="h-10 w-12 rounded-lg border-none bg-muted cursor-pointer p-1"
                         />
                         <Input
                           className={inputClass + " font-mono-tech"}
@@ -228,7 +228,7 @@ export default function VoucherProfilesPage() {
                   <button
                     onClick={() => handleSave(p.name)}
                     disabled={isSaving}
-                    className="flex items-center gap-2 bg-linear-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-6 py-2.5 rounded-lg hover:brightness-105 transition-all disabled:opacity-60"
+                    className="flex items-center gap-2 bg-linear-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-6 py-2.5 rounded-lg hover:brightness-105 transition-all disabled:opacity-60"
                   >
                     {isSaving ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : <><Save className="h-4 w-4" /> Simpan</>}
                   </button>

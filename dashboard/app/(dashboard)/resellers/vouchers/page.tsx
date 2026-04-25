@@ -30,9 +30,9 @@ function formatDate(dateStr: string | null | undefined): string {
 function sourceBadge(source: string) {
   switch (source) {
     case "dashboard":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4cd7f6]/15 text-[#4cd7f6]">Dashboard</span>
+      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4cd7f6]/15 text-primary">Dashboard</span>
     case "nanobot":
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4ae176]/15 text-[#4ae176]">Nanobot</span>
+      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#4ae176]/15 text-tertiary">Nanobot</span>
     case "reseller_bot":
       return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#a78bfa]/15 text-[#a78bfa]">Reseller Bot</span>
     default:
@@ -91,31 +91,31 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
   return (
     <>
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-md">
-      <div className="w-full max-w-lg mx-4 md:mx-0 bg-[#131b2e] border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between">
-          <h3 className="text-xl font-headline font-bold text-[#dae2fd]">Generate Voucher</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-[#dae2fd] transition-colors"><X className="h-5 w-5" /></button>
+      <div className="w-full max-w-lg mx-4 md:mx-0 bg-surface-low border border-white/10 rounded-2xl shadow-[0_0_80px_rgba(0,0,0,0.5)] overflow-hidden">
+        <div className="p-4 md:p-6 border-b border-border/20 flex items-center justify-between">
+          <h3 className="text-xl font-headline font-bold text-foreground">Generate Voucher</h3>
+          <button onClick={onClose} className="text-slate-500 hover:text-foreground transition-colors"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-4 md:p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Profile</label>
               <Select value={profile} onValueChange={setProfile} disabled={profilesLoading}>
-                <SelectTrigger className="bg-[#2d3449] border-none text-[#dae2fd] text-sm">
+                <SelectTrigger className="bg-surface-highest border-none text-foreground text-sm">
                   <SelectValue placeholder={profilesLoading ? "Loading..." : "Pilih profile"} />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2d3449] border-white/10 text-[#dae2fd]">
+                <SelectContent className="bg-surface-highest border-white/10 text-foreground">
                   {profiles?.map((p) => (<SelectItem key={p.name} value={p.name}>{p.name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Jumlah</label>
-              <Input type="number" min={1} max={50} value={count} onChange={(e) => setCount(Number(e.target.value))} className="bg-[#2d3449] border-none text-[#dae2fd] text-sm" />
+              <Input type="number" min={1} max={50} value={count} onChange={(e) => setCount(Number(e.target.value))} className="bg-surface-highest border-none text-foreground text-sm" />
             </div>
             <div>
               <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block">Prefix</label>
-              <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="v" className="bg-[#2d3449] border-none text-[#dae2fd] text-sm" />
+              <Input value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="v" className="bg-surface-highest border-none text-foreground text-sm" />
             </div>
           </div>
           <button onClick={handleGenerate} disabled={generating || profilesLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold font-headline bg-[#06b6d4] hover:bg-[#4cd7f6] text-[#00424f] disabled:opacity-50 transition-all">
@@ -125,7 +125,7 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
           {vouchers.length > 0 && (
             <button
               onClick={() => setShowPrint(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border border-white/10 text-[#dae2fd] hover:bg-white/5 transition-all"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border border-white/10 text-foreground hover:bg-muted/50 transition-all"
             >
               <Printer className="h-4 w-4 shrink-0" />
               Cetak Voucher ({vouchers.length})
@@ -134,9 +134,9 @@ function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
           {vouchers.length > 0 && (
             <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-hide">
               {vouchers.map((v, i) => (
-                <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0b1326] border border-white/5">
-                  <span className="font-mono text-sm"><span className="text-[#4cd7f6]">{v.username}</span><span className="text-slate-600 mx-2">/</span><span className="text-emerald-400">{v.password}</span></span>
-                  <button onClick={() => handleCopy(i, v)} className="p-1 rounded hover:bg-white/5 transition-colors">{copiedIdx === i ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-slate-500" />}</button>
+                <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-lg bg-background border border-border/20">
+                  <span className="font-mono text-sm"><span className="text-primary">{v.username}</span><span className="text-slate-600 mx-2">/</span><span className="text-emerald-400">{v.password}</span></span>
+                  <button onClick={() => handleCopy(i, v)} className="p-1 rounded hover:bg-muted/50 transition-colors">{copiedIdx === i ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-slate-500" />}</button>
                 </div>
               ))}
             </div>
@@ -181,17 +181,17 @@ export default function VoucherHistoryPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">
             Voucher History
           </h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <Receipt className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <p className="text-muted-foreground flex items-center gap-2">
+            <Receipt className="h-[18px] w-[18px] text-primary shrink-0" />
             All vouchers from dashboard, Nanobot, and reseller bot.
           </p>
         </div>
         <button
           onClick={() => setShowGenerate(true)}
-          className="flex items-center gap-2 bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-[#4cd7f6]/20 hover:scale-105 transition-all duration-200"
+          className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-primary-foreground px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all duration-200"
         >
           <PlusCircle className="h-4 w-4 shrink-0" />
           Generate Voucher
@@ -203,10 +203,10 @@ export default function VoucherHistoryPage() {
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <Select value={sourceFilter || "__all__"} onValueChange={(v) => { setSourceFilter(v === "__all__" ? "" : v); setPage(1) }}>
-          <SelectTrigger className="bg-[#131b2e] border border-white/5 text-[#dae2fd] text-sm">
+          <SelectTrigger className="bg-surface-low border border-border/20 text-foreground text-sm">
             <SelectValue placeholder="All Sources" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+          <SelectContent className="bg-surface-low border-white/10 text-foreground">
             <SelectItem value="__all__">All Sources</SelectItem>
             <SelectItem value="dashboard">Dashboard</SelectItem>
             <SelectItem value="nanobot">Nanobot</SelectItem>
@@ -214,10 +214,10 @@ export default function VoucherHistoryPage() {
           </SelectContent>
         </Select>
         <Select value={resellerFilter || "__all__"} onValueChange={(v) => { setResellerFilter(v === "__all__" ? "" : v); setPage(1) }}>
-          <SelectTrigger className="bg-[#131b2e] border border-white/5 text-[#dae2fd] text-sm">
+          <SelectTrigger className="bg-surface-low border border-border/20 text-foreground text-sm">
             <SelectValue placeholder="All Resellers" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131b2e] border-white/10 text-[#dae2fd]">
+          <SelectContent className="bg-surface-low border-white/10 text-foreground">
             <SelectItem value="__all__">All Resellers</SelectItem>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {resellers?.map((r: any) => (
@@ -228,7 +228,7 @@ export default function VoucherHistoryPage() {
         {(sourceFilter || resellerFilter) && (
           <button
             onClick={() => { setSourceFilter(""); setResellerFilter(""); setPage(1) }}
-            className="text-xs text-slate-500 hover:text-[#4cd7f6] transition-colors px-3"
+            className="text-xs text-slate-500 hover:text-primary transition-colors px-3"
           >
             Reset Filters
           </button>
@@ -236,27 +236,27 @@ export default function VoucherHistoryPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#131b2e] rounded-3xl border border-white/5 overflow-hidden">
+      <div className="bg-surface-low rounded-3xl border border-border/20 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Date</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Reseller</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Router</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Profile</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Count</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Total Cost</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5">Source</th>
+              <tr className="bg-surface-lowest/80">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Date</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Reseller</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Router</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Profile</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Count</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Total Cost</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Source</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border/20">
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
                       <td key={j} className="px-6 py-5">
-                        <div className="h-4 w-20 animate-pulse rounded bg-[#222a3d]" />
+                        <div className="h-4 w-20 animate-pulse rounded bg-muted" />
                       </td>
                     ))}
                   </tr>
@@ -270,15 +270,15 @@ export default function VoucherHistoryPage() {
               ) : (
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 vouchers.map((batch: any) => (
-                  <tr key={batch.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={batch.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-5 text-sm text-slate-400">{formatDate(batch.createdAt)}</td>
-                    <td className="px-6 py-5 text-sm font-bold text-[#dae2fd]">
+                    <td className="px-6 py-5 text-sm font-bold text-foreground">
                       {batch.reseller?.name || batch.resellerName || "Admin"}
                     </td>
                     <td className="px-6 py-5 text-sm text-slate-400">{batch.routerName || "-"}</td>
-                    <td className="px-6 py-5 text-sm text-[#dae2fd]">{batch.profile}</td>
-                    <td className="px-6 py-5 text-sm text-[#dae2fd]">{batch.count}</td>
-                    <td className="px-6 py-5 text-sm font-bold text-[#4cd7f6]">{formatRupiah(batch.totalCost ?? 0)}</td>
+                    <td className="px-6 py-5 text-sm text-foreground">{batch.profile}</td>
+                    <td className="px-6 py-5 text-sm text-foreground">{batch.count}</td>
+                    <td className="px-6 py-5 text-sm font-bold text-primary">{formatRupiah(batch.totalCost ?? 0)}</td>
                     <td className="px-6 py-5">{sourceBadge(batch.source)}</td>
                   </tr>
                 ))
@@ -288,7 +288,7 @@ export default function VoucherHistoryPage() {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 bg-slate-900/50 flex items-center justify-between border-t border-white/5">
+        <div className="px-6 py-4 bg-surface-lowest/80 flex items-center justify-between border-t border-border/20">
           <span className="text-xs text-slate-500">
             {totalPages > 1
               ? `Page ${page} of ${totalPages} (${total} total)`
@@ -296,7 +296,7 @@ export default function VoucherHistoryPage() {
           </span>
           <div className="flex items-center gap-2">
             <button
-              className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30"
+              className="p-1 hover:bg-surface-highest rounded-lg disabled:opacity-30"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
@@ -312,8 +312,8 @@ export default function VoucherHistoryPage() {
                     className={cn(
                       "w-6 h-6 flex items-center justify-center text-xs font-bold rounded-lg",
                       page === pageNum
-                        ? "bg-[#4cd7f6] text-[#003640]"
-                        : "text-slate-400 hover:bg-[#2d3449]"
+                        ? "bg-[#4cd7f6] text-primary-foreground"
+                        : "text-slate-400 hover:bg-surface-highest"
                     )}
                   >
                     {pageNum}
@@ -322,7 +322,7 @@ export default function VoucherHistoryPage() {
               })}
             </div>
             <button
-              className="p-1 hover:bg-[#2d3449] rounded-lg disabled:opacity-30"
+              className="p-1 hover:bg-surface-highest rounded-lg disabled:opacity-30"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >

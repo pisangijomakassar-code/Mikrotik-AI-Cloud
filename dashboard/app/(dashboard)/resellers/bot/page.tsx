@@ -88,11 +88,11 @@ export default function ResellerBotPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-[#dae2fd] tracking-tight mb-2">
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">
             Reseller Bot
           </h2>
-          <p className="text-[#bcc9cd] flex items-center gap-2">
-            <BotMessageSquare className="h-[18px] w-[18px] text-[#4cd7f6] shrink-0" />
+          <p className="text-muted-foreground flex items-center gap-2">
+            <BotMessageSquare className="h-[18px] w-[18px] text-primary shrink-0" />
             Configure a Telegram bot for reseller self-service.
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function ResellerBotPage() {
 
       <div className="max-w-2xl">
         {/* Setup Card */}
-        <div className="bg-[rgba(15,23,42,0.6)] backdrop-blur-xl border border-white/5 rounded-2xl p-8">
+        <div className="bg-[rgba(15,23,42,0.6)] backdrop-blur-xl border border-border/20 rounded-2xl p-8">
           {/* Status Indicator */}
           <div className="flex items-center gap-3 mb-8">
             <div
@@ -113,7 +113,7 @@ export default function ResellerBotPage() {
             />
             <span className={cn(
               "text-sm font-bold",
-              isActive ? "text-[#4ae176]" : "text-slate-400"
+              isActive ? "text-tertiary" : "text-slate-400"
             )}>
               {loading ? "Loading..." : isActive ? "Bot Active" : "Bot Inactive"}
             </span>
@@ -126,7 +126,7 @@ export default function ResellerBotPage() {
             </label>
             <div className="relative">
               <Input
-                className="w-full bg-[#2d3449] border-none rounded-lg py-3 px-4 pr-12 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-[#dae2fd] outline-none"
+                className="w-full bg-surface-highest border-none rounded-lg py-3 px-4 pr-12 text-sm font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] placeholder:text-slate-600 transition-all text-foreground outline-none"
                 placeholder="123456789:ABCDefGhIJKlMNOpQRsTUVWxyz"
                 type={showToken ? "text" : "password"}
                 value={botToken}
@@ -136,7 +136,7 @@ export default function ResellerBotPage() {
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#4cd7f6] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors"
               >
                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -154,7 +154,7 @@ export default function ResellerBotPage() {
               <button
                 onClick={handleActivate}
                 disabled={saving || loading || !botToken.trim()}
-                className="bg-gradient-to-br from-[#4ae176] to-[#22c55e] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                className="bg-gradient-to-br from-tertiary to-tertiary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
               >
                 {saving ? "Activating..." : "Activate Bot"}
               </button>
@@ -163,14 +163,14 @@ export default function ResellerBotPage() {
                 <button
                   onClick={handleActivate}
                   disabled={saving || loading || !botToken.trim() || botToken === savedToken}
-                  className="bg-gradient-to-br from-[#4cd7f6] to-[#06b6d4] text-[#003640] font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
+                  className="bg-gradient-to-br from-primary to-primary-container text-primary-foreground font-headline font-bold px-8 py-2.5 rounded-lg shadow-lg hover:scale-105 transition-transform disabled:opacity-70"
                 >
                   {saving ? "Saving..." : "Update Token"}
                 </button>
                 <button
                   onClick={handleDeactivate}
                   disabled={saving || loading}
-                  className="bg-[#93000a]/20 text-[#ffb4ab] font-headline font-bold px-8 py-2.5 rounded-lg hover:bg-[#93000a]/30 transition-colors disabled:opacity-70"
+                  className="bg-[#93000a]/20 text-destructive font-headline font-bold px-8 py-2.5 rounded-lg hover:bg-[#93000a]/30 transition-colors disabled:opacity-70"
                 >
                   {saving ? "Deactivating..." : "Deactivate Bot"}
                 </button>
@@ -180,12 +180,12 @@ export default function ResellerBotPage() {
         </div>
 
         {/* Instructions */}
-        <div className="mt-6 bg-[rgba(15,23,42,0.6)] backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden">
+        <div className="mt-6 bg-[rgba(15,23,42,0.6)] backdrop-blur-xl border border-border/20 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowInstructions(!showInstructions)}
-            className="w-full flex items-center justify-between p-6 text-left hover:bg-white/5 transition-colors"
+            className="w-full flex items-center justify-between p-6 text-left hover:bg-muted/50 transition-colors"
           >
-            <span className="text-sm font-bold text-[#dae2fd]">Cara Setup Reseller Bot</span>
+            <span className="text-sm font-bold text-foreground">Cara Setup Reseller Bot</span>
             {showInstructions ? (
               <ChevronUp className="h-5 w-5 text-slate-400" />
             ) : (
@@ -194,7 +194,7 @@ export default function ResellerBotPage() {
           </button>
           {showInstructions && (
             <div className="px-6 pb-6 space-y-4">
-              <div className="border-t border-white/5 mb-4" />
+              <div className="border-t border-border/20 mb-4" />
               {[
                 { step: 1, text: "Buka @BotFather di Telegram" },
                 { step: 2, text: "Kirim /newbot dan ikuti instruksi" },
@@ -205,7 +205,7 @@ export default function ResellerBotPage() {
               ].map(({ step, text }) => (
                 <div key={step} className="flex items-start gap-3">
                   <div className="w-6 h-6 rounded-full bg-[#4cd7f6]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-[#4cd7f6]">{step}</span>
+                    <span className="text-xs font-bold text-primary">{step}</span>
                   </div>
                   <p className="text-sm text-slate-400">{text}</p>
                 </div>

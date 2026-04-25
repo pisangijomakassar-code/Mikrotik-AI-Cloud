@@ -75,7 +75,7 @@ export function DashboardAIInsight() {
 
       {!isPending && error && (
         <div className="py-4 px-4 rounded-xl bg-[#ffb4ab]/5 border border-[#ffb4ab]/10">
-          <p className="text-sm text-[#ffb4ab]">
+          <p className="text-sm text-destructive">
             Failed to generate insight. Please try again.
           </p>
         </div>

@@ -101,7 +101,7 @@ export function StatsCards() {
               {card.value}
             </h2>
             {card.badge && (
-              <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded-lg text-[10px] text-[#4ae176] font-bold animate-pulse">
+              <div className="px-2 py-1 bg-[#4ae176]/10 border border-[#4ae176]/20 rounded-lg text-[10px] text-tertiary font-bold animate-pulse">
                 OPTIMIZED
               </div>
             )}

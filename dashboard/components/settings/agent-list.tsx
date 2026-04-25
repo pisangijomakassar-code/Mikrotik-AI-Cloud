@@ -15,12 +15,12 @@ export function AgentList({ agents, isLoading, telegramAllowFromCount }: AgentLi
     <section className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-[#4cd7f6]/10 rounded-lg">
-          <Users className="h-5 w-5 text-[#4cd7f6]" />
+          <Users className="h-5 w-5 text-primary" />
         </div>
-        <h3 className="text-lg font-semibold font-headline text-[#dae2fd]">Agents</h3>
+        <h3 className="text-lg font-semibold font-headline text-foreground">Agents</h3>
         <span className="text-xs text-slate-500 ml-auto">{agents.length} users</span>
       </div>
-      <div className="bg-[#131b2e] rounded-xl border border-white/5 overflow-hidden">
+      <div className="bg-surface-low rounded-xl border border-border/20 overflow-hidden">
         <table className="w-full text-left">
           <thead>
             <tr className="bg-white/[0.02]">
@@ -30,7 +30,7 @@ export function AgentList({ agents, isLoading, telegramAllowFromCount }: AgentLi
               <th className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border/20">
             {isLoading ? (
               <TableSkeleton rows={3} columns={4} />
             ) : agents.length === 0 ? (
@@ -40,22 +40,22 @@ export function AgentList({ agents, isLoading, telegramAllowFromCount }: AgentLi
             ) : (
               agents.map((agent) => (
                 <tr key={agent.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-3 text-sm text-[#dae2fd] font-medium">{agent.name}</td>
+                  <td className="px-6 py-3 text-sm text-foreground font-medium">{agent.name}</td>
                   <td className="px-6 py-3 text-xs font-mono text-slate-400">{agent.telegramId}</td>
                   <td className="px-6 py-3">
                     {agent.botToken ? (
                       <span className="text-xs font-mono text-slate-500">{agent.botToken.slice(0, 8)}&bull;&bull;&bull;</span>
                     ) : (
-                      <span className="text-xs text-[#ffb4ab]">Not set</span>
+                      <span className="text-xs text-destructive">Not set</span>
                     )}
                   </td>
                   <td className="px-6 py-3">
                     {agent.botToken ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#4ae176]">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-tertiary">
                         <CheckCircle className="h-3 w-3" /> Configured
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#ffb4ab]">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive">
                         <XCircle className="h-3 w-3" /> Incomplete
                       </span>
                     )}

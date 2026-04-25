@@ -5,6 +5,9 @@ export const addResellerSchema = z.object({
   phone: z.string().trim().optional().or(z.literal("")),
   telegramId: z.string().trim().optional().or(z.literal("")),
   balance: z.string().optional().or(z.literal("")),
+  discount: z.string().optional().or(z.literal("")),
+  voucherGroup: z.string().trim().optional().or(z.literal("")),
+  uplink: z.string().trim().optional().or(z.literal("")),
 })
 
 export type AddResellerFormData = z.infer<typeof addResellerSchema>
@@ -14,6 +17,9 @@ export const editResellerSchema = z.object({
   phone: z.string().trim().optional().or(z.literal("")),
   telegramId: z.string().trim().optional().or(z.literal("")),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+  discount: z.string().optional().or(z.literal("")),
+  voucherGroup: z.string().trim().optional().or(z.literal("")),
+  uplink: z.string().trim().optional().or(z.literal("")),
 })
 
 export type EditResellerFormData = z.infer<typeof editResellerSchema>
