@@ -1,5 +1,5 @@
 import * as crypto from "crypto"
-import type { PrismaClient } from "@/app/generated/prisma"
+import type { PrismaClient } from "@/app/generated/prisma/client"
 
 // ── Architecture Note ─────────────────────────────────────────────────────────
 //
