@@ -587,48 +587,56 @@ class HealthHandler(BaseHTTPRequestHandler):
 
     def _handle_hotspot_profiles(self, user_id, router_name=None):
         """List hotspot user profiles."""
+        import concurrent.futures
+
         try:
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name)
-            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                # Try dedicated profile path first; fall back to unique names from user list
+
+            def _fetch_profiles():
+                with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                    # Try dedicated profile path with strict timeout via thread
+                    def _try_profile_path():
+                        return list(api.path("ip", "hotspot", "user", "profile").select())
+
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                        fut = ex.submit(_try_profile_path)
+                        try:
+                            raw = fut.result(timeout=5)
+                            profiles = [
+                                {
+                                    "name": p.get("name", ""),
+                                    "rateLimit": p.get("rate-limit", ""),
+                                    "sharedUsers": p.get("shared-users", ""),
+                                    "sessionTimeout": p.get("session-timeout", ""),
+                                    "idleTimeout": p.get("idle-timeout", ""),
+                                    "addressPool": p.get("address-pool", ""),
+                                    "onLogin": p.get("on-login", ""),
+                                }
+                                for p in raw
+                                if p.get("name", "") not in ("", "default")
+                            ]
+                        except Exception:
+                            # Fallback: extract unique profile names from hotspot users
+                            users = list(api.path("ip", "hotspot", "user").select())
+                            seen: set = set()
+                            profiles = []
+                            for u in users:
+                                pname = u.get("profile", "")
+                                if pname and pname not in seen:
+                                    seen.add(pname)
+                                    profiles.append({"name": pname, "rateLimit": "",
+                                                     "sharedUsers": "", "sessionTimeout": "",
+                                                     "idleTimeout": "", "addressPool": "", "onLogin": ""})
+                    return {"router": conn.get("name", ""), "profiles": profiles}
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                fut = ex.submit(_fetch_profiles)
                 try:
-                    raw = list(api.path("ip", "hotspot", "user", "profile").select())
-                    profiles_data = [
-                        {
-                            "name": p.get("name", ""),
-                            "rateLimit": p.get("rate-limit", ""),
-                            "sharedUsers": p.get("shared-users", ""),
-                            "sessionTimeout": p.get("session-timeout", ""),
-                            "idleTimeout": p.get("idle-timeout", ""),
-                            "addressPool": p.get("address-pool", ""),
-                            "onLogin": p.get("on-login", ""),
-                        }
-                        for p in raw
-                        if p.get("name", "") not in ("", "default")
-                    ]
-                except Exception:
-                    # Fallback: extract unique profile names from hotspot users
-                    users = list(api.path("ip", "hotspot", "user").select())
-                    seen = set()
-                    profiles_data = []
-                    for u in users:
-                        pname = u.get("profile", "")
-                        if pname and pname not in seen:
-                            seen.add(pname)
-                            profiles_data.append({
-                                "name": pname,
-                                "rateLimit": "",
-                                "sharedUsers": "",
-                                "sessionTimeout": "",
-                                "idleTimeout": "",
-                                "addressPool": "",
-                                "onLogin": "",
-                            })
-                result = {
-                    "router": conn.get("name", ""),
-                    "profiles": profiles_data,
-                }
+                    result = fut.result(timeout=8)
+                except concurrent.futures.TimeoutError:
+                    result = {"router": "", "profiles": []}
+
             _send_json(self, result)
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
