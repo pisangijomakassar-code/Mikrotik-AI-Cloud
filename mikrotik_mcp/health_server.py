@@ -221,6 +221,21 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_ip_pools(user_id, router_name)
             return
 
+        # Simple queues (used as parent-queue in hotspot profile)
+        if path.startswith("/queues/"):
+            user_id = path.split("/queues/")[1]
+            router_name = params.get("router", [None])[0]
+            self._handle_queues(user_id, router_name)
+            return
+
+        # Mikhmon scripts preview (list scripts from MikroTik in Mikhmon format)
+        if path.startswith("/mikhmon-scripts/"):
+            user_id = path.split("/mikhmon-scripts/")[1].strip("/")
+            router_name = params.get("router", [None])[0]
+            if user_id:
+                self._handle_mikhmon_scripts_list(user_id, router_name)
+                return
+
         # PPP secrets
         if path.startswith("/ppp-secrets/"):
             user_id = path.split("/ppp-secrets/")[1]
@@ -361,6 +376,13 @@ class HealthHandler(BaseHTTPRequestHandler):
             if len(parts) == 2:
                 user_id, cleanup_type = parts[0], parts[1]
                 self._handle_hotspot_cleanup(user_id, cleanup_type)
+                return
+
+        # Mikhmon script import
+        if path.startswith("/mikhmon-import/"):
+            user_id = path.split("/mikhmon-import/")[1].strip("/")
+            if user_id:
+                self._handle_mikhmon_import(user_id)
                 return
 
         self.send_response(404)
@@ -616,8 +638,10 @@ class HealthHandler(BaseHTTPRequestHandler):
                                     "rateLimit": p.get("rate-limit", ""),
                                     "sharedUsers": p.get("shared-users", ""),
                                     "sessionTimeout": p.get("session-timeout", ""),
-                                    "idleTimeout": p.get("idle-timeout", ""),
                                     "addressPool": p.get("address-pool", ""),
+                                    "expiredMode": p.get("expired-mode", ""),
+                                    "macCookie": p.get("add-mac-cookie", "false"),
+                                    "parentQueue": p.get("parent-queue", ""),
                                     "onLogin": p.get("on-login", ""),
                                 }
                                 for p in raw
@@ -663,6 +687,24 @@ class HealthHandler(BaseHTTPRequestHandler):
                             "ranges": p.get("ranges", ""),
                         }
                         for p in pools if p.get("name")
+                    ],
+                }
+            _send_json(self, result)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_queues(self, user_id, router_name=None):
+        """List simple queues (used as parent-queue in hotspot profile)."""
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                queues = list(api.path("queue", "simple"))
+                result = {
+                    "router": conn.get("name", ""),
+                    "queues": [
+                        {"name": q.get("name", "")}
+                        for q in queues if q.get("name")
                     ],
                 }
             _send_json(self, result)
@@ -1181,12 +1223,196 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     # ══════════════════════════════════════════════════════════════════
+    #  Mikhmon script import
+    # ══════════════════════════════════════════════════════════════════
+
+    def _fetch_mikhmon_scripts(self, registry, user_id, router_name):
+        """Fetch system scripts from MikroTik and return only those in Mikhmon format."""
+        conn = registry.resolve(user_id, router_name or None)
+        if isinstance(conn, list):
+            conn = next((c for c in conn if c.get("is_default")), conn[0] if conn else None)
+        if not conn or "error" in conn:
+            return None, conn or {"error": "No router found"}
+
+        from server import connect_router
+        with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+            resource = api.path("system", "script")
+            scripts = list(resource)
+
+        mikhmon_scripts = []
+        for s in scripts:
+            name = s.get("name", "")
+            parsed = _parse_mikhmon_script_name(name)
+            if parsed:
+                mikhmon_scripts.append({
+                    "id": s.get(".id", ""),
+                    "name": name,
+                    "owner": s.get("owner", ""),
+                    **parsed,
+                })
+        return mikhmon_scripts, conn
+
+    def _handle_mikhmon_scripts_list(self, user_id, router_name=None):
+        """GET /mikhmon-scripts/{user_id} — list Mikhmon-format scripts for preview."""
+        try:
+            registry = _get_registry()
+            scripts, conn_or_err = self._fetch_mikhmon_scripts(registry, user_id, router_name)
+            if scripts is None:
+                _send_json(self, conn_or_err, 400)
+                return
+            _send_json(self, {"scripts": scripts, "count": len(scripts), "router": conn_or_err.get("name", "")})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_mikhmon_import(self, user_id):
+        """POST /mikhmon-import/{user_id} — import Mikhmon scripts to DB, then delete from MikroTik.
+
+        Body (optional): {"router": "router_name", "deleteAfterImport": true}
+        Returns: {"imported": N, "skipped": M, "deleted": K}
+        """
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            router_name = body.get("router", "")
+            delete_after = body.get("deleteAfterImport", True)
+
+            registry = _get_registry()
+            scripts, conn_or_err = self._fetch_mikhmon_scripts(registry, user_id, router_name)
+            if scripts is None:
+                _send_json(self, conn_or_err, 400)
+                return
+            if not scripts:
+                _send_json(self, {"imported": 0, "skipped": 0, "deleted": 0, "message": "No Mikhmon scripts found"})
+                return
+
+            vdb = _get_voucher_db()
+            router_display = conn_or_err.get("name", router_name or "default")
+
+            # Group scripts by date month and profile for batch saving
+            from collections import defaultdict
+            from datetime import datetime as dt, timezone as _tz
+            import re
+
+            _MONTHS = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+                       "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+
+            def _parse_mikhmon_date(date_str: str):
+                """Parse Mikhmon date. Supports 'oct/01/2025', '2025-10-01', '01/10/2025'.
+                Returns (datetime|None, 'YYYY-MM'|None)."""
+                if not date_str:
+                    return None, None
+                s = date_str.strip().lower()
+                # Try "mmm/dd/yyyy" (Mikhmon native)
+                m = re.match(r"^([a-z]{3})/(\d{1,2})/(\d{4})$", s)
+                if m and m.group(1) in _MONTHS:
+                    mo, d, y = _MONTHS[m.group(1)], int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                # Try "YYYY-MM-DD"
+                m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
+                if m:
+                    y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                # Try "DD/MM/YYYY"
+                m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", s)
+                if m:
+                    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                return None, None
+
+            # Group by (month_from_date, profile) for batch saving
+            groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+            for s in scripts:
+                date_str = s.get("date", "unknown")
+                _, month = _parse_mikhmon_date(date_str)
+                if not month:
+                    month = "unknown"
+                profile = s.get("profile", "")
+                groups[(month, profile)].append(s)
+
+            imported = 0
+            skipped = 0
+            for (month, profile), group_scripts in groups.items():
+                vouchers = []
+                for s in group_scripts:
+                    try:
+                        price = int(re.sub(r"[^\d]", "", s.get("price", "0")) or 0)
+                    except Exception:
+                        price = 0
+                    vouchers.append({
+                        "username": s.get("username", ""),
+                        "password": "",
+                        "profile": profile,
+                        "mac": s.get("mac", ""),
+                        "ip": s.get("ip", ""),
+                        "limitUptime": s.get("limitUptime", ""),
+                        "date": s.get("date", ""),
+                        "time": s.get("time", ""),
+                        "price": price,
+                        "batchRef": s.get("batchRef", ""),
+                        "source": "mikhmon_import",
+                    })
+
+                if vdb and vouchers:
+                    try:
+                        # Use first voucher's price as price_per_unit (same profile = same price)
+                        price_per = vouchers[0]["price"] if vouchers else 0
+
+                        # Parse batch date: use earliest date in the group
+                        batch_timestamp = None
+                        parsed_dates = [_parse_mikhmon_date(g.get("date", ""))[0] for g in group_scripts]
+                        parsed_dates = [d for d in parsed_dates if d is not None]
+                        if parsed_dates:
+                            batch_timestamp = min(parsed_dates)
+
+                        vdb.save_batch(
+                            user_id=user_id,
+                            router_name=router_display,
+                            profile=profile,
+                            vouchers=vouchers,
+                            source=f"mikhmon_import:{month}",
+                            price_per_unit=price_per,
+                            created_at=batch_timestamp,
+                        )
+                        imported += len(vouchers)
+                    except Exception as db_err:
+                        import logging
+                        logging.getLogger(__name__).warning("Mikhmon import DB error: %s", db_err)
+                        skipped += len(vouchers)
+                else:
+                    skipped += len(vouchers)
+
+            # Delete scripts from MikroTik after successful import
+            deleted = 0
+            if delete_after and imported > 0:
+                from server import connect_router
+                conn = conn_or_err
+                with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                    resource = api.path("system", "script")
+                    script_ids = [s["id"] for s in scripts if s.get("id")]
+                    for sid in script_ids:
+                        try:
+                            resource.remove(sid)
+                            deleted += 1
+                        except Exception:
+                            pass
+
+            _send_json(self, {
+                "imported": imported,
+                "skipped": skipped,
+                "deleted": deleted,
+                "router": router_display,
+            })
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    # ══════════════════════════════════════════════════════════════════
     #  Hotspot cleanup
     # ══════════════════════════════════════════════════════════════════
 
     def _handle_hotspot_cleanup(self, user_id, cleanup_type):
         """Remove disabled or expired hotspot users. cleanup_type: 'disabled' | 'expired'"""
         try:
+            from server import remove_disabled_hotspot_users, remove_expired_hotspot_users
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
             router = body.get("router", "")
@@ -1584,10 +1810,14 @@ class HealthHandler(BaseHTTPRequestHandler):
                 add_params["rate-limit"] = body["rateLimit"]
             if body.get("sharedUsers"):
                 add_params["shared-users"] = str(body["sharedUsers"])
-            if body.get("sessionTimeout"):
-                add_params["session-timeout"] = body["sessionTimeout"]
-            if body.get("idleTimeout"):
-                add_params["idle-timeout"] = body["idleTimeout"]
+            if body.get("masaBerlaku"):
+                add_params["session-timeout"] = body["masaBerlaku"]
+            if body.get("expiredMode"):
+                add_params["expired-mode"] = body["expiredMode"]
+            if body.get("macCookie") is not None:
+                add_params["add-mac-cookie"] = "true" if body["macCookie"] else "false"
+            if body.get("parentQueue"):
+                add_params["parent-queue"] = body["parentQueue"]
             if body.get("onLogin"):
                 add_params["on-login"] = body["onLogin"]
             if body.get("onLogout"):
@@ -1628,10 +1858,14 @@ class HealthHandler(BaseHTTPRequestHandler):
                     update_params["rate-limit"] = body["rateLimit"]
                 if "sharedUsers" in body:
                     update_params["shared-users"] = str(body["sharedUsers"])
-                if "sessionTimeout" in body:
-                    update_params["session-timeout"] = body["sessionTimeout"]
-                if "idleTimeout" in body:
-                    update_params["idle-timeout"] = body["idleTimeout"]
+                if "masaBerlaku" in body:
+                    update_params["session-timeout"] = body["masaBerlaku"]
+                if "expiredMode" in body:
+                    update_params["expired-mode"] = body["expiredMode"]
+                if "macCookie" in body:
+                    update_params["add-mac-cookie"] = "true" if body["macCookie"] else "false"
+                if "parentQueue" in body:
+                    update_params["parent-queue"] = body["parentQueue"]
                 if "onLogin" in body:
                     update_params["on-login"] = body["onLogin"]
                 if "onLogout" in body:
@@ -1703,11 +1937,74 @@ def _format_bytes(n):
     return f"{n:.1f} TB"
 
 
+def _parse_mikhmon_script_name(script_name: str) -> dict | None:
+    """Parse a Mikhmon script name into transaction fields.
+
+    Actual Mikhmon format (9 fields):
+      date-|-time-|-username-|-price-|-ip-|-mac-|-limit_uptime-|-profile-|-batch_ref
+    Example: oct/01/2025-|-12:57:32-|-58w6zc-|-4000-|-10.10.8.97-|-0A:E2:F4:...-|-1d-|-24jam-5K-|-vc-678
+
+    Returns None if the name doesn't match Mikhmon format (fewer than 6 fields).
+    """
+    parts = script_name.split("-|-")
+    if len(parts) < 6:
+        return None
+    return {
+        "date": parts[0].strip(),
+        "time": parts[1].strip(),
+        "username": parts[2].strip(),
+        "price": parts[3].strip(),
+        "ip": parts[4].strip(),
+        "mac": parts[5].strip(),
+        "limitUptime": parts[6].strip() if len(parts) > 6 else "",
+        "profile": parts[7].strip() if len(parts) > 7 else "",
+        "batchRef": parts[8].strip() if len(parts) > 8 else "",
+    }
+
+
+def _expired_cleanup_cron(interval_seconds=300):
+    """Background cron: every 5 minutes, remove expired hotspot users for all routers.
+
+    Saves expired users to DB before deletion (via remove_expired_hotspot_users).
+    Only runs when DATABASE_URL is set (i.e. production environment).
+    """
+    import logging
+    logger = logging.getLogger("expired_cron")
+    logger.info("Expired cleanup cron started (interval=%ds)", interval_seconds)
+
+    while True:
+        time.sleep(interval_seconds)
+        try:
+            from server import remove_expired_hotspot_users
+            vdb = _get_voucher_db()
+            if not vdb:
+                continue
+
+            pairs = vdb.list_all_user_router_pairs()
+            for telegram_id, router_name in pairs:
+                try:
+                    result = remove_expired_hotspot_users(telegram_id, router_name)
+                    if result.get("count", 0) > 0:
+                        logger.info(
+                            "Cron expired cleanup: router=%s user=%s removed=%d archived=%d",
+                            router_name, telegram_id, result["count"], result.get("archived", 0)
+                        )
+                except Exception as e:
+                    logger.warning("Cron expired cleanup failed for %s/%s: %s", telegram_id, router_name, e)
+        except Exception as e:
+            logger.warning("Expired cron error: %s", e)
+
+
 def start_health_server(port=8080):
     server = HTTPServer(("0.0.0.0", port), HealthHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     print(f"Health server started on port {port}")
+
+    if os.environ.get("DATABASE_URL"):
+        cron_thread = threading.Thread(target=_expired_cleanup_cron, args=(300,), daemon=True)
+        cron_thread.start()
+        print("Expired cleanup cron started (every 5 minutes)")
 
 
 if __name__ == "__main__":
