@@ -694,12 +694,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     def _handle_queues(self, user_id, router_name=None):
-        """List simple queues (used as parent-queue in hotspot profile)."""
+        """List queue tree entries (used as parent-queue in hotspot profile)."""
         try:
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name)
             with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                queues = list(api.path("queue", "simple"))
+                queues = list(api.path("queue", "tree"))
                 result = {
                     "router": conn.get("name", ""),
                     "queues": [
