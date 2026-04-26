@@ -9,3 +9,8 @@ dashboard/node_modules/
 dashboard/.next/
 dashboard/.env*
 !dashboard/.env.example
+
+# Local credentials (never commit)
+CREDENTIALS.md
+credentials.md
+*.credentials
