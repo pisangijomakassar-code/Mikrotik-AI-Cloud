@@ -1574,11 +1574,11 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     # ══════════════════════════════════════════════════════════════════
-    #  Chat completions — proxy to nanobot serve (port 18790)
+    #  Chat completions — proxy to nanobot gateway (port 18790)
     # ══════════════════════════════════════════════════════════════════
 
     def _handle_chat_completions(self):
-        """Forward chat requests to nanobot serve, which has full MCP tool access."""
+        """Forward chat requests to nanobot gateway, which has full MCP tool access."""
         import urllib.request
         import urllib.error
 

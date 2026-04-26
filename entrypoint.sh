@@ -20,9 +20,6 @@ cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null ||
 # Start health API server in background (port 8080, for dashboard to query router data)
 python3 /app/mikrotik_mcp/health_server.py &
 
-# Start nanobot HTTP API server (port 18790, proxied by health_server for dashboard chat)
-nanobot serve --port 18790 --host 127.0.0.1 &
-
 # Start tunnel manager in background (manages cloudflared access tcp processes)
 python3 /app/mikrotik_mcp/tunnel_manager.py &
 
