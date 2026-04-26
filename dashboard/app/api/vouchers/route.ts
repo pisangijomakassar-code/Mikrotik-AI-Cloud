@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { profile, count, prefix, routerName, passwordLength, usernameLength, server, typeChar, typeLogin, limitUptime, resellerId, pricePerUnit, comment } = body
+    const { profile, count, prefix, routerName, passwordLength, usernameLength, server, typeChar, typeLogin, limitUptime, limitQuota, resellerId, pricePerUnit, discount, markUp, comment } = body
 
     if (!profile || !count) {
       return Response.json({ error: "profile and count are required" }, { status: 400 })
@@ -73,11 +73,14 @@ export async function POST(request: NextRequest) {
         password_length: passwordLength ?? 6,
         username_length: usernameLength ?? 6,
         server: server ?? "",
-        typeChar: typeChar ?? "Random abcd",
+        typeChar: typeChar ?? "Random abcd2345",
         typeLogin: typeLogin ?? "Username = Password",
         limitUptime: limitUptime ?? "",
+        limitQuota: limitQuota ?? 0,
         resellerId: resellerId ?? null,
         price_per_unit: pricePerUnit ?? 0,
+        discount: discount ?? 0,
+        markUp: markUp ?? 0,
         comment: comment ?? "",
       }),
       signal: AbortSignal.timeout(30000),

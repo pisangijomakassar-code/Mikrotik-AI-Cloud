@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Zap, Copy, Check, Loader2, Printer } from "lucide-react"
+import { Zap, Copy, Check, Loader2, Printer, Info } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,11 +11,13 @@ import { useResellers } from "@/hooks/use-resellers"
 import { useRouters } from "@/hooks/use-routers"
 
 const TYPE_CHAR_OPTIONS = [
-  "Random abcd",
-  "Random ABCD",
+  "Random abcd2345",
+  "Random ABCD2345",
+  "Random aBcD2345",
+  "Random 5ab2c34d",
+  "Random 5AB2C34D",
+  "Random 5aB2c34D",
   "Random 1234",
-  "Random abcd1234",
-  "Random ABCD1234",
 ]
 
 const TYPE_LOGIN_OPTIONS = [
@@ -34,18 +36,31 @@ export default function GenerateVoucherPage() {
   const [resellerId, setResellerId] = useState("")
   const [routerName, setRouterName] = useState("")
   const [count, setCount] = useState(10)
-  const [typeChar, setTypeChar] = useState("Random abcd")
+  const [typeChar, setTypeChar] = useState("Random abcd2345")
   const [typeLogin, setTypeLogin] = useState("Username = Password")
   const [prefix, setPrefix] = useState("")
   const [charLen, setCharLen] = useState(6)
+  const [diskonReseller, setDiskonReseller] = useState("")
+  const [hargaEndUser, setHargaEndUser] = useState("")
+  const [markUp, setMarkUp] = useState("")
+  const [limitUptime, setLimitUptime] = useState("")
+  const [limitQuota, setLimitQuota] = useState("")
 
   const [generating, setGenerating] = useState(false)
   const [vouchers, setVouchers] = useState<GeneratedVoucher[]>([])
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [showPrint, setShowPrint] = useState(false)
 
-  // When reseller is selected, filter voucher types by voucherGroup
   const selectedReseller = resellers?.find((r) => r.id === resellerId)
+
+  // Auto-fill diskon from selected reseller
+  useMemo(() => {
+    if (selectedReseller) {
+      setDiskonReseller(String(selectedReseller.discount ?? 0))
+    } else {
+      setDiskonReseller("")
+    }
+  }, [selectedReseller])
 
   const filteredTypes = useMemo(() => {
     if (!voucherTypes) return []
@@ -59,7 +74,6 @@ export default function GenerateVoucherPage() {
 
   const selectedType = voucherTypes?.find((v) => v.id === selectedTypeId)
 
-  // When jenis voucher selected, auto-fill form fields
   function handleSelectType(id: string) {
     setSelectedTypeId(id)
     const vt = voucherTypes?.find((v) => v.id === id)
@@ -68,6 +82,8 @@ export default function GenerateVoucherPage() {
       setTypeLogin(vt.typeLogin)
       setPrefix(vt.prefix)
       setCharLen(vt.panjangKarakter)
+      setLimitUptime(vt.limitUptime !== "0" ? vt.limitUptime : "")
+      setHargaEndUser(String(vt.harga ?? ""))
     }
   }
 
@@ -78,6 +94,9 @@ export default function GenerateVoucherPage() {
     const qty = Math.max(1, Math.min(count, 200))
     setGenerating(true)
     try {
+      const diskon = diskonReseller ? parseInt(diskonReseller) : 0
+      const markup = diskon > 0 ? 0 : (markUp ? parseInt(markUp) : 0)
+
       const res = await fetch("/api/vouchers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,9 +110,12 @@ export default function GenerateVoucherPage() {
           server: selectedType.server !== "all" ? selectedType.server : "",
           typeChar,
           typeLogin,
-          limitUptime: selectedType.limitUptime !== "0" ? selectedType.limitUptime : "",
+          limitUptime: limitUptime || "",
+          limitQuota: limitQuota ? parseInt(limitQuota) : undefined,
           resellerId: resellerId || null,
-          pricePerUnit: selectedType.harga,
+          pricePerUnit: hargaEndUser ? parseInt(hargaEndUser) : selectedType.harga,
+          discount: diskon,
+          markUp: markup,
         }),
       })
       if (!res.ok) {
@@ -127,6 +149,7 @@ export default function GenerateVoucherPage() {
 
   const lbl = "text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60"
   const inp = "w-full bg-muted border-none rounded-lg py-2 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-primary outline-none"
+  const diskonFilled = diskonReseller !== "" && parseInt(diskonReseller) > 0
 
   return (
     <div>
@@ -145,6 +168,12 @@ export default function GenerateVoucherPage() {
           <div className="bg-surface-low rounded-3xl border border-border/20 p-6 space-y-5">
             <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">Konfigurasi</h3>
 
+            {/* Jumlah Voucher */}
+            <div className="space-y-1.5">
+              <label className={lbl}>Jumlah Voucher (maks 200)</label>
+              <Input className={inp + " font-mono-tech"} type="number" min={1} max={200} value={count} onChange={(e) => setCount(Number(e.target.value))} />
+            </div>
+
             {/* Reseller */}
             <div className="space-y-1.5">
               <label className={lbl}>Reseller (opsional)</label>
@@ -161,6 +190,56 @@ export default function GenerateVoucherPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Diskon Reseller */}
+            <div className="space-y-1.5">
+              <label className={lbl}>Diskon Reseller (%)</label>
+              <Input
+                className={inp + " font-mono-tech"}
+                type="number"
+                min={0}
+                max={100}
+                placeholder="0"
+                value={diskonReseller}
+                onChange={(e) => setDiskonReseller(e.target.value)}
+              />
+              {diskonFilled && (
+                <p className="text-[10px] text-amber-400 ml-1">Mark Up diabaikan karena Diskon diisi</p>
+              )}
+            </div>
+
+            {/* Harga End User + Mark Up */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className={lbl}>Harga End User (Rp)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono-tech">Rp</span>
+                  <Input
+                    className={inp + " font-mono-tech pl-8"}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={hargaEndUser}
+                    onChange={(e) => setHargaEndUser(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className={`${lbl} ${diskonFilled ? "opacity-30" : ""}`}>Mark Up (Rp)</label>
+                <div className="relative">
+                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono-tech ${diskonFilled ? "text-muted-foreground/30" : "text-muted-foreground"}`}>Rp</span>
+                  <Input
+                    className={inp + " font-mono-tech pl-8" + (diskonFilled ? " opacity-30 pointer-events-none" : "")}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={markUp}
+                    disabled={diskonFilled}
+                    onChange={(e) => setMarkUp(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Jenis Voucher */}
@@ -204,12 +283,6 @@ export default function GenerateVoucherPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Jumlah */}
-            <div className="space-y-1.5">
-              <label className={lbl}>Jumlah Voucher (maks 200)</label>
-              <Input className={inp + " font-mono-tech"} type="number" min={1} max={200} value={count} onChange={(e) => setCount(Number(e.target.value))} />
             </div>
 
             {/* Prefix + Panjang */}
@@ -257,6 +330,30 @@ export default function GenerateVoucherPage() {
               </Select>
             </div>
 
+            {/* Limit Uptime + Limit Quota */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className={lbl}>Limit Uptime</label>
+                <Input
+                  className={inp + " font-mono-tech"}
+                  placeholder="e.g. 1d / 2h"
+                  value={limitUptime}
+                  onChange={(e) => setLimitUptime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className={lbl}>Limit Quota (Mb)</label>
+                <Input
+                  className={inp + " font-mono-tech"}
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={limitQuota}
+                  onChange={(e) => setLimitQuota(e.target.value)}
+                />
+              </div>
+            </div>
+
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
@@ -268,50 +365,83 @@ export default function GenerateVoucherPage() {
           </div>
         </div>
 
-        {/* Result Panel */}
+        {/* Result / Petunjuk Panel */}
         <div className="lg:col-span-3">
           <div className="bg-surface-low rounded-3xl border border-border/20 overflow-hidden h-full flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-border/20">
-              <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">
-                Hasil Generate {vouchers.length > 0 && <span className="text-primary">({vouchers.length})</span>}
-              </h3>
-              {vouchers.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <button onClick={copyAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-                    <Copy className="h-3.5 w-3.5" /> Copy Semua
-                  </button>
-                  <button onClick={() => setShowPrint(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-colors">
-                    <Printer className="h-3.5 w-3.5" /> Cetak
-                  </button>
+            {vouchers.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between p-5 border-b border-border/20">
+                  <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">
+                    Hasil Generate <span className="text-primary">({vouchers.length})</span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button onClick={copyAll} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                      <Copy className="h-3.5 w-3.5" /> Copy Semua
+                    </button>
+                    <button onClick={() => setShowPrint(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-colors">
+                      <Printer className="h-3.5 w-3.5" /> Cetak
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              {vouchers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                  <Zap className="h-12 w-12 text-slate-500/30" />
-                  <p className="text-sm text-slate-500">Hasil voucher akan muncul di sini</p>
-                  <p className="text-xs text-slate-600">Pilih jenis voucher dan klik Generate</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {vouchers.map((v, i) => (
-                    <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted border border-border/20">
-                      <div className="font-mono-tech text-sm">
-                        <span className="text-primary">{v.username}</span>
-                        {typeLogin !== "Username Only" && (
-                          <><span className="text-slate-600 mx-1">/</span><span className="text-tertiary">{v.password}</span></>
-                        )}
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {vouchers.map((v, i) => (
+                      <div key={`${v.username}-${i}`} className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted border border-border/20">
+                        <div className="font-mono-tech text-sm">
+                          <span className="text-primary">{v.username}</span>
+                          {typeLogin !== "Username Only" && (
+                            <><span className="text-slate-600 mx-1">/</span><span className="text-tertiary">{v.password}</span></>
+                          )}
+                        </div>
+                        <button onClick={() => handleCopy(i, v)} className="p-1 rounded hover:bg-surface-low transition-colors shrink-0">
+                          {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-tertiary" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
+                        </button>
                       </div>
-                      <button onClick={() => handleCopy(i, v)} className="p-1 rounded hover:bg-surface-low transition-colors shrink-0">
-                        {copiedIdx === i ? <Check className="h-3.5 w-3.5 text-tertiary" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
-                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 p-5 border-b border-border/20">
+                  <Info className="h-4 w-4 text-primary shrink-0" />
+                  <h3 className="text-sm font-headline font-bold text-foreground uppercase tracking-widest">Petunjuk</h3>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                  {[
+                    {
+                      title: "JUMLAH VOUCHER",
+                      desc: "Tulis jumlah voucher yang akan di generate.",
+                    },
+                    {
+                      title: "RESELLER",
+                      desc: "Pilih reseller yang akan menjual voucher ini.",
+                    },
+                    {
+                      title: "DISKON dan MARK UP",
+                      desc: "Jika Diskon diisi maka nilai Mark Up diabaikan.",
+                    },
+                    {
+                      title: "JENIS VOUCHER",
+                      desc: "Pilih jenis voucher yang akan digunakan. Jika tidak ingin pakai jenis voucher yang tersedia, biarkan saja.",
+                    },
+                    {
+                      title: "PREFIX",
+                      desc: "Tulis prefix yang menjadi ciri khas voucher yang akan di-generate.",
+                    },
+                    {
+                      title: "LAIN LAIN",
+                      desc: "Semua data selanjutnya akan menyesuaikan jenis voucher yang dipilih. Jika ingin mencetak tanpa menggunakan jenis voucher yang ada, maka silahkan isi semuanya secara manual.",
+                    },
+                  ].map((item) => (
+                    <div key={item.title} className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{item.title}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

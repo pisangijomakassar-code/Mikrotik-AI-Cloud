@@ -18,11 +18,13 @@ import {
 import { useHotspotProfiles, useHotspotServers } from "@/hooks/use-hotspot"
 
 const TYPE_CHAR_OPTIONS = [
-  "Random abcd",
-  "Random ABCD",
+  "Random abcd2345",
+  "Random ABCD2345",
+  "Random aBcD2345",
+  "Random 5ab2c34d",
+  "Random 5AB2C34D",
+  "Random 5aB2c34D",
   "Random 1234",
-  "Random abcd1234",
-  "Random ABCD1234",
 ]
 
 const TYPE_LOGIN_OPTIONS = [

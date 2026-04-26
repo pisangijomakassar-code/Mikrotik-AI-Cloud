@@ -792,23 +792,30 @@ class HealthHandler(BaseHTTPRequestHandler):
             reseller_id = body.get("reseller_id") or body.get("resellerId")
             price_per_unit = int(body.get("price_per_unit") or body.get("pricePerUnit") or 0)
             limit_uptime = body.get("limitUptime") or body.get("limit_uptime") or ""
+            limit_quota_mb = int(body.get("limitQuota") or body.get("limit_quota") or 0)
             comment_tmpl = body.get("comment") or ""
             type_login = body.get("typeLogin") or body.get("type_login") or "Username = Password"
 
-            # Charset based on typeChar
-            type_char = (body.get("typeChar") or body.get("type_char") or "Random abcd").lower()
-            if "abcd1234" in type_char or "alphanumeric" in type_char:
-                charset = string.ascii_lowercase + string.digits
-            elif "abcd" in type_char and "1234" not in type_char:
-                charset = string.ascii_lowercase
-            elif "1234" in type_char and "abcd" not in type_char:
+            # Charset based on typeChar — no-ambiguous chars (no 0,O,1,l,I)
+            _NO_AMB_LOWER = "abcdefghjkmnpqrstuvwxyz"
+            _NO_AMB_UPPER = "ABCDEFGHJKMNPQRSTUVWXYZ"
+            _NO_AMB_DIGIT = "23456789"
+            type_char_raw = body.get("typeChar") or body.get("type_char") or "Random abcd2345"
+            tc = type_char_raw.lower()
+            has_lower = any(c.islower() for c in type_char_raw if c.isalpha())
+            has_upper = any(c.isupper() for c in type_char_raw if c.isalpha())
+            has_digit = any(c.isdigit() for c in type_char_raw)
+            if "1234" in tc and not any(x in tc for x in ["abcd", "ab", "aB", "AB"]):
                 charset = string.digits
-            elif "ABCD1234" in (body.get("typeChar") or ""):
-                charset = string.ascii_uppercase + string.digits
-            elif "ABCD" in (body.get("typeChar") or ""):
-                charset = string.ascii_uppercase
             else:
-                charset = string.ascii_lowercase + string.digits
+                parts = ""
+                if has_lower:
+                    parts += _NO_AMB_LOWER
+                if has_upper:
+                    parts += _NO_AMB_UPPER
+                if has_digit:
+                    parts += _NO_AMB_DIGIT
+                charset = parts if parts else _NO_AMB_LOWER + _NO_AMB_DIGIT
 
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name or None)
@@ -832,6 +839,8 @@ class HealthHandler(BaseHTTPRequestHandler):
                         add_params["server"] = server
                     if limit_uptime and limit_uptime != "0":
                         add_params["limit-uptime"] = limit_uptime
+                    if limit_quota_mb and limit_quota_mb > 0:
+                        add_params["limit-bytes-total"] = str(limit_quota_mb * 1048576)
                     if comment_tmpl:
                         add_params["comment"] = comment_tmpl
 
