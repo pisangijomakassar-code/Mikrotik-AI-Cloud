@@ -73,6 +73,9 @@ class VoucherDB:
         source: str = "nanobot",
         reseller_id: str | None = None,
         price_per_unit: int = 0,
+        discount: int = 0,
+        mark_up: int = 0,
+        harga_end_user: int = 0,
     ) -> str | None:
         """Insert a VoucherBatch record after successful router creation.
 
@@ -98,12 +101,14 @@ class VoucherDB:
                 INSERT INTO "VoucherBatch"
                     ("id", "routerName", "profile", "count", "pricePerUnit",
                      "totalCost", "vouchers", "source", "createdAt",
+                     "discount", "markUp", "hargaEndUser",
                      "resellerId", "userId")
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     batch_id, router_name, profile, count, price_per_unit,
                     total_cost, json.dumps(vouchers), source, _now(),
+                    int(discount or 0), int(mark_up or 0), int(harga_end_user or 0),
                     reseller_id, internal_uid,
                 ),
             )
@@ -112,7 +117,7 @@ class VoucherDB:
     # ── Reseller lookups ──
 
     def get_reseller_by_telegram(self, telegram_id: str) -> dict | None:
-        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId."""
+        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup."""
         if not self._pool:
             return None
 
@@ -121,12 +126,78 @@ class VoucherDB:
             cur.execute(
                 """
                 SELECT r."id", r."name", r."balance", r."phone", r."status",
+                       r."discount", r."voucherGroup",
                        r."userId", u."telegramId" as "ownerTelegramId"
                 FROM "Reseller" r
                 JOIN "User" u ON u."id" = r."userId"
                 WHERE r."telegramId" = %s AND r."status" = 'ACTIVE'
                 """,
                 (telegram_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    # ── VoucherType lookups (for reseller bot pricing) ──
+
+    def list_voucher_types_for_reseller(
+        self, owner_user_id_internal: str, reseller_voucher_group: str
+    ) -> list[dict]:
+        """Return VoucherTypes owned by user, filtered by reseller's voucherGroup.
+
+        VoucherType.voucherGroup and Reseller.voucherGroup are both comma-separated
+        strings (e.g. "default,1,2"). A VoucherType is visible if any of its groups
+        matches any of the reseller's groups, OR if its group is "default".
+        """
+        if not self._pool:
+            return []
+
+        reseller_groups = [g.strip() for g in (reseller_voucher_group or "default").split(",") if g.strip()]
+        if not reseller_groups:
+            reseller_groups = ["default"]
+
+        with self._conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT "id", "namaVoucher", "deskripsi", "harga", "markUp",
+                       "server", "profile", "limitUptime",
+                       "limitQuotaDl", "limitQuotaUl", "limitQuotaTotal",
+                       "typeChar", "typeLogin", "prefix", "panjangKarakter",
+                       "voucherGroup"
+                FROM "VoucherType"
+                WHERE "userId" = %s
+                ORDER BY "harga" ASC, "namaVoucher" ASC
+                """,
+                (owner_user_id_internal,),
+            )
+            rows = cur.fetchall()
+
+        result = []
+        for row in rows:
+            d = dict(row)
+            vt_groups = [g.strip() for g in (d.get("voucherGroup") or "default").split(",") if g.strip()]
+            # Visible if any group matches, OR voucher type is in "default" group
+            if "default" in vt_groups or any(g in reseller_groups for g in vt_groups):
+                result.append(d)
+        return result
+
+    def get_voucher_type_by_id(self, voucher_type_id: str) -> dict | None:
+        """Fetch single VoucherType by id."""
+        if not self._pool:
+            return None
+        with self._conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT "id", "namaVoucher", "deskripsi", "harga", "markUp",
+                       "server", "profile", "limitUptime",
+                       "limitQuotaDl", "limitQuotaUl", "limitQuotaTotal",
+                       "typeChar", "typeLogin", "prefix", "panjangKarakter",
+                       "voucherGroup", "userId"
+                FROM "VoucherType"
+                WHERE "id" = %s
+                """,
+                (voucher_type_id,),
             )
             row = cur.fetchone()
             return dict(row) if row else None

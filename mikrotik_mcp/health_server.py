@@ -791,6 +791,9 @@ class HealthHandler(BaseHTTPRequestHandler):
             router_name = body.get("router_name") or body.get("router") or ""
             reseller_id = body.get("reseller_id") or body.get("resellerId")
             price_per_unit = int(body.get("price_per_unit") or body.get("pricePerUnit") or 0)
+            discount = int(body.get("discount") or 0)
+            mark_up = int(body.get("markUp") or body.get("mark_up") or 0)
+            harga_end_user = price_per_unit  # form's "Harga End User" already mapped to price_per_unit
             limit_uptime = body.get("limitUptime") or body.get("limit_uptime") or ""
             limit_quota_mb = int(body.get("limitQuota") or body.get("limit_quota") or 0)
             comment_tmpl = body.get("comment") or ""
@@ -859,6 +862,9 @@ class HealthHandler(BaseHTTPRequestHandler):
                         source="dashboard",
                         reseller_id=reseller_id,
                         price_per_unit=price_per_unit,
+                        discount=discount,
+                        mark_up=mark_up,
+                        harga_end_user=harga_end_user,
                     )
                     logger.info("VoucherBatch saved: %s vouchers, profile=%s, user=%s", len(vouchers), profile, user_id)
                 except Exception as e:

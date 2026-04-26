@@ -369,6 +369,10 @@ model VoucherBatch {
   source       String   @default("dashboard")
   createdAt    DateTime @default(now())
 
+  discount     Int      @default(0)
+  markUp       Int      @default(0)
+  hargaEndUser Int      @default(0)
+
   resellerId String?
   reseller   Reseller? @relation(fields: [resellerId], references: [id], onDelete: SetNull)
 

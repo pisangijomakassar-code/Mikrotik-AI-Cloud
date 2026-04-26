@@ -287,7 +287,41 @@ class ResellerBot:
             reply_markup=self._back_button(),
         )
 
-    # ── Buy: profile list ────────────────────────────────────
+    # ── Pricing helper ────────────────────────────────────────
+
+    @staticmethod
+    def _calc_reseller_price(voucher_type: dict, reseller_discount_pct: int) -> int:
+        """Compute price the reseller pays.
+
+        Rule: harga jual ke reseller = harga - (harga × discount%).
+        Mark-up only applies for the end-user-facing price; bot purchase uses harga.
+        """
+        harga = int(voucher_type.get("harga") or 0)
+        disc = max(0, min(100, int(reseller_discount_pct or 0)))
+        return max(0, harga - (harga * disc // 100))
+
+    @staticmethod
+    def _charset_for(type_char_raw: str) -> str:
+        """Mirror health_server charset selection. No-ambiguous chars."""
+        _NO_AMB_LOWER = "abcdefghjkmnpqrstuvwxyz"
+        _NO_AMB_UPPER = "ABCDEFGHJKMNPQRSTUVWXYZ"
+        _NO_AMB_DIGIT = "23456789"
+        tc = (type_char_raw or "Random abcd2345").lower()
+        has_lower = any(c.islower() for c in (type_char_raw or "") if c.isalpha())
+        has_upper = any(c.isupper() for c in (type_char_raw or "") if c.isalpha())
+        has_digit = any(c.isdigit() for c in (type_char_raw or ""))
+        if "1234" in tc and not any(x in tc for x in ["abcd", "ab", "aB", "AB"]):
+            return string.digits
+        parts = ""
+        if has_lower:
+            parts += _NO_AMB_LOWER
+        if has_upper:
+            parts += _NO_AMB_UPPER
+        if has_digit:
+            parts += _NO_AMB_DIGIT
+        return parts or (_NO_AMB_LOWER + _NO_AMB_DIGIT)
+
+    # ── Buy: voucher type list ───────────────────────────────
 
     async def _show_profiles(self, query, telegram_id: str) -> None:
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
@@ -295,73 +329,67 @@ class ResellerBot:
             await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
             return
 
-        owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id)
+        owner_user_id = reseller["userId"]  # internal User.id (FK target)
+        reseller_groups = reseller.get("voucherGroup") or "default"
+        reseller_disc = int(reseller.get("discount") or 0)
 
-        try:
-            reg = _get_registry()
-            conn = reg.resolve(owner_tid, None)  # default router
-        except Exception as exc:
-            logger.error("Failed to resolve router for owner %s: %s", owner_tid, exc)
+        types = self.vdb.list_voucher_types_for_reseller(owner_user_id, reseller_groups)
+        if not types:
             await query.edit_message_text(
-                "Tidak dapat terhubung ke router. Hubungi admin.",
+                "Belum ada jenis voucher yang tersedia untuk Anda.\nHubungi admin.",
                 reply_markup=self._back_button(),
             )
             return
 
-        try:
-            with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                profiles = list(api.path("ip", "hotspot", "user", "profile"))
-        except Exception as exc:
-            logger.error("Router connection failed: %s", exc)
-            await query.edit_message_text(
-                "Gagal terhubung ke router. Coba lagi nanti.",
-                reply_markup=self._back_button(),
-            )
-            return
-
-        if not profiles:
-            await query.edit_message_text(
-                "Tidak ada profil hotspot yang tersedia.",
-                reply_markup=self._back_button(),
-            )
-            return
-
-        # Filter out 'default' profile and build buttons (2 per row)
         buttons = []
-        row = []
-        for p in profiles:
-            name = p.get("name", "")
-            if not name or name.lower() == "default":
-                continue
-            row.append(InlineKeyboardButton(name, callback_data=f"buy|{name}"))
-            if len(row) == 2:
-                buttons.append(row)
-                row = []
-        if row:
-            buttons.append(row)
+        for vt in types:
+            harga_jual = self._calc_reseller_price(vt, reseller_disc)
+            label = f"{vt['namaVoucher']} — {format_rp(harga_jual)}"
+            buttons.append([InlineKeyboardButton(label, callback_data=f"buy|{vt['id']}")])
         buttons.append([InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")])
 
+        disc_note = f"\n_Diskon Anda: {reseller_disc}%_" if reseller_disc > 0 else ""
         await query.edit_message_text(
-            "🎫 Pilih profil voucher:",
+            f"🎫 Pilih jenis voucher:{disc_note}",
+            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
     # ── Buy: confirm ──────────────────────────────────────────
 
-    async def _confirm_buy(self, query, telegram_id: str, profile_name: str) -> None:
+    async def _confirm_buy(self, query, telegram_id: str, voucher_type_id: str) -> None:
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
             await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
             return
 
-        balance = reseller.get("balance", 0)
+        vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
+        if not vt or vt.get("userId") != reseller["userId"]:
+            await query.edit_message_text(
+                "Jenis voucher tidak ditemukan.",
+                reply_markup=self._back_button(),
+            )
+            return
+
+        balance = int(reseller.get("balance") or 0)
+        disc = int(reseller.get("discount") or 0)
+        harga = int(vt.get("harga") or 0)
+        harga_jual = self._calc_reseller_price(vt, disc)
+        saldo_setelah = balance - harga_jual
+
+        disc_line = f"\n💸 Diskon ({disc}%): -{format_rp(harga - harga_jual)}" if disc > 0 else ""
+        warn = "" if saldo_setelah >= 0 else "\n\n⚠️ Saldo tidak mencukupi!"
+
         await query.edit_message_text(
-            f"Beli 1x voucher *{profile_name}*?\n"
-            f"Saldo: {format_rp(balance)}",
+            f"Beli voucher *{vt['namaVoucher']}*?\n\n"
+            f"📶 Profile: `{vt['profile']}`\n"
+            f"💰 Harga: {format_rp(harga)}{disc_line}\n"
+            f"💵 Bayar: *{format_rp(harga_jual)}*\n"
+            f"💼 Saldo: {format_rp(balance)} → {format_rp(saldo_setelah)}{warn}",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("✅ Ya", callback_data=f"buy|{profile_name}|ok"),
+                    InlineKeyboardButton("✅ Ya, Beli", callback_data=f"buy|{voucher_type_id}|ok"),
                     InlineKeyboardButton("❌ Batal", callback_data="menu"),
                 ],
             ]),
@@ -369,14 +397,35 @@ class ResellerBot:
 
     # ── Buy: execute ──────────────────────────────────────────
 
-    async def _execute_buy(self, query, telegram_id: str, profile_name: str) -> None:
+    async def _execute_buy(self, query, telegram_id: str, voucher_type_id: str) -> None:
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
             await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
             return
 
+        vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
+        if not vt or vt.get("userId") != reseller["userId"]:
+            await query.edit_message_text(
+                "Jenis voucher tidak ditemukan.",
+                reply_markup=self._back_button(),
+            )
+            return
+
         owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id)
         reseller_id = reseller["id"]
+        disc = int(reseller.get("discount") or 0)
+        price_per_unit = self._calc_reseller_price(vt, disc)
+        balance = int(reseller.get("balance") or 0)
+
+        # Pre-flight: saldo check BEFORE touching router
+        if price_per_unit > 0 and balance < price_per_unit:
+            await query.edit_message_text(
+                f"⚠️ Saldo tidak cukup.\n"
+                f"Saldo: {format_rp(balance)}\n"
+                f"Butuh: {format_rp(price_per_unit)}",
+                reply_markup=self._back_button(),
+            )
+            return
 
         # Resolve router
         try:
@@ -390,19 +439,25 @@ class ResellerBot:
             )
             return
 
-        # Generate voucher on router
-        charset = string.ascii_lowercase + string.digits
-        username = "".join(random.choices(charset, k=6))
-        password = "".join(random.choices(charset, k=6))
+        # Generate voucher per VoucherType template
+        prefix = vt.get("prefix") or ""
+        char_len = max(3, int(vt.get("panjangKarakter") or 6))
+        type_login = vt.get("typeLogin") or "Username = Password"
+        charset = self._charset_for(vt.get("typeChar") or "Random abcd2345")
+
+        username = prefix + "".join(random.choices(charset, k=char_len))
+        password = username if type_login == "Username = Password" else "".join(random.choices(charset, k=char_len))
+        profile_name = vt["profile"]
 
         try:
             with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                # Check for username collision
                 existing = {u.get("name", "") for u in api.path("ip", "hotspot", "user")}
                 for _ in range(10):
                     if username not in existing:
                         break
-                    username = "".join(random.choices(charset, k=6))
+                    username = prefix + "".join(random.choices(charset, k=char_len))
+                    if type_login == "Username = Password":
+                        password = username
                 else:
                     await query.edit_message_text(
                         "Gagal membuat username unik. Coba lagi.",
@@ -410,9 +465,17 @@ class ResellerBot:
                     )
                     return
 
-                api.path("ip", "hotspot", "user").add(
-                    name=username, password=password, profile=profile_name,
-                )
+                add_params = {"name": username, "password": password, "profile": profile_name}
+                server = vt.get("server") or ""
+                if server and server != "all":
+                    add_params["server"] = server
+                limit_uptime = vt.get("limitUptime") or ""
+                if limit_uptime and limit_uptime != "0":
+                    add_params["limit-uptime"] = limit_uptime
+                limit_total_bytes = int(vt.get("limitQuotaTotal") or 0)
+                if limit_total_bytes > 0:
+                    add_params["limit-bytes-total"] = str(limit_total_bytes)
+                api.path("ip", "hotspot", "user").add(**add_params)
         except Exception as exc:
             logger.error("Voucher creation on router failed: %s", exc)
             await query.edit_message_text(
@@ -421,33 +484,29 @@ class ResellerBot:
             )
             return
 
-        # Deduct saldo (price_per_unit = 0 for now -- TODO: pricing config)
-        price_per_unit = 0
-        balance_after = reseller.get("balance", 0)
+        # Deduct saldo (atomic). If it fails, log — voucher already on router.
+        balance_after = balance
         if price_per_unit > 0:
             try:
                 tx = self.vdb.deduct_saldo(
                     reseller_id, price_per_unit,
-                    description=f"Voucher {profile_name}",
+                    description=f"Voucher {vt['namaVoucher']}",
                 )
                 balance_after = tx["balanceAfter"]
             except ValueError as exc:
-                # Insufficient balance -- but voucher already created on router.
-                # Log warning; in a future version we should check balance BEFORE
-                # creating on router.
                 logger.warning("Saldo deduction failed after voucher created: %s", exc)
                 await query.edit_message_text(
-                    f"⚠️ Voucher dibuat tapi saldo tidak cukup.\n\n"
+                    f"⚠️ Voucher dibuat tapi saldo tidak cukup saat finalisasi.\n\n"
                     f"👤 *Username:* `{username}`\n"
                     f"🔑 *Password:* `{password}`\n"
                     f"📶 *Profil:* {profile_name}\n\n"
-                    f"Hubungi admin untuk saldo.",
+                    f"Hubungi admin: {exc}",
                     parse_mode="Markdown",
                     reply_markup=self._back_button(),
                 )
                 return
 
-        # Save batch to DB
+        # Persist batch
         try:
             self.vdb.save_batch(
                 user_id=owner_tid,
@@ -461,12 +520,13 @@ class ResellerBot:
         except Exception as exc:
             logger.warning("Failed to persist reseller voucher batch: %s", exc)
 
-        # Send voucher to reseller
         await query.edit_message_text(
             f"✅ Voucher berhasil dibuat!\n\n"
+            f"🎫 *{vt['namaVoucher']}*\n"
             f"👤 *Username:* `{username}`\n"
             f"🔑 *Password:* `{password}`\n"
-            f"📶 *Profil:* {profile_name}\n\n"
+            f"📶 *Profil:* {profile_name}\n"
+            f"💵 Bayar: {format_rp(price_per_unit)}\n"
             f"💰 Sisa saldo: {format_rp(balance_after)}",
             parse_mode="Markdown",
             reply_markup=self._back_button(),
