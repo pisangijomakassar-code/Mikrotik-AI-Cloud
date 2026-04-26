@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { User, Mail, MessageSquare, Shield, Router, Calendar, Pencil, Check, X, Loader2, Lock, Eye, EyeOff } from "lucide-react"
+import { User, Mail, MessageSquare, Shield, Router, Calendar, Pencil, Check, X, Loader2, Lock, Eye, EyeOff, KeyRound } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
@@ -21,7 +21,8 @@ interface ProfileData {
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [editing, setEditing] = useState<"name" | "email" | null>(null)
+  const [editing, setEditing] = useState<"name" | "email" | "telegramId" | "botToken" | null>(null)
+  const [showBotToken, setShowBotToken] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [saving, setSaving] = useState(false)
 
@@ -63,9 +64,12 @@ export default function ProfilePage() {
     }
   }
 
-  function startEdit(field: "name" | "email") {
+  function startEdit(field: "name" | "email" | "telegramId" | "botToken") {
     setEditing(field)
-    setEditValue(field === "name" ? profile?.name ?? "" : profile?.email ?? "")
+    if (field === "name") setEditValue(profile?.name ?? "")
+    else if (field === "email") setEditValue(profile?.email ?? "")
+    else if (field === "telegramId") setEditValue(profile?.telegramId ?? "")
+    else if (field === "botToken") setEditValue(profile?.botToken ?? "")
   }
 
   async function handleChangePassword() {
@@ -260,13 +264,80 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Telegram ID (read-only) */}
+          {/* Telegram ID */}
           <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageSquare className="h-4 w-4 text-slate-500" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Telegram ID</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-slate-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Telegram ID</span>
+              </div>
+              {editing !== "telegramId" && (
+                <button onClick={() => startEdit("telegramId")} className="text-xs text-slate-400 hover:text-primary flex items-center gap-1 transition-colors">
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
             </div>
-            <p className="text-lg text-foreground font-mono-tech">{profile.telegramId}</p>
+            {editing === "telegramId" ? (
+              <div className="flex items-center gap-3">
+                <Input
+                  className="flex-1 bg-muted border-none rounded-lg text-sm text-foreground font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] outline-none"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                  placeholder="e.g. 421687437"
+                  onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                />
+                <button onClick={handleSave} disabled={saving} className="p-2 text-tertiary hover:bg-[#4ae176]/10 rounded-lg transition-colors">
+                  <Check className="h-4 w-4" />
+                </button>
+                <button onClick={() => setEditing(null)} className="p-2 text-slate-400 hover:bg-muted/50 rounded-lg transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-lg text-foreground font-mono-tech">{profile.telegramId || <span className="text-slate-500 text-sm">Belum diset</span>}</p>
+            )}
+          </div>
+
+          {/* Bot Token */}
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-slate-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Bot Token</span>
+              </div>
+              {editing !== "botToken" && (
+                <button onClick={() => startEdit("botToken")} className="text-xs text-slate-400 hover:text-primary flex items-center gap-1 transition-colors">
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+            </div>
+            {editing === "botToken" ? (
+              <div className="flex items-center gap-3">
+                <Input
+                  className="flex-1 bg-muted border-none rounded-lg text-sm text-foreground font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] outline-none"
+                  type={showBotToken ? "text" : "password"}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                  placeholder="123456:ABC-DEF..."
+                  onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                />
+                <button type="button" onClick={() => setShowBotToken(!showBotToken)} className="p-2 text-slate-400 hover:text-primary rounded-lg transition-colors">
+                  {showBotToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+                <button onClick={handleSave} disabled={saving} className="p-2 text-tertiary hover:bg-[#4ae176]/10 rounded-lg transition-colors">
+                  <Check className="h-4 w-4" />
+                </button>
+                <button onClick={() => setEditing(null)} className="p-2 text-slate-400 hover:bg-muted/50 rounded-lg transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-lg text-foreground font-mono-tech">
+                {profile.botToken ? "••••••••••••••••" : <span className="text-slate-500 text-sm">Belum diset</span>}
+              </p>
+            )}
           </div>
 
           {/* Last Active */}

@@ -75,9 +75,13 @@ export async function PATCH(request: Request) {
   }
 
   // Handle profile field update
-  const updateData: Record<string, string> = {}
+  const { telegramId, botToken } = body as { telegramId?: string; botToken?: string }
+
+  const updateData: Record<string, string | null> = {}
   if (name?.trim()) updateData.name = name.trim()
   if (email !== undefined) updateData.email = email?.trim() || ""
+  if (telegramId?.trim()) updateData.telegramId = telegramId.trim()
+  if (botToken !== undefined) updateData.botToken = botToken?.trim() || null
 
   if (Object.keys(updateData).length === 0) {
     return Response.json({ error: "Tidak ada field yang diperbarui" }, { status: 400 })
