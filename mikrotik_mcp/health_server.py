@@ -1267,7 +1267,7 @@ class HealthHandler(BaseHTTPRequestHandler):
     def _handle_mikhmon_import(self, user_id):
         """POST /mikhmon-import/{user_id} — import Mikhmon scripts to DB, then delete from MikroTik.
 
-        Body (optional): {"router": "router_name", "deleteAfterImport": true}
+        Body (optional): {"router": "router_name", "deleteAfterImport": true, "month": "2025-10"}
         Returns: {"imported": N, "skipped": M, "deleted": K}
         """
         try:
@@ -1275,6 +1275,7 @@ class HealthHandler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
             router_name = body.get("router", "")
             delete_after = body.get("deleteAfterImport", True)
+            filter_month = body.get("month", "")  # e.g. "2025-10", empty = all
 
             registry = _get_registry()
             scripts, conn_or_err = self._fetch_mikhmon_scripts(registry, user_id, router_name)
@@ -1287,6 +1288,39 @@ class HealthHandler(BaseHTTPRequestHandler):
 
             vdb = _get_voucher_db()
             router_display = conn_or_err.get("name", router_name or "default")
+
+            # Group scripts by date month and profile for batch saving
+            from collections import defaultdict
+            from datetime import datetime as dt, timezone as _tz
+            import re
+
+            _MONTHS = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+                       "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+
+            def _parse_mikhmon_date_pre(date_str: str):
+                if not date_str:
+                    return None, None
+                s = date_str.strip().lower()
+                m = re.match(r"^([a-z]{3})/(\d{1,2})/(\d{4})$", s)
+                if m and m.group(1) in _MONTHS:
+                    mo, d, y = _MONTHS[m.group(1)], int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
+                if m:
+                    y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", s)
+                if m:
+                    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                    return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
+                return None, None
+
+            # Filter by month if specified
+            if filter_month:
+                scripts = [s for s in scripts if _parse_mikhmon_date_pre(s.get("date", ""))[1] == filter_month]
+                if not scripts:
+                    _send_json(self, {"imported": 0, "skipped": 0, "deleted": 0, "message": f"No scripts found for month {filter_month}"})
+                    return
 
             # Group scripts by date month and profile for batch saving
             from collections import defaultdict

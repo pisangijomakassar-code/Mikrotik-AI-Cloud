@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { BarChart3, Download, Loader2, RefreshCw, Store, Ticket, TrendingUp, TrendingDown } from "lucide-react"
+import { BarChart3, Download, FileInput, Loader2, RefreshCw, Store, Ticket, TrendingUp, TrendingDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatRupiah } from "@/lib/formatters"
@@ -73,6 +73,13 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<"vouchers" | "transactions">("vouchers")
 
+  // Import dialog state
+  const [importOpen, setImportOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importMonth, setImportMonth] = useState("")
+  const [dbMonths, setDbMonths] = useState<{ month: string; vouchers: number; revenue: number }[]>([])
+  const [loadingDbMonths, setLoadingDbMonths] = useState(false)
+
   const handleMonthChange = (yearMonth: string) => {
     setSelectedMonth(yearMonth)
     const { from: f, to: t } = getMonthDates(yearMonth)
@@ -96,6 +103,47 @@ export default function ReportsPage() {
   }, [from, to, resellerFilter])
 
   useEffect(() => { fetchReport() }, [fetchReport])
+
+  async function openImportDialog() {
+    setImportOpen(true)
+    setLoadingDbMonths(true)
+    try {
+      const res = await fetch("/api/reports/months")
+      const json = await res.json()
+      setDbMonths(json.months ?? [])
+    } catch {
+      setDbMonths([])
+    } finally {
+      setLoadingDbMonths(false)
+    }
+  }
+
+  async function handleImport(deleteAfterImport: boolean) {
+    if (!importMonth) { toast.error("Pilih bulan terlebih dahulu"); return }
+    setImporting(true)
+    try {
+      const res = await fetch("/api/hotspot/mikhmon-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleteAfterImport, month: importMonth }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Gagal import")
+      if (json.imported === 0) {
+        toast.info(json.message ?? "Tidak ada script ditemukan untuk bulan ini")
+      } else if (deleteAfterImport) {
+        toast.success(`Import berhasil: ${json.imported} voucher dicatat, ${json.deleted} script dihapus dari router`)
+      } else {
+        toast.success(`Import berhasil: ${json.imported} voucher dicatat (script di router tidak dihapus)`)
+      }
+      setImportOpen(false)
+      fetchReport()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal import")
+    } finally {
+      setImporting(false)
+    }
+  }
 
   function exportCSV(type: "vouchers" | "transactions") {
     if (!data) return
@@ -133,7 +181,81 @@ export default function ReportsPage() {
             Rekap penjualan voucher dan transaksi saldo reseller.
           </p>
         </div>
+        <button
+          onClick={openImportDialog}
+          className="flex items-center gap-2 bg-surface-low border border-white/10 text-slate-300 px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-[#1e2a42] hover:text-amber-400 transition-all whitespace-nowrap"
+        >
+          <FileInput className="h-4 w-4" />
+          Import Data Penjualan
+        </button>
       </div>
+
+      {/* Import dialog */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-[#0f1623] border border-white/10 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-base font-bold text-white mb-1">Import Data Penjualan</h3>
+            <p className="text-xs text-slate-500 mb-5">Script voucher Mikhmon dari router akan dicatat ke database dan muncul di laporan bulanan.</p>
+
+            {/* Months already in DB */}
+            <div className="mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Sudah di database</p>
+              {loadingDbMonths ? (
+                <p className="text-xs text-slate-500">Memuat...</p>
+              ) : dbMonths.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">Belum ada data Mikhmon di database</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {dbMonths.map((m) => (
+                    <div key={m.month} className="flex flex-col items-center bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-center">
+                      <span className="text-xs font-bold text-slate-300">{m.month}</span>
+                      <span className="text-[10px] text-slate-500">{m.vouchers} vcr · {formatRupiah(m.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Month picker */}
+            <div className="mb-6">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-2">Pilih bulan untuk diimport</label>
+              <input
+                type="month"
+                value={importMonth}
+                onChange={(e) => setImportMonth(e.target.value)}
+                className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6] px-3 py-2 w-full"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-3">
+              <button
+                disabled={importing || !importMonth}
+                onClick={() => handleImport(false)}
+                className="w-full px-4 py-2.5 rounded-lg font-bold text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
+              >
+                {importing ? "Mengimpor..." : "Import Saja"}
+                <span className="block text-xs font-normal text-slate-400 mt-0.5">Script di router tidak dihapus</span>
+              </button>
+              <button
+                disabled={importing || !importMonth}
+                onClick={() => handleImport(true)}
+                className="w-full px-4 py-2.5 rounded-lg font-bold text-sm bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all disabled:opacity-50"
+              >
+                {importing ? "Mengimpor..." : "Import & Hapus dari Router"}
+                <span className="block text-xs font-normal text-slate-400 mt-0.5">Script dihapus agar router bersih</span>
+              </button>
+              <button
+                disabled={importing}
+                onClick={() => setImportOpen(false)}
+                className="w-full px-4 py-2.5 rounded-lg font-bold text-sm text-slate-500 hover:text-slate-300 transition-all"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Date filter */}
       <div className="bg-surface-low rounded-2xl border border-border/20 p-5 mb-8">
