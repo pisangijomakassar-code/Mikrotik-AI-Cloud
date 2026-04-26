@@ -20,6 +20,10 @@ export async function GET() {
       status: true,
       createdAt: true,
       lastActiveAt: true,
+      validUntil: true,
+      isLocked: true,
+      notifAsOwner: true,
+      notifAsReseller: true,
       _count: { select: { routers: true } },
     },
   })
@@ -75,13 +79,24 @@ export async function PATCH(request: Request) {
   }
 
   // Handle profile field update
-  const { telegramId, botToken } = body as { telegramId?: string; botToken?: string }
+  const { telegramId, botToken, validUntil, isLocked, notifAsOwner, notifAsReseller } = body as {
+    telegramId?: string
+    botToken?: string
+    validUntil?: string | null
+    isLocked?: boolean
+    notifAsOwner?: boolean
+    notifAsReseller?: boolean
+  }
 
-  const updateData: Record<string, string | null> = {}
+  const updateData: Record<string, string | boolean | Date | null> = {}
   if (name?.trim()) updateData.name = name.trim()
   if (email !== undefined) updateData.email = email?.trim() || ""
   if (telegramId?.trim()) updateData.telegramId = telegramId.trim()
   if (botToken !== undefined) updateData.botToken = botToken?.trim() || null
+  if (validUntil !== undefined) updateData.validUntil = validUntil ? new Date(validUntil) : null
+  if (typeof isLocked === "boolean") updateData.isLocked = isLocked
+  if (typeof notifAsOwner === "boolean") updateData.notifAsOwner = notifAsOwner
+  if (typeof notifAsReseller === "boolean") updateData.notifAsReseller = notifAsReseller
 
   if (Object.keys(updateData).length === 0) {
     return Response.json({ error: "Tidak ada field yang diperbarui" }, { status: 400 })
@@ -95,8 +110,13 @@ export async function PATCH(request: Request) {
       name: true,
       email: true,
       telegramId: true,
+      botToken: true,
       role: true,
       status: true,
+      validUntil: true,
+      isLocked: true,
+      notifAsOwner: true,
+      notifAsReseller: true,
     },
   })
 

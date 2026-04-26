@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { User, Mail, MessageSquare, Shield, Router, Calendar, Pencil, Check, X, Loader2, Lock, Eye, EyeOff, KeyRound } from "lucide-react"
+import { User, Mail, MessageSquare, Shield, Router, Calendar, Pencil, Check, X, Loader2, Lock, Eye, EyeOff, KeyRound, Bell, BellOff, ShieldAlert, CalendarClock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
@@ -15,13 +15,17 @@ interface ProfileData {
   status: string
   createdAt: string
   lastActiveAt: string | null
+  validUntil: string | null
+  isLocked: boolean
+  notifAsOwner: boolean
+  notifAsReseller: boolean
   _count: { routers: number }
 }
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [editing, setEditing] = useState<"name" | "email" | "telegramId" | "botToken" | null>(null)
+  const [editing, setEditing] = useState<"name" | "email" | "telegramId" | "botToken" | "validUntil" | null>(null)
   const [showBotToken, setShowBotToken] = useState(false)
   const [editValue, setEditValue] = useState("")
   const [saving, setSaving] = useState(false)
@@ -55,7 +59,8 @@ export default function ProfilePage() {
       if (!res.ok) throw new Error("Failed to update")
       const updated = await res.json()
       setProfile((prev) => (prev ? { ...prev, ...updated } : prev))
-      toast.success(`${editing === "name" ? "Name" : "Email"} updated`)
+      const labelMap = { name: "Nama", email: "Email", telegramId: "Telegram ID", botToken: "Bot Token", validUntil: "Masa berlaku" }
+      toast.success(`${labelMap[editing]} berhasil diubah`)
       setEditing(null)
     } catch {
       toast.error("Failed to update profile")
@@ -64,12 +69,32 @@ export default function ProfilePage() {
     }
   }
 
-  function startEdit(field: "name" | "email" | "telegramId" | "botToken") {
+  function startEdit(field: "name" | "email" | "telegramId" | "botToken" | "validUntil") {
     setEditing(field)
     if (field === "name") setEditValue(profile?.name ?? "")
     else if (field === "email") setEditValue(profile?.email ?? "")
     else if (field === "telegramId") setEditValue(profile?.telegramId ?? "")
     else if (field === "botToken") setEditValue(profile?.botToken ?? "")
+    else if (field === "validUntil") setEditValue(profile?.validUntil ? profile.validUntil.slice(0, 10) : "")
+  }
+
+  async function toggleField(field: "isLocked" | "notifAsOwner" | "notifAsReseller") {
+    if (!profile) return
+    const newValue = !profile[field]
+    setProfile({ ...profile, [field]: newValue })
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: newValue }),
+      })
+      if (!res.ok) throw new Error()
+      const updated = await res.json()
+      setProfile((prev) => (prev ? { ...prev, ...updated } : prev))
+    } catch {
+      setProfile({ ...profile, [field]: !newValue })
+      toast.error("Gagal mengubah pengaturan")
+    }
   }
 
   async function handleChangePassword() {
@@ -338,6 +363,104 @@ export default function ProfilePage() {
                 {profile.botToken ? "••••••••••••••••" : <span className="text-slate-500 text-sm">Belum diset</span>}
               </p>
             )}
+          </div>
+
+          {/* Masa Berlaku */}
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-slate-500" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Masa Berlaku</span>
+              </div>
+              {editing !== "validUntil" && (
+                <button onClick={() => startEdit("validUntil")} className="text-xs text-slate-400 hover:text-primary flex items-center gap-1 transition-colors">
+                  <Pencil className="h-3 w-3" /> Edit
+                </button>
+              )}
+            </div>
+            {editing === "validUntil" ? (
+              <div className="flex items-center gap-3">
+                <Input
+                  type="date"
+                  className="flex-1 bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6] outline-none"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                />
+                <button onClick={handleSave} disabled={saving} className="p-2 text-tertiary hover:bg-[#4ae176]/10 rounded-lg transition-colors">
+                  <Check className="h-4 w-4" />
+                </button>
+                <button onClick={() => setEditing(null)} className="p-2 text-slate-400 hover:bg-muted/50 rounded-lg transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <p className="text-lg text-foreground">
+                {profile.validUntil ? formatDate(profile.validUntil) : <span className="text-slate-500 text-sm">Tidak ada batas</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Toggles: Lock User, Notif Owner, Notif Reseller */}
+          <div className="bg-surface-low rounded-2xl border border-border/20 p-6 space-y-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Shield className="h-4 w-4 text-slate-500" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Pengaturan Akun</span>
+            </div>
+
+            {/* Lock User */}
+            <button
+              type="button"
+              onClick={() => toggleField("isLocked")}
+              className="w-full flex items-center justify-between gap-4 group"
+            >
+              <div className="flex items-center gap-3 text-left">
+                <ShieldAlert className={`h-5 w-5 ${profile.isLocked ? "text-red-400" : "text-slate-500"}`} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Kunci Akun</p>
+                  <p className="text-xs text-slate-500">Akun terkunci tidak bisa login</p>
+                </div>
+              </div>
+              <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${profile.isLocked ? "bg-red-500" : "bg-muted"}`}>
+                <span className={`inline-block h-5 w-5 my-0.5 rounded-full bg-white shadow transition-transform ${profile.isLocked ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
+
+            {/* Notif Owner */}
+            <button
+              type="button"
+              onClick={() => toggleField("notifAsOwner")}
+              className="w-full flex items-center justify-between gap-4 group"
+            >
+              <div className="flex items-center gap-3 text-left">
+                {profile.notifAsOwner ? <Bell className="h-5 w-5 text-primary" /> : <BellOff className="h-5 w-5 text-slate-500" />}
+                <div>
+                  <p className="text-sm font-medium text-foreground">Notif Telegram (sbg Owner)</p>
+                  <p className="text-xs text-slate-500">Terima notifikasi deposit & aktivitas reseller</p>
+                </div>
+              </div>
+              <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${profile.notifAsOwner ? "bg-primary" : "bg-muted"}`}>
+                <span className={`inline-block h-5 w-5 my-0.5 rounded-full bg-white shadow transition-transform ${profile.notifAsOwner ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
+
+            {/* Notif Reseller */}
+            <button
+              type="button"
+              onClick={() => toggleField("notifAsReseller")}
+              className="w-full flex items-center justify-between gap-4 group"
+            >
+              <div className="flex items-center gap-3 text-left">
+                {profile.notifAsReseller ? <Bell className="h-5 w-5 text-primary" /> : <BellOff className="h-5 w-5 text-slate-500" />}
+                <div>
+                  <p className="text-sm font-medium text-foreground">Notif Telegram (sbg Reseller)</p>
+                  <p className="text-xs text-slate-500">Terima notifikasi pembelian voucher & saldo</p>
+                </div>
+              </div>
+              <div className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${profile.notifAsReseller ? "bg-primary" : "bg-muted"}`}>
+                <span className={`inline-block h-5 w-5 my-0.5 rounded-full bg-white shadow transition-transform ${profile.notifAsReseller ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
           </div>
 
           {/* Last Active */}

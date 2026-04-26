@@ -51,6 +51,12 @@ model User {
   updatedAt     DateTime   @updatedAt
   lastActiveAt  DateTime?
 
+  // Account lifecycle & notification preferences
+  validUntil       DateTime?
+  isLocked         Boolean   @default(false)
+  notifAsOwner     Boolean   @default(true)
+  notifAsReseller  Boolean   @default(true)
+
   routers                Router[]
   activityLogs           ActivityLog[]
   subscription           Subscription?
