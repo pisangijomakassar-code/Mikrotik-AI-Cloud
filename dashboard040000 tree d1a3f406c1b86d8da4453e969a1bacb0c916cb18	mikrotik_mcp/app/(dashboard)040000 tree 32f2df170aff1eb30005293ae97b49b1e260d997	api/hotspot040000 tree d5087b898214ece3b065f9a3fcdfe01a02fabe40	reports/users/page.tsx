@@ -63,7 +63,8 @@ export default function HotspotUsersPage() {
       if (data.count === 0) {
         toast.info(data.message || `Tidak ada user ${type === "disabled" ? "disabled" : "expired"} ditemukan`)
       } else {
-        toast.success(`${data.count} user dihapus`)
+        const archivedMsg = data.archived > 0 ? ` (${data.archived} dicatat ke DB)` : ""
+        toast.success(`${data.count} user dihapus${archivedMsg}`)
         refetch()
       }
     } catch (e) {
@@ -72,6 +73,7 @@ export default function HotspotUsersPage() {
       setCleaningUp(null)
     }
   }
+
 
   function handleToggleStatus(username: string, isDisabled: boolean) {
     if (isDisabled) {
