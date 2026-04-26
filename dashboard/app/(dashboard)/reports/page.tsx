@@ -53,14 +53,32 @@ function getDefaultDates() {
   return { from, to }
 }
 
+function getMonthDates(yearMonth: string) {
+  const [year, month] = yearMonth.split("-")
+  const from = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString().slice(0, 10)
+  const to = new Date(parseInt(year), parseInt(month), 0).toISOString().slice(0, 10)
+  return { from, to }
+}
+
 export default function ReportsPage() {
   const defaults = getDefaultDates()
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+
   const [from, setFrom] = useState(defaults.from)
   const [to, setTo] = useState(defaults.to)
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [resellerFilter, setResellerFilter] = useState("")
   const [data, setData] = useState<ReportData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<"vouchers" | "transactions">("vouchers")
+
+  const handleMonthChange = (yearMonth: string) => {
+    setSelectedMonth(yearMonth)
+    const { from: f, to: t } = getMonthDates(yearMonth)
+    setFrom(f)
+    setTo(t)
+  }
 
   const fetchReport = useCallback(async () => {
     setIsLoading(true)
@@ -119,27 +137,61 @@ export default function ReportsPage() {
 
       {/* Date filter */}
       <div className="bg-surface-low rounded-2xl border border-border/20 p-5 mb-8">
-        <div className="flex flex-wrap items-end gap-4">
+        {/* Month selector row */}
+        <div className="flex flex-wrap items-end gap-4 mb-4">
           <div className="space-y-1.5">
-            <label className={labelClass}>Dari Tanggal</label>
-            <Input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6]"
+            <label className={labelClass}>Pilih Bulan</label>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6] px-3 py-2"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className={labelClass}>Sampai Tanggal</label>
-            <Input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6]"
-            />
+          <button
+            onClick={fetchReport}
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-linear-to-br from-primary to-primary-container text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-lg hover:brightness-105 transition-all disabled:opacity-60"
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Tampilkan
+          </button>
+        </div>
+
+        {/* Custom date range (collapsible) */}
+        <details className="mt-3 pt-3 border-t border-border/20">
+          <summary className={`${labelClass} cursor-pointer`}>Tanggal Custom (opsional)</summary>
+          <div className="flex flex-wrap items-end gap-4 mt-4">
+            <div className="space-y-1.5">
+              <label className={labelClass}>Dari Tanggal</label>
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value)
+                  setSelectedMonth("")
+                }}
+                className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelClass}>Sampai Tanggal</label>
+              <Input
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value)
+                  setSelectedMonth("")
+                }}
+                className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-[#4cd7f6]"
+              />
+            </div>
           </div>
-          {/* Reseller filter */}
-          {data?.resellers && data.resellers.length > 0 && (
+        </details>
+
+        {/* Reseller filter */}
+        {data?.resellers && data.resellers.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border/20 flex flex-wrap items-end gap-4">
             <div className="space-y-1.5">
               <label className={labelClass}>Filter Reseller</label>
               <Select value={resellerFilter || "__all__"} onValueChange={(v) => setResellerFilter(v === "__all__" ? "" : v)}>
@@ -154,16 +206,8 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-          )}
-          <button
-            onClick={fetchReport}
-            disabled={isLoading}
-            className="flex items-center gap-2 bg-linear-to-br from-primary to-primary-container text-primary-foreground font-bold text-sm px-5 py-2.5 rounded-lg hover:brightness-105 transition-all disabled:opacity-60"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Tampilkan
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Summary cards */}

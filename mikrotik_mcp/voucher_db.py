@@ -76,10 +76,12 @@ class VoucherDB:
         discount: int = 0,
         mark_up: int = 0,
         harga_end_user: int = 0,
+        created_at: datetime | None = None,
     ) -> str | None:
         """Insert a VoucherBatch record after successful router creation.
 
         user_id is the Telegram ID (will be resolved to internal User.id).
+        created_at: optional timestamp (defaults to now). For Mikhmon imports, pass the date from script.
         Returns the batch id, or None if DB not available.
         """
         if not self._pool:
@@ -95,6 +97,7 @@ class VoucherDB:
             batch_id = _cuid_like()
             count = len(vouchers)
             total_cost = count * price_per_unit
+            batch_timestamp = created_at or _now()
 
             cur.execute(
                 """
@@ -107,12 +110,89 @@ class VoucherDB:
                 """,
                 (
                     batch_id, router_name, profile, count, price_per_unit,
-                    total_cost, json.dumps(vouchers), source, _now(),
+                    total_cost, json.dumps(vouchers), source, batch_timestamp,
                     int(discount or 0), int(mark_up or 0), int(harga_end_user or 0),
                     reseller_id, internal_uid,
                 ),
             )
             return batch_id
+
+    # ── HotspotUserArchive ──
+
+    def save_expired_users(
+        self,
+        telegram_id: str,
+        router_name: str,
+        users: list[dict],
+        reason: str = "expired",
+    ) -> int:
+        """Save expired/archived hotspot users to HotspotUserArchive before deletion.
+
+        users: list of MikroTik user dicts (raw from /ip/hotspot/user).
+        Returns number of rows inserted (0 if DB unavailable).
+        """
+        if not self._pool or not users:
+            return 0
+
+        with self._conn() as conn:
+            cur = conn.cursor()
+            internal_uid = self._get_user_id(cur, telegram_id)
+            if not internal_uid:
+                logger.warning("save_expired_users: telegram_id %s not found in DB", telegram_id)
+                return 0
+
+            now = _now()
+            count = 0
+            for u in users:
+                row_id = _cuid_like()
+                cur.execute(
+                    """
+                    INSERT INTO "HotspotUserArchive"
+                        ("id", "routerName", "username", "profile", "macAddress",
+                         "server", "comment", "limitUptime", "limitBytesTotal",
+                         "uptimeUsed", "bytesIn", "bytesOut", "reason", "archivedAt", "userId")
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        row_id,
+                        router_name,
+                        u.get("name", ""),
+                        u.get("profile", ""),
+                        u.get("mac-address", ""),
+                        u.get("server", ""),
+                        u.get("comment", ""),
+                        u.get("limit-uptime", ""),
+                        u.get("limit-bytes-total", ""),
+                        u.get("uptime", ""),
+                        int(u.get("bytes-in", "0") or 0),
+                        int(u.get("bytes-out", "0") or 0),
+                        reason,
+                        now,
+                        internal_uid,
+                    ),
+                )
+                count += 1
+            return count
+
+    def list_all_user_router_pairs(self) -> list[tuple[str, str]]:
+        """Return all (telegram_id, router_name) pairs for active users with routers.
+
+        Used by the expired cleanup cron to iterate over all routers.
+        """
+        if not self._pool:
+            return []
+        with self._conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT u."telegramId", r."name"
+                FROM "Router" r
+                JOIN "User" u ON u."id" = r."userId"
+                WHERE u."status" = 'ACTIVE'
+                ORDER BY u."telegramId", r."name"
+                """
+            )
+            return [(row[0], row[1]) for row in cur.fetchall()]
 
     # ── Reseller lookups ──
 
