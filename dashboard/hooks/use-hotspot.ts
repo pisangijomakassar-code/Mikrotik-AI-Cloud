@@ -111,6 +111,17 @@ async function fetchHotspotServers(router?: string): Promise<HotspotServer[]> {
   return data.servers ?? []
 }
 
+export interface IpPool {
+  name: string
+  ranges: string
+}
+
+async function fetchIpPools(router?: string): Promise<IpPool[]> {
+  const qs = router ? `?router=${encodeURIComponent(router)}` : ""
+  const data = await apiClient.get<{ pools?: IpPool[] }>(`/api/hotspot/pools${qs}`)
+  return data.pools ?? []
+}
+
 async function fetchHotspotStats(router?: string): Promise<HotspotStats> {
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
   return apiClient.get(`/api/hotspot/stats${qs}`)
@@ -144,6 +155,13 @@ export function useHotspotServers(router?: string) {
   return useQuery({
     queryKey: ["hotspot-servers", router],
     queryFn: () => fetchHotspotServers(router),
+  })
+}
+
+export function useIpPools(router?: string) {
+  return useQuery({
+    queryKey: ["ip-pools", router],
+    queryFn: () => fetchIpPools(router),
   })
 }
 

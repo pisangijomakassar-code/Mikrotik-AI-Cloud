@@ -21,6 +21,7 @@ export interface VoucherTypeData {
   panjangKarakter: number
   voucherGroup: string
   voucherColor: string
+  addressPool: string
   createdAt: string
   updatedAt: string
 }

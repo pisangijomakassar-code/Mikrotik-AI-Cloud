@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         panjangKarakter: Number(body.panjangKarakter) || 6,
         voucherGroup: body.voucherGroup ?? "default",
         voucherColor: body.voucherColor ?? "#ffffff",
+        addressPool: body.addressPool ?? "",
       },
     })
     return Response.json(vt)

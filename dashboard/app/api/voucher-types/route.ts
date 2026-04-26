@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
         panjangKarakter: Number(body.panjangKarakter) || 6,
         voucherGroup: body.voucherGroup ?? "default",
         voucherColor: body.voucherColor ?? "#ffffff",
+        addressPool: body.addressPool ?? "",
       },
     })
     return Response.json(vt, { status: 201 })

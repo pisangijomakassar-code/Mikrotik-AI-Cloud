@@ -355,6 +355,7 @@ model VoucherType {
   panjangKarakter  Int      @default(6)
   voucherGroup     String   @default("default") // comma-separated: "default,1,2"
   voucherColor     String   @default("#ffffff")
+  addressPool      String   @default("")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Printer, X, LayoutGrid, QrCode, AlignJustify } from "lucide-react"
 import QRCode from "qrcode"
-import { useVoucherProfileSettings } from "@/hooks/use-voucher-profiles"
+import { useVoucherTypes } from "@/hooks/use-voucher-types"
 
 type PrintLayout = "default" | "qrcode" | "small"
 
@@ -108,8 +108,8 @@ const LAYOUT_CONFIG: Record<PrintLayout, { cols: string; printCols: string; labe
 }
 
 export function PrintVoucherSheet({ vouchers, profile, hotspotLoginUrl, onClose }: PrintVoucherSheetProps) {
-  const { data: profileSettings } = useVoucherProfileSettings()
-  const qrColor = profileSettings?.find((s) => s.profileName === profile)?.qrColor ?? "#000000"
+  const { data: voucherTypes } = useVoucherTypes()
+  const qrColor = voucherTypes?.find((vt) => vt.profile === profile)?.voucherColor ?? "#000000"
   const [layout, setLayout] = useState<PrintLayout>("default")
   const qrMap = useQrMap(vouchers, qrColor, hotspotLoginUrl)
 

@@ -214,6 +214,13 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_hotspot_stats(user_id, router_name)
             return
 
+        # IP pools (used as hotspot address-pool)
+        if path.startswith("/ip-pools/"):
+            user_id = path.split("/ip-pools/")[1]
+            router_name = params.get("router", [None])[0]
+            self._handle_ip_pools(user_id, router_name)
+            return
+
         # PPP secrets
         if path.startswith("/ppp-secrets/"):
             user_id = path.split("/ppp-secrets/")[1]
@@ -637,6 +644,27 @@ class HealthHandler(BaseHTTPRequestHandler):
                 except concurrent.futures.TimeoutError:
                     result = {"router": "", "profiles": []}
 
+            _send_json(self, result)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_ip_pools(self, user_id, router_name=None):
+        """List IP pools (used as hotspot address-pool)."""
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                pools = list(api.path("ip", "pool"))
+                result = {
+                    "router": conn.get("name", ""),
+                    "pools": [
+                        {
+                            "name": p.get("name", ""),
+                            "ranges": p.get("ranges", ""),
+                        }
+                        for p in pools if p.get("name")
+                    ],
+                }
             _send_json(self, result)
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)

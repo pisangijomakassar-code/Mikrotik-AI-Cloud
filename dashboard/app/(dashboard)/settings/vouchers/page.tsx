@@ -15,7 +15,7 @@ import {
   type VoucherTypeData,
   type VoucherTypeInput,
 } from "@/hooks/use-voucher-types"
-import { useHotspotProfiles, useHotspotServers } from "@/hooks/use-hotspot"
+import { useHotspotProfiles, useHotspotServers, useIpPools } from "@/hooks/use-hotspot"
 
 const TYPE_CHAR_OPTIONS = [
   "Random abcd2345",
@@ -51,6 +51,7 @@ const EMPTY: VoucherTypeInput = {
   panjangKarakter: 6,
   voucherGroup: "default",
   voucherColor: "#ffffff",
+  addressPool: "",
 }
 
 export default function VouchersSettingsPage() {
@@ -60,6 +61,7 @@ export default function VouchersSettingsPage() {
   const deleteVt = useDeleteVoucherType()
   const { data: hotspotProfiles } = useHotspotProfiles()
   const { data: hotspotServers } = useHotspotServers()
+  const { data: ipPools } = useIpPools()
 
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -98,6 +100,7 @@ export default function VouchersSettingsPage() {
       panjangKarakter: v.panjangKarakter,
       voucherGroup: v.voucherGroup,
       voucherColor: v.voucherColor,
+      addressPool: v.addressPool ?? "",
     })
     setDialogOpen(true)
   }
@@ -317,6 +320,23 @@ export default function VouchersSettingsPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Address Pool */}
+              <div className="space-y-1.5">
+                <label className={lbl}>Address Pool (dari MikroTik)</label>
+                <select
+                  className={inp}
+                  value={form.addressPool}
+                  onChange={(e) => setForm((f) => ({ ...f, addressPool: e.target.value }))}
+                >
+                  <option value="">— Tidak digunakan —</option>
+                  {(ipPools ?? []).map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name} {p.ranges ? `(${p.ranges})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Limit Uptime */}
