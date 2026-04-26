@@ -38,12 +38,12 @@ export interface HotspotProfile {
   rateLimit?: string
   sharedUsers?: number | string
   sessionTimeout?: string
-  idleTimeout?: string
-  keepaliveTimeout?: string
   addressPool?: string
+  expiredMode?: string
+  macCookie?: string
+  parentQueue?: string
   onLogin?: string
   onLogout?: string
-  /** Injected by /api/hotspot/profiles from VoucherProfileSetting */
   price?: number
 }
 
@@ -51,12 +51,18 @@ export interface HotspotProfileInput {
   name: string
   rateLimit?: string
   sharedUsers?: number
-  sessionTimeout?: string
-  idleTimeout?: string
+  masaBerlaku?: string
   addressPool?: string
+  expiredMode?: string
+  macCookie?: boolean
+  parentQueue?: string
   onLogin?: string
   onLogout?: string
   router?: string
+}
+
+export interface SimpleQueue {
+  name: string
 }
 
 export interface HotspotServer {
@@ -162,6 +168,21 @@ export function useIpPools(router?: string) {
   return useQuery({
     queryKey: ["ip-pools", router],
     queryFn: () => fetchIpPools(router),
+  })
+}
+
+async function fetchQueues(router?: string): Promise<SimpleQueue[]> {
+  const qs = router ? `?router=${encodeURIComponent(router)}` : ""
+  const res = await fetch(`/api/hotspot/queues${qs}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.queues ?? []
+}
+
+export function useQueues(router?: string) {
+  return useQuery({
+    queryKey: ["queues", router],
+    queryFn: () => fetchQueues(router),
   })
 }
 
