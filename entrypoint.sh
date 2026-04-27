@@ -99,11 +99,16 @@ watch_config "$@" &
 WATCHER_PID=$!
 
 # Wait for nanobot process — if it dies unexpectedly, restart it
+# Unless /tmp/nanobot_disabled flag is set (stopped intentionally from dashboard)
 while true; do
     if ! kill -0 $NANOBOT_PID 2>/dev/null; then
-        echo "[entrypoint] nanobot exited unexpectedly, restarting in 3s..."
-        sleep 3
-        start_nanobot "$@"
+        if [ -f /tmp/nanobot_disabled ]; then
+            echo "[entrypoint] nanobot stopped intentionally (dashboard toggle), not restarting."
+        else
+            echo "[entrypoint] nanobot exited unexpectedly, restarting in 3s..."
+            sleep 3
+            start_nanobot "$@"
+        fi
     fi
     sleep 5
 done

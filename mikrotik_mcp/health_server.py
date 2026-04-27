@@ -710,8 +710,15 @@ class HealthHandler(BaseHTTPRequestHandler):
         pids = self._find_nanobot_pids()
         _send_json(self, {"running": len(pids) > 0})
 
+    _DISABLE_FLAG = "/tmp/nanobot_disabled"
+
     def _handle_agent_stop(self):
         import os, signal
+        # Set flag so entrypoint won't auto-restart
+        try:
+            open(self._DISABLE_FLAG, "w").close()
+        except Exception:
+            pass
         pids = self._find_nanobot_pids()
         for pid in pids:
             try:
@@ -721,7 +728,12 @@ class HealthHandler(BaseHTTPRequestHandler):
         _send_json(self, {"success": True})
 
     def _handle_agent_start(self):
-        import subprocess
+        import os, subprocess
+        # Remove disable flag so entrypoint will resume auto-restart on future crashes
+        try:
+            os.remove(self._DISABLE_FLAG)
+        except FileNotFoundError:
+            pass
         if self._find_nanobot_pids():
             _send_json(self, {"success": True, "message": "already running"})
             return
