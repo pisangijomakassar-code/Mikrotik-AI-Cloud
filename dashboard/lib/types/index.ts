@@ -22,6 +22,8 @@ export interface UpdateUserInput {
   botToken?: string;
   role?: UserRole;
   status?: UserStatus;
+  validUntil?: Date | null;
+  isLocked?: boolean;
 }
 
 export interface UserFilter {

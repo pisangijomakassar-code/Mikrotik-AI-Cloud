@@ -12,6 +12,9 @@ interface User {
   botToken: string | null
   role: "ADMIN" | "USER"
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED"
+  isLocked: boolean
+  isProvisioned: boolean
+  validUntil: string | null
   lastActive: string | null
   createdAt: string
   _count?: { routers: number }

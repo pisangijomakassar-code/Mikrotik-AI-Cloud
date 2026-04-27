@@ -83,6 +83,11 @@ export async function updateUser(id: string, data: UpdateUserInput) {
   if (data.botToken !== undefined) updateData.botToken = data.botToken || null
   if (data.role !== undefined) updateData.role = data.role
   if (data.status !== undefined) updateData.status = data.status
+  if (data.validUntil !== undefined) {
+    updateData.validUntil =
+      data.validUntil === null ? null : new Date(data.validUntil)
+  }
+  if (data.isLocked !== undefined) updateData.isLocked = data.isLocked
   if (data.password) {
     updateData.passwordHash = await bcrypt.hash(data.password, 12)
   }
@@ -95,8 +100,12 @@ export async function updateUser(id: string, data: UpdateUserInput) {
     },
   })
 
-  // Auto-sync on status change (ACTIVE/INACTIVE affects allowFrom)
-  if (data.status !== undefined) {
+  // Re-sync whenever anything that affects agent eligibility changes
+  const affectsEligibility =
+    data.status !== undefined ||
+    data.validUntil !== undefined ||
+    data.isLocked !== undefined
+  if (affectsEligibility) {
     syncAndRestart().catch((err) =>
       console.error("Auto-sync failed after user update:", err)
     )
