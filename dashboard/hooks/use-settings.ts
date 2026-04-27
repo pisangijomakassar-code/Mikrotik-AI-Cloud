@@ -52,3 +52,21 @@ export function useSyncAgent() {
     mutationFn: () => apiClient.post("/api/provisioning"),
   })
 }
+
+export function useAgentStatus() {
+  return useQuery<{ running: boolean }>({
+    queryKey: ["agent-status"],
+    queryFn: () => apiClient.get("/api/agent"),
+    refetchInterval: 10000,
+  })
+}
+
+export function useToggleAgent() {
+  const queryClient = useQueryClient()
+  return useMutation<{ success: boolean }, Error, "stop" | "start">({
+    mutationFn: (action) => apiClient.post("/api/agent", { action }),
+    onSuccess: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["agent-status"] }), 2000)
+    },
+  })
+}

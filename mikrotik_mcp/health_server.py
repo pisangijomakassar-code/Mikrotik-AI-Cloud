@@ -267,6 +267,11 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"connected": connected, "username": username})
             return
 
+        # AI agent status (is nanobot running?)
+        if path == "/agent/status":
+            self._handle_agent_status()
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -384,6 +389,14 @@ class HealthHandler(BaseHTTPRequestHandler):
             if user_id:
                 self._handle_mikhmon_import(user_id)
                 return
+
+        # AI agent stop/start
+        if path == "/agent/stop":
+            self._handle_agent_stop()
+            return
+        if path == "/agent/start":
+            self._handle_agent_start()
+            return
 
         self.send_response(404)
         self.end_headers()
@@ -671,6 +684,33 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, result)
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
+
+    # ── AI Agent Control ─────────────────────────────────────────────────
+
+    def _handle_agent_status(self):
+        import subprocess
+        result = subprocess.run(["pgrep", "-f", "nanobot"], capture_output=True)
+        _send_json(self, {"running": result.returncode == 0})
+
+    def _handle_agent_stop(self):
+        import subprocess
+        result = subprocess.run(["pkill", "-TERM", "-f", "nanobot"], capture_output=True)
+        # returncode 0 = killed, 1 = no process found (already stopped)
+        _send_json(self, {"success": result.returncode in (0, 1)})
+
+    def _handle_agent_start(self):
+        import subprocess
+        check = subprocess.run(["pgrep", "-f", "nanobot"], capture_output=True)
+        if check.returncode == 0:
+            _send_json(self, {"success": True, "message": "already running"})
+            return
+        subprocess.Popen(
+            ["nanobot", "gateway"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        _send_json(self, {"success": True})
 
     def _handle_ip_pools(self, user_id, router_name=None):
         """List IP pools (used as hotspot address-pool)."""
