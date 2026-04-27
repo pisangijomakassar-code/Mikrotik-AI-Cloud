@@ -687,21 +687,42 @@ class HealthHandler(BaseHTTPRequestHandler):
 
     # ── AI Agent Control ─────────────────────────────────────────────────
 
+    @staticmethod
+    def _find_nanobot_pids():
+        """Find PIDs of running nanobot processes via /proc."""
+        import os
+        pids = []
+        try:
+            for entry in os.listdir("/proc"):
+                if not entry.isdigit():
+                    continue
+                try:
+                    cmdline = open(f"/proc/{entry}/cmdline", "rb").read().replace(b"\x00", b" ").decode()
+                    if "nanobot" in cmdline:
+                        pids.append(int(entry))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return pids
+
     def _handle_agent_status(self):
-        import subprocess
-        result = subprocess.run(["pgrep", "-f", "nanobot"], capture_output=True)
-        _send_json(self, {"running": result.returncode == 0})
+        pids = self._find_nanobot_pids()
+        _send_json(self, {"running": len(pids) > 0})
 
     def _handle_agent_stop(self):
-        import subprocess
-        result = subprocess.run(["pkill", "-TERM", "-f", "nanobot"], capture_output=True)
-        # returncode 0 = killed, 1 = no process found (already stopped)
-        _send_json(self, {"success": result.returncode in (0, 1)})
+        import os, signal
+        pids = self._find_nanobot_pids()
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except Exception:
+                pass
+        _send_json(self, {"success": True})
 
     def _handle_agent_start(self):
         import subprocess
-        check = subprocess.run(["pgrep", "-f", "nanobot"], capture_output=True)
-        if check.returncode == 0:
+        if self._find_nanobot_pids():
             _send_json(self, {"success": True, "message": "already running"})
             return
         subprocess.Popen(
