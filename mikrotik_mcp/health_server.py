@@ -267,6 +267,11 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"connected": connected, "username": username})
             return
 
+        # AI agent status (is nanobot running?)
+        if path == "/agent/status":
+            self._handle_agent_status()
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -384,6 +389,15 @@ class HealthHandler(BaseHTTPRequestHandler):
             if user_id:
                 self._handle_mikhmon_import(user_id)
                 return
+
+        # AI agent stop/start
+        if path == "/agent/stop":
+            self._handle_agent_stop()
+            return
+        if path == "/agent/start":
+            self._handle_agent_start()
+            return
+
 
         self.send_response(404)
         self.end_headers()
@@ -672,6 +686,66 @@ class HealthHandler(BaseHTTPRequestHandler):
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
+    # ── AI Agent Control ─────────────────────────────────────────────────
+
+    @staticmethod
+    def _find_nanobot_pids():
+        """Find PIDs of running nanobot processes via /proc."""
+        import os
+        pids = []
+        try:
+            for entry in os.listdir("/proc"):
+                if not entry.isdigit():
+                    continue
+                try:
+                    cmdline = open(f"/proc/{entry}/cmdline", "rb").read().replace(b"\x00", b" ").decode()
+                    if "nanobot" in cmdline:
+                        pids.append(int(entry))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return pids
+
+    def _handle_agent_status(self):
+        pids = self._find_nanobot_pids()
+        _send_json(self, {"running": len(pids) > 0})
+
+    _DISABLE_FLAG = "/tmp/nanobot_disabled"
+
+    def _handle_agent_stop(self):
+        import os, signal
+        # Set flag so entrypoint won't auto-restart
+        try:
+            open(self._DISABLE_FLAG, "w").close()
+        except Exception:
+            pass
+        pids = self._find_nanobot_pids()
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except Exception:
+                pass
+        _send_json(self, {"success": True})
+
+    def _handle_agent_start(self):
+        import os, subprocess
+        # Remove disable flag so entrypoint will resume auto-restart on future crashes
+        try:
+            os.remove(self._DISABLE_FLAG)
+        except FileNotFoundError:
+            pass
+        if self._find_nanobot_pids():
+            _send_json(self, {"success": True, "message": "already running"})
+            return
+        subprocess.Popen(
+            ["nanobot", "gateway"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        _send_json(self, {"success": True})
+
     def _handle_ip_pools(self, user_id, router_name=None):
         """List IP pools (used as hotspot address-pool)."""
         try:
@@ -694,12 +768,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     def _handle_queues(self, user_id, router_name=None):
-        """List simple queues (used as parent-queue in hotspot profile)."""
+        """List queue tree entries (used as parent-queue in hotspot profile)."""
         try:
             registry = _get_registry()
             conn = registry.resolve(user_id, router_name)
             with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
-                queues = list(api.path("queue", "simple"))
+                queues = list(api.path("queue", "tree"))
                 result = {
                     "router": conn.get("name", ""),
                     "queues": [

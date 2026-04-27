@@ -17,6 +17,8 @@ import {
   Database,
   AlertTriangle,
   Heart,
+  Power,
+  PowerOff,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -24,6 +26,8 @@ import {
   useAgentUsers,
   useSaveSettingsField,
   useSyncAgent,
+  useAgentStatus,
+  useToggleAgent,
 } from "@/hooks/use-settings"
 import { AgentList } from "@/components/settings/agent-list"
 import { Input } from "@/components/ui/input"
@@ -46,6 +50,8 @@ export default function SettingsPage() {
   const { data: agents = [], isLoading: agentsLoading } = useAgentUsers()
   const saveField = useSaveSettingsField()
   const syncAgent = useSyncAgent()
+  const { data: agentStatus } = useAgentStatus()
+  const toggleAgent = useToggleAgent()
 
   const { register, handleSubmit, reset, getValues } = useForm<SettingsFormValues>({
     defaultValues: { model: "", soul: "", heartbeat: "" },
@@ -87,6 +93,14 @@ export default function SettingsPage() {
     })
   }
 
+  function handleToggleAgent() {
+    const action = agentStatus?.running ? "stop" : "start"
+    toggleAgent.mutate(action, {
+      onSuccess: () => toast.success(action === "stop" ? "Agent dinonaktifkan" : "Agent diaktifkan"),
+      onError: () => toast.error("Gagal mengubah status agent"),
+    })
+  }
+
   if (authLoading || !isAdmin) return null
 
   if (settingsLoading) {
@@ -109,6 +123,29 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleToggleAgent}
+            disabled={toggleAgent.isPending}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 border text-xs font-bold rounded-lg transition-all disabled:opacity-50",
+              agentStatus?.running
+                ? "bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive hover:text-white"
+                : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white"
+            )}
+          >
+            {toggleAgent.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : agentStatus?.running ? (
+              <PowerOff className="h-4 w-4" />
+            ) : (
+              <Power className="h-4 w-4" />
+            )}
+            {toggleAgent.isPending
+              ? "Memproses..."
+              : agentStatus?.running
+              ? "Nonaktifkan Agent"
+              : "Aktifkan Agent"}
+          </button>
           <button
             onClick={handleSync}
             disabled={syncAgent.isPending}
