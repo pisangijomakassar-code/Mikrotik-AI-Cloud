@@ -39,9 +39,8 @@ export interface HotspotProfile {
   sharedUsers?: number | string
   sessionTimeout?: string
   addressPool?: string
-  expiredMode?: string
-  macCookie?: string
   parentQueue?: string
+  transparentProxy?: string
   onLogin?: string
   onLogout?: string
   price?: number
@@ -51,13 +50,11 @@ export interface HotspotProfileInput {
   name: string
   rateLimit?: string
   sharedUsers?: number
-  masaBerlaku?: string
-  addressPool?: string
-  expiredMode?: string
-  macCookie?: boolean
+  validity?: string          // e.g. "12h", "1d" — Mikbotam-style calendar expiry
+  lockUser?: boolean         // bind MAC at first login
+  transparentProxy?: boolean
   parentQueue?: string
-  onLogin?: string
-  onLogout?: string
+  onLogin?: string           // optional override (script editor)
   router?: string
 }
 

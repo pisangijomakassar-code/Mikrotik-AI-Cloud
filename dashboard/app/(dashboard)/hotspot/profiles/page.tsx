@@ -10,28 +10,19 @@ import {
   useAddHotspotProfile,
   useUpdateHotspotProfile,
   useDeleteHotspotProfile,
-  useIpPools,
   useQueues,
   type HotspotProfile,
   type HotspotProfileInput,
 } from "@/hooks/use-hotspot"
 
-const EXPIRED_MODE_OPTIONS = [
-  { value: "remove-user-and-record", label: "Remove & Record (hapus + catat)" },
-  { value: "no-action", label: "None (tidak ada aksi)" },
-]
-
 const EMPTY: HotspotProfileInput = {
   name: "",
   rateLimit: "",
   sharedUsers: 1,
-  masaBerlaku: "",
-  addressPool: "",
-  expiredMode: "remove-user-and-record",
-  macCookie: false,
+  validity: "",
+  lockUser: false,
+  transparentProxy: false,
   parentQueue: "",
-  onLogin: "",
-  onLogout: "",
 }
 
 const DEFAULT_ON_LOGIN_SCRIPT = `/ip hotspot user
@@ -47,7 +38,6 @@ export default function HotspotProfilesPage() {
   const addProfile = useAddHotspotProfile()
   const updateProfile = useUpdateHotspotProfile()
   const deleteProfile = useDeleteHotspotProfile()
-  const { data: ipPools } = useIpPools()
   const { data: queues } = useQueues()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -65,19 +55,16 @@ export default function HotspotProfilesPage() {
     setDialogOpen(true)
   }
 
-  function openEdit(p: HotspotProfile) {
+  function openEdit(p: HotspotProfile & { validity?: string; lockUser?: boolean; transparentProxy?: string }) {
     setEditTarget(p)
     setForm({
       name: p.name,
       rateLimit: p.rateLimit ?? "",
       sharedUsers: Number(p.sharedUsers) || 1,
-      masaBerlaku: p.sessionTimeout ?? "",
-      addressPool: p.addressPool ?? "",
-      expiredMode: p.expiredMode ?? "",
-      macCookie: p.macCookie === "true",
+      validity: p.validity ?? "",
+      lockUser: p.lockUser ?? false,
+      transparentProxy: p.transparentProxy === "yes",
       parentQueue: p.parentQueue ?? "",
-      onLogin: p.onLogin ?? "",
-      onLogout: p.onLogout ?? "",
     })
     setDialogOpen(true)
   }
@@ -165,7 +152,7 @@ export default function HotspotProfilesPage() {
                 <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Name</th>
                 <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Rate Limit</th>
                 <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Shared Users</th>
-                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20 hidden md:table-cell">Address Pool</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20 hidden md:table-cell">Validity</th>
                 <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">On Login</th>
                 <th className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-border/20">Operasi</th>
               </tr>
@@ -206,7 +193,9 @@ export default function HotspotProfilesPage() {
                       ) : <span className="text-xs text-slate-600">--</span>}
                     </td>
                     <td className="px-4 py-2 text-sm text-slate-400">{profile.sharedUsers ?? "--"}</td>
-                    <td className="px-4 py-2 text-xs text-slate-400 font-mono-tech hidden md:table-cell">{profile.addressPool || "--"}</td>
+                    <td className="px-4 py-2 text-xs text-slate-400 font-mono-tech hidden md:table-cell">
+                      {(profile as HotspotProfile & { validity?: string }).validity || "--"}
+                    </td>
                     <td className="px-4 py-2">
                       <button
                         onClick={() => openScript(profile)}
@@ -266,29 +255,17 @@ export default function HotspotProfilesPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className={lbl}>Masa Berlaku</label>
-                <Input className={inp + " font-mono-tech"} placeholder="1h, 24h, 7d, 30d" value={form.masaBerlaku ?? ""} onChange={(e) => setForm((f) => ({ ...f, masaBerlaku: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <label className={lbl}>Expired Mode</label>
-                <select className={inp} value={form.expiredMode ?? ""} onChange={(e) => setForm((f) => ({ ...f, expiredMode: e.target.value }))}>
-                  {EXPIRED_MODE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className={lbl}>Address Pool (dari MikroTik)</label>
-                <input
-                  list="pool-list"
-                  className={inp}
-                  placeholder={ipPools?.length ? "Pilih atau ketik nama pool..." : "Ketik nama pool..."}
-                  value={form.addressPool ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, addressPool: e.target.value }))}
+                <label className={lbl}>Validity (masa berlaku sejak login pertama)</label>
+                <Input
+                  className={inp + " font-mono-tech"}
+                  placeholder="12h, 1d, 7d, 30d"
+                  value={form.validity ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, validity: e.target.value }))}
                 />
-                <datalist id="pool-list">
-                  {ipPools?.map((pool) => (
-                    <option key={pool.name} value={pool.name}>{pool.name} ({pool.ranges})</option>
-                  ))}
-                </datalist>
+                <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                  Voucher hangus setelah <em>waktu kalender</em> ini lewat sejak login pertama —
+                  via <code className="font-mono-tech">/system scheduler</code>. Kosongkan kalau tidak mau auto-expire.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <label className={lbl}>Parent Queue (dari MikroTik)</label>
@@ -303,16 +280,29 @@ export default function HotspotProfilesPage() {
                   {queues?.map((q) => <option key={q.name} value={q.name} />)}
                 </datalist>
               </div>
-              <div className="space-y-1.5">
-                <label className={lbl}>Lock User (add-mac-cookie)</label>
-                <select
-                  className={inp}
-                  value={form.macCookie ? "yes" : "no"}
-                  onChange={(e) => setForm((f) => ({ ...f, macCookie: e.target.value === "yes" }))}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className={lbl}>Lock User (MAC binding)</label>
+                  <select
+                    className={inp}
+                    value={form.lockUser ? "yes" : "no"}
+                    onChange={(e) => setForm((f) => ({ ...f, lockUser: e.target.value === "yes" }))}
+                  >
+                    <option value="no">No — voucher bisa dipakai di AP/SSID mana saja</option>
+                    <option value="yes">Yes — voucher terkunci ke device login pertama</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className={lbl}>Transparent Proxy</label>
+                  <select
+                    className={inp}
+                    value={form.transparentProxy ? "yes" : "no"}
+                    onChange={(e) => setForm((f) => ({ ...f, transparentProxy: e.target.value === "yes" }))}
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 p-6 border-t border-border/20">
