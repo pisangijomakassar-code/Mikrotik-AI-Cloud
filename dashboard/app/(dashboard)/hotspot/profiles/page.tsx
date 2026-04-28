@@ -25,6 +25,13 @@ const EMPTY: HotspotProfileInput = {
   parentQueue: "",
 }
 
+type ExpiredMode = "none" | "remove"
+
+const EXPIRED_MODE_OPTIONS: { value: ExpiredMode; label: string; hint: string }[] = [
+  { value: "remove", label: "Remove — voucher dihapus saat validity habis", hint: "Pakai /system scheduler ala Mikbotam." },
+  { value: "none",   label: "None — tidak auto-expire",                     hint: "User dikelola manual. Validity diabaikan." },
+]
+
 const DEFAULT_ON_LOGIN_SCRIPT = `/ip hotspot user
 :local user [find name=$username]
 :if ($user != "") do={
@@ -43,6 +50,7 @@ export default function HotspotProfilesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<HotspotProfile | null>(null)
   const [form, setForm] = useState<HotspotProfileInput>(EMPTY)
+  const [expiredMode, setExpiredMode] = useState<ExpiredMode>("remove")
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [scriptDialog, setScriptDialog] = useState<HotspotProfile | null>(null)
@@ -52,20 +60,23 @@ export default function HotspotProfilesPage() {
   function openAdd() {
     setEditTarget(null)
     setForm(EMPTY)
+    setExpiredMode("remove")
     setDialogOpen(true)
   }
 
   function openEdit(p: HotspotProfile & { validity?: string; lockUser?: boolean; transparentProxy?: string }) {
+    const validity = p.validity ?? ""
     setEditTarget(p)
     setForm({
       name: p.name,
       rateLimit: p.rateLimit ?? "",
       sharedUsers: Number(p.sharedUsers) || 1,
-      validity: p.validity ?? "",
+      validity,
       lockUser: p.lockUser ?? false,
       transparentProxy: p.transparentProxy === "yes",
       parentQueue: p.parentQueue ?? "",
     })
+    setExpiredMode(validity ? "remove" : "none")
     setDialogOpen(true)
   }
 
@@ -76,14 +87,22 @@ export default function HotspotProfilesPage() {
 
   async function handleSave() {
     if (!form.name.trim()) { toast.error("Nama profil wajib diisi"); return }
+    if (expiredMode === "remove" && !form.validity?.trim()) {
+      toast.error("Validity wajib diisi saat Expired Mode = Remove (atau ganti ke None)")
+      return
+    }
+    // When mode = none, force-empty validity & lockUser → backend skips on-login.
+    const payload: HotspotProfileInput = expiredMode === "none"
+      ? { ...form, validity: "", lockUser: false }
+      : form
     setSaving(true)
     try {
       if (editTarget) {
-        await updateProfile.mutateAsync({ ...form, name: editTarget.name })
+        await updateProfile.mutateAsync({ ...payload, name: editTarget.name })
         toast.success(`Profil "${editTarget.name}" diperbarui`)
       } else {
-        await addProfile.mutateAsync(form)
-        toast.success(`Profil "${form.name}" ditambahkan`)
+        await addProfile.mutateAsync(payload)
+        toast.success(`Profil "${payload.name}" ditambahkan`)
       }
       setDialogOpen(false)
     } catch (e: unknown) {
@@ -255,18 +274,35 @@ export default function HotspotProfilesPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className={lbl}>Validity (masa berlaku sejak login pertama)</label>
-                <Input
-                  className={inp + " font-mono-tech"}
-                  placeholder="12h, 1d, 7d, 30d"
-                  value={form.validity ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, validity: e.target.value }))}
-                />
+                <label className={lbl}>Expired Mode</label>
+                <select
+                  className={inp}
+                  value={expiredMode}
+                  onChange={(e) => setExpiredMode(e.target.value as ExpiredMode)}
+                >
+                  {EXPIRED_MODE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
                 <p className="text-[10px] text-muted-foreground/70 leading-snug">
-                  Voucher hangus setelah <em>waktu kalender</em> ini lewat sejak login pertama —
-                  via <code className="font-mono-tech">/system scheduler</code>. Kosongkan kalau tidak mau auto-expire.
+                  {EXPIRED_MODE_OPTIONS.find((o) => o.value === expiredMode)?.hint}
                 </p>
               </div>
+              {expiredMode === "remove" && (
+                <div className="space-y-1.5">
+                  <label className={lbl}>Validity (masa berlaku sejak login pertama)</label>
+                  <Input
+                    className={inp + " font-mono-tech"}
+                    placeholder="12h, 1d, 7d, 30d"
+                    value={form.validity ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, validity: e.target.value }))}
+                  />
+                  <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                    Voucher hangus setelah <em>waktu kalender</em> ini lewat sejak login pertama —
+                    via <code className="font-mono-tech">/system scheduler</code>.
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className={lbl}>Parent Queue (dari MikroTik)</label>
                 <input
@@ -281,17 +317,19 @@ export default function HotspotProfilesPage() {
                 </datalist>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className={lbl}>Lock User (MAC binding)</label>
-                  <select
-                    className={inp}
-                    value={form.lockUser ? "yes" : "no"}
-                    onChange={(e) => setForm((f) => ({ ...f, lockUser: e.target.value === "yes" }))}
-                  >
-                    <option value="no">No — voucher bisa dipakai di AP/SSID mana saja</option>
-                    <option value="yes">Yes — voucher terkunci ke device login pertama</option>
-                  </select>
-                </div>
+                {expiredMode === "remove" && (
+                  <div className="space-y-1.5">
+                    <label className={lbl}>Lock User (MAC binding)</label>
+                    <select
+                      className={inp}
+                      value={form.lockUser ? "yes" : "no"}
+                      onChange={(e) => setForm((f) => ({ ...f, lockUser: e.target.value === "yes" }))}
+                    >
+                      <option value="no">No — voucher bisa dipakai di AP/SSID mana saja</option>
+                      <option value="yes">Yes — voucher terkunci ke device login pertama</option>
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <label className={lbl}>Transparent Proxy</label>
                   <select
