@@ -1920,8 +1920,6 @@ class HealthHandler(BaseHTTPRequestHandler):
                 add_params["shared-users"] = str(body["sharedUsers"])
             if body.get("masaBerlaku"):
                 add_params["session-timeout"] = body["masaBerlaku"]
-            if body.get("expiredMode"):
-                add_params["expired-mode"] = body["expiredMode"]
             if body.get("macCookie") is not None:
                 add_params["add-mac-cookie"] = "true" if body["macCookie"] else "false"
             if body.get("parentQueue"):
@@ -1968,8 +1966,6 @@ class HealthHandler(BaseHTTPRequestHandler):
                     update_params["shared-users"] = str(body["sharedUsers"])
                 if "masaBerlaku" in body:
                     update_params["session-timeout"] = body["masaBerlaku"]
-                if "expiredMode" in body:
-                    update_params["expired-mode"] = body["expiredMode"]
                 if "macCookie" in body:
                     update_params["add-mac-cookie"] = "true" if body["macCookie"] else "false"
                 if "parentQueue" in body:
