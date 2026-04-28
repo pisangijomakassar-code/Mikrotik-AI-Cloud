@@ -1,0 +1,7 @@
+-- Add agent eligibility and notification fields to User model
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isProvisioned"   BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isLocked"        BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "validUntil"      TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notifAsOwner"    BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "notifAsReseller" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "resellerBotToken" TEXT;
