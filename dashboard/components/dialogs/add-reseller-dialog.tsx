@@ -9,6 +9,7 @@ import { addResellerSchema, type AddResellerFormData } from "@/lib/schemas"
 import { useCreateReseller } from "@/hooks/use-resellers"
 import { useVoucherTypes } from "@/hooks/use-voucher-types"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface AddResellerDialogProps {
   open: boolean
@@ -31,6 +32,8 @@ export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<AddResellerFormData>({
     resolver: zodResolver(addResellerSchema),
@@ -44,6 +47,8 @@ export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps
       uplink: "",
     },
   })
+
+  const voucherGroupValue = watch("voucherGroup")
 
   useEffect(() => {
     if (!open) reset()
@@ -93,7 +98,7 @@ export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Username / Nama *</label>
               <Input
                 className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                placeholder="e.g. tekinamaku"
+                placeholder="e.g. Jokowi"
                 {...register("name")}
               />
               {errors.name?.message && <p className="text-xs text-red-400 ml-1">{errors.name.message}</p>}
@@ -149,14 +154,16 @@ export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">Grup Voucher</label>
-                <select
-                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                  {...register("voucherGroup")}
-                >
-                  {voucherGroups.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
+                <Select value={voucherGroupValue} onValueChange={(v) => setValue("voucherGroup", v)}>
+                  <SelectTrigger className="w-full bg-muted border-none rounded-lg text-sm text-foreground h-[46px]">
+                    <SelectValue placeholder="Pilih grup voucher..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    {voucherGroups.map((g) => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

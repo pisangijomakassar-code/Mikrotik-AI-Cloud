@@ -711,7 +711,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         pids = self._find_nanobot_pids()
         _send_json(self, {"running": len(pids) > 0})
 
-    _DISABLE_FLAG = "/tmp/nanobot_disabled"
+    _DISABLE_FLAG = "/app/data/.nanobot_disabled"
 
     def _handle_agent_stop(self):
         import os, signal

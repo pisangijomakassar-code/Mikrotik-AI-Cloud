@@ -28,8 +28,8 @@ const TYPE_LOGIN_OPTIONS = [
 interface GeneratedVoucher { username: string; password: string }
 
 export default function GenerateVoucherPage() {
-  const { data: voucherTypes } = useVoucherTypes()
-  const { data: resellers } = useResellers()
+  const { data: voucherTypes, isLoading: loadingTypes } = useVoucherTypes()
+  const { data: resellers, isLoading: loadingResellers } = useResellers()
   const { data: routers } = useRouters()
 
   const [selectedTypeId, setSelectedTypeId] = useState("")
@@ -177,9 +177,9 @@ export default function GenerateVoucherPage() {
             {/* Reseller */}
             <div className="space-y-1.5">
               <label className={lbl}>Reseller (opsional)</label>
-              <Select value={resellerId || "__none__"} onValueChange={(v) => { setResellerId(v === "__none__" ? "" : v); setSelectedTypeId("") }}>
+              <Select value={resellerId || "__none__"} onValueChange={(v) => { setResellerId(v === "__none__" ? "" : v); setSelectedTypeId("") }} disabled={loadingResellers}>
                 <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
-                  <SelectValue placeholder="Admin / Tanpa Reseller" />
+                  <SelectValue placeholder={loadingResellers ? "Memuat reseller..." : "Admin / Tanpa Reseller"} />
                 </SelectTrigger>
                 <SelectContent className="bg-muted border-border text-foreground">
                   <SelectItem value="__none__">Admin / Tanpa Reseller</SelectItem>
@@ -245,9 +245,9 @@ export default function GenerateVoucherPage() {
             {/* Jenis Voucher */}
             <div className="space-y-1.5">
               <label className={lbl}>Jenis Voucher *</label>
-              <Select value={selectedTypeId || "__none__"} onValueChange={(v) => handleSelectType(v === "__none__" ? "" : v)}>
+              <Select value={selectedTypeId || "__none__"} onValueChange={(v) => handleSelectType(v === "__none__" ? "" : v)} disabled={loadingTypes}>
                 <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
-                  <SelectValue placeholder="Pilih jenis voucher..." />
+                  <SelectValue placeholder={loadingTypes ? "Memuat jenis voucher..." : "Pilih jenis voucher..."} />
                 </SelectTrigger>
                 <SelectContent className="bg-muted border-border text-foreground">
                   {filteredTypes.length === 0 ? (
