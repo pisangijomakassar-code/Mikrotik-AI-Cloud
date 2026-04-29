@@ -1,11 +1,37 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { BarChart3, Download, FileInput, Loader2, RefreshCw, Store, Ticket, TrendingUp, TrendingDown } from "lucide-react"
+import { BarChart3, Download, FileInput, Loader2, RefreshCw, Store, Ticket, TrendingUp, TrendingDown, Database, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatRupiah } from "@/lib/formatters"
 import { toast } from "sonner"
+
+interface SyncRouterEntry {
+  router: string
+  lastSync: { syncedAt: string; imported: number; skipped: number } | null
+  scriptCount: number | null
+  scriptBytesEstimate: number | null
+}
+
+function timeAgo(iso: string | undefined): string {
+  if (!iso) return "—"
+  const diff = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return "baru saja"
+  if (min < 60) return `${min} menit lalu`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} jam lalu`
+  const d = Math.floor(h / 24)
+  return `${d} hari lalu`
+}
+
+function formatBytes(n: number | null | undefined): string {
+  if (!n) return "—"
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+  return `${(n / 1024 / 1024).toFixed(2)} MB`
+}
 
 interface Batch {
   id: string
@@ -79,6 +105,100 @@ export default function ReportsPage() {
   const [importMonth, setImportMonth] = useState("")
   const [dbMonths, setDbMonths] = useState<{ month: string; vouchers: number; revenue: number }[]>([])
   const [loadingDbMonths, setLoadingDbMonths] = useState(false)
+
+  // Sync status (auto-sync info per router)
+  const [syncStatus, setSyncStatus] = useState<SyncRouterEntry[]>([])
+  const [syncing, setSyncing] = useState(false)
+
+  // Cleanup dialog state
+  const [cleanupOpen, setCleanupOpen] = useState(false)
+  const [cleanupRetention, setCleanupRetention] = useState(6)
+  const [cleanupRouter, setCleanupRouter] = useState("")
+  const [cleanupDryRun, setCleanupDryRun] = useState<{ wouldDelete: number; kept: number; cutoffMonth: string } | null>(null)
+  const [cleanupBusy, setCleanupBusy] = useState(false)
+
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/hotspot/mikhmon-sync-status")
+      const json = await res.json()
+      setSyncStatus(json.routers ?? [])
+    } catch {
+      // ignore — fallback shows "—"
+    }
+  }, [])
+
+  useEffect(() => { fetchSyncStatus() }, [fetchSyncStatus])
+
+  async function handleSyncNow() {
+    setSyncing(true)
+    try {
+      const res = await fetch("/api/hotspot/mikhmon-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deleteAfterImport: false }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Gagal sinkron")
+      toast.success(`Sinkron selesai: ${json.imported ?? 0} voucher dicatat (${json.skipped ?? 0} dilewati)`)
+      await Promise.all([fetchReport(), fetchSyncStatus()])
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal sinkron")
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function handleCleanupDryRun() {
+    setCleanupBusy(true)
+    try {
+      const res = await fetch("/api/hotspot/mikhmon-cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ router: cleanupRouter, retentionMonths: cleanupRetention, dryRun: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Gagal preview cleanup")
+      setCleanupDryRun({ wouldDelete: json.wouldDelete, kept: json.kept, cutoffMonth: json.cutoffMonth })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal preview")
+    } finally {
+      setCleanupBusy(false)
+    }
+  }
+
+  async function handleCleanupExecute() {
+    setCleanupBusy(true)
+    try {
+      // Sync first to ensure DB has the data before deleting from router.
+      await fetch("/api/hotspot/mikhmon-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ router: cleanupRouter, deleteAfterImport: false }),
+      })
+      // Then delete old script entries.
+      const res = await fetch("/api/hotspot/mikhmon-cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ router: cleanupRouter, retentionMonths: cleanupRetention, dryRun: false }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Gagal cleanup")
+      toast.success(`Cleanup selesai: ${json.deleted} script dihapus dari router`)
+      setCleanupOpen(false)
+      setCleanupDryRun(null)
+      await fetchSyncStatus()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal cleanup")
+    } finally {
+      setCleanupBusy(false)
+    }
+  }
+
+  function openCleanupDialog(router: string) {
+    setCleanupRouter(router)
+    setCleanupDryRun(null)
+    setCleanupOpen(true)
+  }
 
   const handleMonthChange = (yearMonth: string) => {
     setSelectedMonth(yearMonth)
@@ -248,6 +368,142 @@ export default function ReportsPage() {
               <button
                 disabled={importing}
                 onClick={() => setImportOpen(false)}
+                className="w-full px-4 py-2.5 rounded-lg font-bold text-sm text-slate-500 hover:text-slate-300 transition-all"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Status — per router auto-sync info + storage usage */}
+      {syncStatus.length > 0 && (
+        <div className="bg-surface-low rounded-2xl border border-border/20 p-5 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Database className="h-4 w-4 text-primary" />
+              Status Sinkronisasi RouterOS
+            </h3>
+            <button
+              onClick={handleSyncNow}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-primary/20 transition-all disabled:opacity-50"
+            >
+              {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Sinkron Sekarang
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {syncStatus.map((r) => (
+              <div key={r.router} className="bg-muted/30 border border-white/5 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-foreground font-mono-tech">{r.router}</span>
+                  <button
+                    onClick={() => openCleanupDialog(r.router)}
+                    className="flex items-center gap-1 text-[10px] font-bold text-amber-400 hover:text-amber-300 px-2 py-0.5 rounded transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Bersihkan log lama
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Sinkron terakhir</div>
+                    <div className="text-foreground font-mono-tech">
+                      {timeAgo(r.lastSync?.syncedAt)}
+                      {r.lastSync && (
+                        <span className="text-muted-foreground/60 ml-1.5">
+                          (+{r.lastSync.imported}, ~{r.lastSync.skipped})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground/60">/system script (mikhmon)</div>
+                    <div className="text-foreground font-mono-tech">
+                      {r.scriptCount ?? "—"} entries · {formatBytes(r.scriptBytesEstimate)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground/50 mt-2">
+            Auto-sync: <strong>setiap 1 jam</strong>. Data laporan dibaca dari PostgreSQL, sinkron jaga konsistensi dengan RouterOS.
+          </p>
+        </div>
+      )}
+
+      {/* Cleanup dialog */}
+      {cleanupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-[#0f1623] border border-white/10 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-base font-bold text-white mb-1">Bersihkan Log Mikhmon</h3>
+            <p className="text-xs text-slate-500 mb-5">
+              Router: <span className="font-mono-tech text-foreground">{cleanupRouter}</span>.
+              Script log akan disinkron ke PostgreSQL dulu, lalu dihapus dari RouterOS.
+            </p>
+
+            <div className="mb-5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block mb-2">
+                Hapus log lebih lama dari (bulan)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={120}
+                value={cleanupRetention}
+                onChange={(e) => { setCleanupRetention(Math.max(1, Math.min(120, Number(e.target.value) || 6))); setCleanupDryRun(null) }}
+                className="bg-muted border-none rounded-lg text-sm text-foreground focus:ring-1 focus:ring-primary px-3 py-2 w-full font-mono-tech"
+              />
+              <div className="flex gap-1 mt-2">
+                {[3, 6, 12, 24].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => { setCleanupRetention(n); setCleanupDryRun(null) }}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                      cleanupRetention === n ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {n} bln
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {cleanupDryRun && (
+              <div className="mb-5 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs">
+                <div className="font-bold text-amber-400 mb-1">Preview cleanup</div>
+                <div className="text-foreground">
+                  Akan dihapus: <strong>{cleanupDryRun.wouldDelete}</strong> script entries
+                </div>
+                <div className="text-muted-foreground">
+                  Tetap disimpan: {cleanupDryRun.kept} entries (cutoff: {cleanupDryRun.cutoffMonth})
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <button
+                disabled={cleanupBusy}
+                onClick={handleCleanupDryRun}
+                className="w-full px-4 py-2.5 rounded-lg font-bold text-sm bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
+              >
+                {cleanupBusy ? "Memproses..." : "Preview Dulu (Dry-run)"}
+              </button>
+              {cleanupDryRun && cleanupDryRun.wouldDelete > 0 && (
+                <button
+                  disabled={cleanupBusy}
+                  onClick={handleCleanupExecute}
+                  className="w-full px-4 py-2.5 rounded-lg font-bold text-sm bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all disabled:opacity-50"
+                >
+                  {cleanupBusy ? "Menghapus..." : `Sinkron + Hapus ${cleanupDryRun.wouldDelete} Script`}
+                </button>
+              )}
+              <button
+                disabled={cleanupBusy}
+                onClick={() => { setCleanupOpen(false); setCleanupDryRun(null) }}
                 className="w-full px-4 py-2.5 rounded-lg font-bold text-sm text-slate-500 hover:text-slate-300 transition-all"
               >
                 Batal

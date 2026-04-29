@@ -491,6 +491,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_hotspot_stats(user_id, router_name)
             return
 
+        # Mikhmon sync status — last auto-sync timestamps per (user, router).
+        if path.startswith("/mikhmon-sync-status/"):
+            user_id = path.split("/mikhmon-sync-status/")[1].strip("/")
+            self._handle_mikhmon_sync_status(user_id)
+            return
+
         # IP pools (used as hotspot address-pool)
         if path.startswith("/ip-pools/"):
             user_id = path.split("/ip-pools/")[1]
@@ -661,6 +667,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                 return
 
         # Mikhmon script import
+        if path.startswith("/mikhmon-cleanup/"):
+            user_id = path.split("/mikhmon-cleanup/")[1].strip("/")
+            self._handle_mikhmon_cleanup(user_id)
+            return
+
         if path.startswith("/mikhmon-import/"):
             user_id = path.split("/mikhmon-import/")[1].strip("/")
             if user_id:
@@ -1114,6 +1125,151 @@ class HealthHandler(BaseHTTPRequestHandler):
                     "activeSessions": len(active),
                 }
             _send_json(self, result)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_mikhmon_sync_status(self, user_id):
+        """GET /mikhmon-sync-status/<user_id>
+
+        Returns last auto-sync info per router for this user, plus router
+        `/system script` storage usage (count + estimated bytes used by
+        Mikhmon log entries).
+        """
+        try:
+            registry = _get_registry()
+            # Resolve all router names this user has registered.
+            router_names: list[str] = []
+            try:
+                routers = registry.list_routers(user_id) or []
+                router_names = [r.get("name", "") for r in routers if r.get("name")]
+            except Exception:
+                pass
+            if not router_names:
+                # Fall back: try default router only.
+                try:
+                    conn = registry.resolve(user_id, None)
+                    if conn and conn.get("name"):
+                        router_names = [conn["name"]]
+                except Exception:
+                    pass
+
+            entries = []
+            for router_name in router_names:
+                key = (user_id, router_name)
+                last = _mikhmon_last_sync.get(key)
+                # Best-effort storage info — pull /system script filtered by
+                # comment=mikhmon. Failure is non-fatal (e.g. router offline).
+                script_count = None
+                script_bytes_estimate = None
+                try:
+                    conn = registry.resolve(user_id, router_name)
+                    with _connect(
+                        conn["host"], conn["port"], conn["username"], conn["password"]
+                    ) as api:
+                        scripts = [
+                            s for s in api.path("system", "script")
+                            if s.get("comment") == "mikhmon"
+                        ]
+                        script_count = len(scripts)
+                        # Rough estimate: name + source + comment overhead per row
+                        script_bytes_estimate = sum(
+                            len(s.get("name", "")) + len(s.get("source", "")) + 80
+                            for s in scripts
+                        )
+                except Exception:
+                    pass
+
+                entries.append({
+                    "router": router_name,
+                    "lastSync": last,
+                    "scriptCount": script_count,
+                    "scriptBytesEstimate": script_bytes_estimate,
+                })
+
+            _send_json(self, {"routers": entries})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_mikhmon_cleanup(self, user_id):
+        """POST /mikhmon-cleanup/<user_id>
+
+        Body: {"router": "<name>", "retentionMonths": N, "dryRun": false}
+
+        Deletes Mikhmon `/system script` log entries older than `retentionMonths`
+        from RouterOS. Sync to PostgreSQL must be done separately first
+        (call /mikhmon-import with deleteAfterImport=false). When `dryRun` is
+        true, returns the count without deleting.
+
+        Returns: {"deleted": N, "kept": M, "cutoffMonth": "YYYY-MM"}
+        """
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            router_name = body.get("router", "")
+            retention_months = int(body.get("retentionMonths", 6))
+            dry_run = bool(body.get("dryRun", False))
+
+            if retention_months < 1:
+                _send_json(self, {"error": "retentionMonths must be >= 1"}, 400)
+                return
+
+            # Compute cutoff date — script.owner is "<month3letter><year4>" (Mikhmon
+            # convention, e.g. "apr2026"). We compare via numeric YYYYMM.
+            from datetime import datetime as dt
+            now = dt.utcnow()
+            cutoff_total = now.year * 12 + (now.month - 1) - retention_months
+            cutoff_year, cutoff_month = divmod(cutoff_total, 12)
+            cutoff_yymm = cutoff_year * 100 + (cutoff_month + 1)
+
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name or None)
+
+            _MONTHS = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+                       "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12}
+
+            def _owner_to_yymm(owner: str) -> int | None:
+                if not owner or len(owner) < 7:
+                    return None
+                m = owner[:3].lower()
+                if m not in _MONTHS:
+                    return None
+                try:
+                    y = int(owner[3:7])
+                except ValueError:
+                    return None
+                return y * 100 + _MONTHS[m]
+
+            with _connect(
+                conn["host"], conn["port"], conn["username"], conn["password"]
+            ) as api:
+                resource = api.path("system", "script")
+                to_delete = []
+                kept = 0
+                for s in resource:
+                    if s.get("comment") != "mikhmon":
+                        continue
+                    yymm = _owner_to_yymm(s.get("owner", ""))
+                    if yymm is None or yymm >= cutoff_yymm:
+                        kept += 1
+                    else:
+                        to_delete.append(s.get(".id"))
+
+                deleted = 0
+                if not dry_run:
+                    for sid in to_delete:
+                        try:
+                            resource.remove(sid)
+                            deleted += 1
+                        except Exception as e:
+                            logger.warning("Failed to delete script %s: %s", sid, e)
+
+            _send_json(self, {
+                "deleted": deleted if not dry_run else 0,
+                "wouldDelete": len(to_delete),
+                "kept": kept,
+                "cutoffMonth": f"{cutoff_year:04d}-{cutoff_month + 1:02d}",
+                "dryRun": dry_run,
+            })
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
@@ -2387,6 +2543,79 @@ def _parse_mikhmon_script_name(script_name: str) -> dict | None:
     }
 
 
+# In-memory cache: (telegram_id, router_name) → last sync ISO timestamp.
+# Populated by _mikhmon_sync_cron and consumed by GET /mikhmon-sync-status.
+# Resets on agent restart — UI can fall back to "never synced" or use the
+# latest VoucherBatch.createdAt with source LIKE 'mikhmon_import:%' from DB.
+_mikhmon_last_sync: dict = {}
+
+
+def _mikhmon_sync_cron(interval_seconds=3600):
+    """Background cron: every hour, pull /system script (Mikhmon log entries)
+    from each registered router and persist to PostgreSQL.
+
+    Calls the existing /mikhmon-import endpoint internally with
+    `deleteAfterImport=false` — keeps script entries in router (so Mikhmon UI
+    can still see them) but mirrors them to PostgreSQL for fast Reports query.
+
+    Cleanup of old script entries is a separate manual operation (UI button
+    or POST /mikhmon-cleanup with retention months).
+    """
+    import http.client
+    import logging
+    logger = logging.getLogger("mikhmon_sync_cron")
+    logger.info("Mikhmon sync cron started (interval=%ds)", interval_seconds)
+
+    while True:
+        time.sleep(interval_seconds)
+        try:
+            vdb = _get_voucher_db()
+            if not vdb:
+                continue
+
+            pairs = vdb.list_all_user_router_pairs()
+            for telegram_id, router_name in pairs:
+                key = (telegram_id, router_name)
+                try:
+                    body = json.dumps({
+                        "router": router_name,
+                        "deleteAfterImport": False,
+                    }).encode("utf-8")
+                    conn = http.client.HTTPConnection("localhost", 8080, timeout=120)
+                    conn.request(
+                        "POST", f"/mikhmon-import/{telegram_id}",
+                        body, {"Content-Type": "application/json"},
+                    )
+                    resp = conn.getresponse()
+                    data = json.loads(resp.read() or b"{}")
+                    conn.close()
+
+                    if "error" in data:
+                        logger.warning(
+                            "Mikhmon sync error for %s/%s: %s",
+                            telegram_id, router_name, data["error"]
+                        )
+                    else:
+                        _mikhmon_last_sync[key] = {
+                            "syncedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "imported": data.get("imported", 0),
+                            "skipped": data.get("skipped", 0),
+                        }
+                        if data.get("imported", 0) > 0:
+                            logger.info(
+                                "Mikhmon sync: user=%s router=%s imported=%d skipped=%d",
+                                telegram_id, router_name,
+                                data["imported"], data.get("skipped", 0)
+                            )
+                except Exception as e:
+                    logger.warning(
+                        "Mikhmon sync failed for %s/%s: %s",
+                        telegram_id, router_name, e
+                    )
+        except Exception as e:
+            logger.warning("Mikhmon sync cron error: %s", e)
+
+
 def _expired_cleanup_cron(interval_seconds=300):
     """Background cron: every 5 minutes, remove expired hotspot users for all routers.
 
@@ -2430,6 +2659,10 @@ def start_health_server(port=8080):
         cron_thread = threading.Thread(target=_expired_cleanup_cron, args=(300,), daemon=True)
         cron_thread.start()
         print("Expired cleanup cron started (every 5 minutes)")
+
+        sync_thread = threading.Thread(target=_mikhmon_sync_cron, args=(3600,), daemon=True)
+        sync_thread.start()
+        print("Mikhmon sync cron started (every 1 hour)")
 
 
 if __name__ == "__main__":
