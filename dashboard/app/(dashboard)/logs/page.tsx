@@ -8,10 +8,10 @@ export default function LogsPage() {
     <div>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Activity Logs</h2>
+          <h2 className="text-4xl font-headline font-bold text-foreground tracking-tight mb-2">Log Aktivitas</h2>
           <p className="text-muted-foreground flex items-center gap-2">
             <Terminal className="h-[18px] w-[18px] shrink-0 text-primary" />
-            Real-time system logs and activity monitoring.
+            Log real-time dari RouterOS — default tampil event voucher (login, logout, gagal login). Ganti filter untuk lihat topik lain.
           </p>
         </div>
       </div>

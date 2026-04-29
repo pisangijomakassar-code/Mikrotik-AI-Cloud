@@ -1,975 +1,357 @@
-# MikroTik AI Agent -- User Guide
+# Panduan Pengguna — MikroTik AI Agent
 
-Complete guide for managing your MikroTik routers through the Telegram bot using natural language.
-
----
-
-## Table of Contents
-
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Step 1: Create Your Telegram Bot](#step-1-create-your-telegram-bot)
-  - [Step 2: Get Your Telegram User ID](#step-2-get-your-telegram-user-id)
-  - [Step 3: Register in the Dashboard](#step-3-register-in-the-dashboard)
-  - [Step 4: Start Chatting](#step-4-start-chatting)
-  - [First-Time Setup](#first-time-setup)
-  - [Understanding Responses](#understanding-responses)
-- [Router Management](#router-management)
-  - [Adding a Router](#adding-a-router)
-  - [Adding Multiple Routers](#adding-multiple-routers)
-  - [Setting a Default Router](#setting-a-default-router)
-  - [Removing a Router](#removing-a-router)
-  - [Listing Your Routers](#listing-your-routers)
-- [Daily Operations](#daily-operations)
-  - [System Status](#system-status)
-  - [Monitoring Clients](#monitoring-clients)
-  - [Interfaces and Traffic](#interfaces-and-traffic)
-  - [Firewall Rules](#firewall-rules)
-  - [Viewing Logs](#viewing-logs)
-  - [Health Check Across All Routers](#health-check-across-all-routers)
-- [Hotspot Management](#hotspot-management)
-  - [Viewing Hotspot Users and Profiles](#viewing-hotspot-users-and-profiles)
-  - [Creating Individual Hotspot Users](#creating-individual-hotspot-users)
-  - [Generating Bulk Vouchers](#generating-bulk-vouchers)
-  - [Managing User Profiles](#managing-user-profiles)
-  - [Enabling and Disabling Users](#enabling-and-disabling-users)
-  - [Searching for Users](#searching-for-users)
-  - [Bulk Operations](#bulk-operations)
-  - [Cleaning Up Expired and Disabled Users](#cleaning-up-expired-and-disabled-users)
-  - [Viewing Voucher Statistics](#viewing-voucher-statistics)
-- [PPP/VPN Management](#pppvpn-management)
-  - [Viewing PPP Users and Connections](#viewing-ppp-users-and-connections)
-  - [Adding and Removing PPP Secrets](#adding-and-removing-ppp-secrets)
-  - [Kicking Active Sessions](#kicking-active-sessions)
-- [Firewall Management](#firewall-management)
-  - [Viewing Rules](#viewing-rules)
-  - [Adding and Removing Filter Rules](#adding-and-removing-filter-rules)
-  - [NAT Rules](#nat-rules)
-  - [Enabling and Disabling Rules](#enabling-and-disabling-rules)
-  - [Address Lists](#address-lists)
-- [Queue and Bandwidth Management](#queue-and-bandwidth-management)
-  - [Viewing Queues](#viewing-queues)
-  - [Adding and Removing Bandwidth Limits](#adding-and-removing-bandwidth-limits)
-  - [Queue Tree](#queue-tree)
-- [Advanced Features](#advanced-features)
-  - [Raw RouterOS API Queries](#raw-routeros-api-queries)
-  - [Cross-Router Health Check](#cross-router-health-check)
-  - [Router Backup](#router-backup)
-  - [Scheduled Tasks](#scheduled-tasks)
-  - [DNS Management](#dns-management)
-  - [Static Routes](#static-routes)
-- [Tips and Tricks](#tips-and-tricks)
-  - [Common Commands Cheat Sheet](#common-commands-cheat-sheet)
-  - [Best Practices](#best-practices)
-  - [Troubleshooting](#troubleshooting)
+Panduan ini fokus ke pengelolaan voucher hotspot lewat dashboard.
+Untuk perintah Telegram bot natural language, lihat [API_REFERENCE.md](./API_REFERENCE.md).
 
 ---
 
-## Getting Started
+## Daftar Isi
 
-### Prerequisites
-
-Every user **must** create their own private Telegram bot. The MikroTik AI Agent does **not** use a shared/public bot -- each user runs their own bot instance for security and isolation.
-
-**You will need:**
-1. A Telegram account
-2. Your own Telegram bot (created via `@BotFather`)
-3. Your Telegram bot token
-4. Your Telegram user ID (numeric)
-
-### Step 1: Create Your Telegram Bot
-
-1. Open Telegram and search for **@BotFather**.
-2. Send `/newbot` and follow the prompts:
-   - Choose a display name (e.g., "My MikroTik Agent")
-   - Choose a username ending in `bot` (e.g., `my_mikrotik_agent_bot`)
-3. BotFather will reply with your **bot token** -- a string like `7123456789:AAF...`. **Save this token securely.**
-4. (Optional) Send `/setdescription` to add a description, and `/setuserpic` to set a profile photo.
-
-### Step 2: Get Your Telegram User ID
-
-Your Telegram user ID is a numeric identifier (not your username). To find it:
-
-1. Search for **@userinfobot** on Telegram.
-2. Send any message to it.
-3. It will reply with your numeric user ID (e.g., `123456789`). **Copy this number.**
-
-Alternatively, forward any of your messages to `@userinfobot`.
-
-### Step 3: Register in the Dashboard
-
-1. **Get access from the admin.** This is a paid service. After payment, the admin will create your account in the dashboard.
-2. **Log in to the dashboard** with the credentials provided by the admin.
-3. Go to **Routers** and register your Telegram bot:
-   - **Telegram Bot Token** -- paste the token from BotFather
-   - **Telegram User ID** -- paste your numeric user ID
-4. The system will activate your bot instance and connect it to the AI Agent.
-
-> **Why a personal bot?** Each user having their own bot ensures complete isolation -- your router credentials, chat history, and commands are never shared with other users. It also means you have full control over your bot's name and appearance.
-
-### Step 4: Start Chatting
-
-1. Open your bot in Telegram (the one you created in Step 1).
-2. Send `/start` or any message to begin.
-3. The bot will detect that you have no routers registered and guide you through adding one.
-
-### First-Time Setup
-
-When you message the bot for the first time, you will need to add at least one router.
-
-**What you need:**
-- A friendly name for your router (e.g., "Kantor", "Warnet", "RumahUtama")
-- The router's hostname or IP address (e.g., `192.168.1.1` or `router.example.com`)
-- The RouterOS API port (default: `8728`)
-- A RouterOS username with API access
-- The password for that username
-
-**Example first interaction:**
-
-```
-You:   /start
-
-Bot:   Halo! Gue asisten MikroTik lo.
-       Belum ada router yang terdaftar nih.
-       Kirim detail router: nama, host, port, username, password.
-
-You:   Nama: Kantor
-       Host: 192.168.1.1
-       Port: 8728
-       User: admin
-       Pass: rahasia123
-
-Bot:   Router Kantor ditambahkan, hEX v6.49.8, uptime 6j48m
-```
-
-The bot will test the connection before saving. If it fails, you will receive an error message with details.
-
-**Important:** Make sure RouterOS API access is enabled on your router. In Winbox, go to **IP > Services** and ensure the `api` service is enabled on port `8728`.
-
-### Understanding Responses
-
-The bot communicates in casual Indonesian by default. If you write in English, it replies in English.
-
-**Responses are short and data-focused:**
-```
-📊 Kantor
-• Board: `hEX` · v`6.49.8`
-• CPU: `11%` · RAM: `211/256 MB`
-• Uptime: `6j 48m`
-```
-
-**Write operations always require confirmation:**
-```
-You:   hapus user hotspot tamu
-Bot:   mau hapus user hotspot 'tamu' di Kantor? (ya/tidak)
-You:   ya
-Bot:   user hotspot 'tamu' udah dihapus
-```
-
-Dangerous operations (reboot, raw API queries, running scripts) require **double confirmation**.
+1. [Konsep Inti](#konsep-inti)
+2. [Setup Awal](#setup-awal)
+3. [Hotspot Profile](#hotspot-profile)
+4. [Generate Voucher](#generate-voucher)
+5. [Cetak Voucher](#cetak-voucher)
+6. [Setting Voucher (Bot)](#setting-voucher-bot)
+7. [Laporan](#laporan)
+8. [Log Aktivitas](#log-aktivitas)
+9. [Sinkronisasi & Maintenance](#sinkronisasi--maintenance)
+10. [Pertanyaan Umum (FAQ)](#pertanyaan-umum-faq)
 
 ---
 
-## Router Management
+## Konsep Inti
 
-### Adding a Router
+### Bagaimana voucher bekerja
 
-Send the router details to the bot in any format. The bot understands natural language.
+Setiap voucher punya 3 fase lifecycle:
 
-**Examples:**
-```
-tambah router Warnet, host warnet.tunnel.my.id, port 8728, user admin, pass secret123
-```
-```
-register router baru:
-nama: CafeWifi
-host: 10.0.0.1
-port: 8728
-username: api_user
-password: mypassword
-```
+| Fase | Keterangan |
+|------|-----------|
+| **Generated** | Voucher dibuat di dashboard / agent → tercatat di tabel `VoucherBatch`. Akun voucher dibuat di MikroTik (`/ip hotspot user`) dengan `comment` kosong. Belum jadi pendapatan. |
+| **Activated** | User pertama kali login pakai voucher. On-login script di profil menulis datetime expiry ke `comment` user, plus log transaksi ke `/system script` (mode *c). **Inilah momen pendapatan dihitung**. |
+| **Expired / Removed** | Setelah masa berlaku habis, `bgservice` scheduler menjalankan aksi sesuai mode profil: `set limit-uptime=1s` (Notice) atau `remove user` (Remove). |
 
-The bot will:
-1. Ask you to confirm the details.
-2. Test the connection to the router.
-3. Save the router if the connection succeeds.
-4. Report the board name, RouterOS version, and identity.
+Aplikasi ini **kompatibel dengan Mikhmon** — format on-login script dan log
+transaksi di RouterOS sama persis, sehingga bisa dipakai bersama Mikhmon UI di
+router yang sama.
 
-Your first router automatically becomes the **default router** -- all commands target it unless you specify otherwise.
+### Sumber data laporan
 
-### Adding Multiple Routers
-
-Simply add more routers the same way. The bot keeps track of all your routers.
-
-```
-You:   tambah router Rumah, host rumah.tunnel.my.id, port 8728, user admin, pass pass456
-Bot:   Router Rumah ditambahkan.
-       Punya 3 router: Kantor (default), Warnet, Rumah
-```
-
-### Setting a Default Router
-
-When you have multiple routers, commands target the default router unless you specify one. To change the default:
-
-```
-You:   set default router ke Warnet
-Bot:   Default router diubah ke Warnet? (ya/tidak)
-You:   ya
-Bot:   Default router sekarang Warnet
-```
-
-### Removing a Router
-
-```
-You:   hapus router Rumah
-Bot:   Hapus router Rumah? (ya/tidak)
-You:   ya
-Bot:   Router Rumah dihapus
-```
-
-### Listing Your Routers
-
-```
-You:   list router
-Bot:   Router kamu (3):
-       1. Kantor (default) — hEX v6.49.8
-       2. Warnet — RB750Gr3 v7.14
-       3. Rumah — hAP ac2 v7.14
-```
+Dashboard membaca data dari **PostgreSQL** (cepat, aman) — bukan query langsung
+ke RouterOS tiap kali. Sinkronisasi otomatis jalan tiap **1 jam**, atau bisa
+trigger manual lewat tombol "Sinkron Sekarang" di halaman Laporan.
 
 ---
 
-## Daily Operations
+## Setup Awal
 
-### System Status
+### 1. Tambah Router
 
-Check CPU load, memory usage, uptime, and board information.
+**System → Routers → Tambah Router**
 
-```
-You:   cek status router
-You:   berapa CPU sekarang?
-You:   info sistem Kantor
-```
+Field penting:
+- **Nama** — identifier (e.g. `ummi`)
+- **Host & Port** — IP/hostname RouterOS API + port (default 8728)
+- **Username & Password** — credential MikroTik dengan API access
 
-**Example response:**
-```
-📊 Kantor
-• Board: `hEX` · v`6.49.8`
-• CPU: `11%` · RAM: `211/256 MB`
-• Uptime: `6j 48m`
-```
+**Section "Hotspot Branding"** (opsional, untuk cetak voucher):
+- **DNS Hotspot** — DNS hotspot router (untuk QR code login)
+- **Nama Hotspot** — display name di header voucher cetak (kalau kosong → fallback ke nama router)
+- **Logo Hotspot URL** — URL gambar logo (opsional)
 
-**Other system commands:**
-```
-cek jam router              → router date/time
-cek hardware health         → voltage, temperature
-cek routerboard info        → serial number, firmware
-cek lisensi                 → license level
-list paket yang terinstall  → installed packages
-list user RouterOS          → RouterOS login accounts
-```
+### 2. Tambah Reseller (opsional)
 
-### Monitoring Clients
+**Reseller → Reseller List → Add Reseller**
 
-**Count active clients:**
-```
-You:   berapa client online?
-Bot:   👥 34 user online di Kantor
-```
-
-**List DHCP leases (all connected clients):**
-```
-You:   list client DHCP
-Bot:   👥 Active Clients — Kantor (34 total)
-       1. 10.10.8.18 — Infinix-HOT-60i (B6:00:D0:44:76:13)
-       2. 10.10.8.178 — android-be1b2d283 (38:29:5A:13:A5:81)
-       ...
-```
-
-**List wireless clients:**
-```
-You:   siapa aja yang konek wifi?
-```
-
-**List ARP table (all devices seen by router):**
-```
-You:   list ARP table
-```
-
-**Targeting a specific router:**
-```
-You:   berapa client online di Warnet?
-You:   list DHCP leases di semua router
-```
-
-### Interfaces and Traffic
-
-**List all interfaces:**
-```
-You:   list interface
-```
-
-**Check traffic on a specific interface:**
-```
-You:   cek traffic di ether1
-```
-
-**List VLANs, bridges, tunnels:**
-```
-You:   list VLAN
-You:   list bridge port
-You:   list EoIP tunnel
-```
-
-### Firewall Rules
-
-**View filter rules:**
-```
-You:   list firewall filter
-```
-
-**View NAT rules:**
-```
-You:   list NAT
-```
-
-**View mangle rules:**
-```
-You:   list mangle
-```
-
-**View address lists:**
-```
-You:   list address list
-```
-
-### Viewing Logs
-
-```
-You:   tampilkan log terakhir
-You:   show last 20 logs
-```
-
-By default, the bot returns the 50 most recent log entries. You can request a specific count.
-
-### Health Check Across All Routers
-
-Get a quick overview of all your routers at once:
-
-```
-You:   cek semua router
-You:   health check all routers
-
-Bot:   🟢 Kantor — online · CPU `8%` · `34 client`
-       🟢 Warnet — online · CPU `3%` · `12 client`
-       🔴 Rumah — OFFLINE (unreachable)
-```
+Field:
+- **Nama** + **WhatsApp**
+- **Diskon (%)** — auto-applied saat reseller pilih voucher
+- **Voucher Group** — filter jenis voucher yang boleh diakses reseller (default `default`)
 
 ---
 
-## Hotspot Management
+## Hotspot Profile
 
-The bot provides Mikhmon-like hotspot management capabilities directly from Telegram.
+**Hotspot → User Profiles**
 
-### Viewing Hotspot Users and Profiles
+Profile menentukan rate limit, masa berlaku, dan mode expired voucher di
+RouterOS.
 
-**Count hotspot users (fast, no full listing):**
-```
-You:   berapa user hotspot?
-Bot:   📊 Kantor: 450 total (420 enabled, 30 disabled)
-```
+### Field penting
 
-**List all hotspot users (warning: can be slow if 1000+ users):**
-```
-You:   list user hotspot
-```
+| Field | Keterangan |
+|-------|-----------|
+| **Nama Profile** | Identifier di MikroTik (mis. `1jam`, `12jam`, `24jam`) |
+| **Rate Limit** | TX/RX, mis. `1M/1M` |
+| **Shared Users** | Berapa device boleh login bersamaan |
+| **Expired Mode** | Lihat penjelasan di bawah — default `Notice & Record` |
+| **Validity** | Masa berlaku sejak login pertama (mis. `12h`, `1d`, `30d`) |
+| **Lock User (MAC binding)** | `Yes` = voucher terkunci ke device login pertama; `No` = bebas dipakai di device lain |
+| **Transparent Proxy** | Aktifkan transparent proxy untuk profile ini |
 
-**View active/online hotspot sessions:**
-```
-You:   siapa aja yang online di hotspot?
-You:   count active hotspot
-```
+### 5 Pilihan Expired Mode
 
-**View hotspot user profiles (rate limit templates):**
-```
-You:   list profil hotspot
-Bot:   📋 Hotspot Profiles — Kantor
-       • default — unlimited
-       • 5rb — rate: 1M/2M
-       • 10rb — rate: 2M/4M
-       • Free — rate: 512k/512k
-```
+| Mode | Aksi saat expired | User di RouterOS | Log activation |
+|------|------------------|-----------------|----------------|
+| **Notice & Record** ⭐ (default) | `set limit-uptime=1s` | tetap ada (disable) | ✅ |
+| **Remove & Record** | `remove user` | hilang | ✅ |
+| **Notice (no log)** | `set limit-uptime=1s` | tetap ada (disable) | ❌ |
+| **Remove (no log)** | `remove user` | hilang | ❌ |
+| **None** | (tidak auto-expire) | tetap ada selamanya | ❌ |
 
-**Get detailed info about a specific user:**
-```
-You:   detail user hotspot tamu01
-Bot:   📋 tamu01
-       • Profile: 5rb
-       • Uptime used: 2h30m / 3h limit
-       • Data: 150 MB in / 50 MB out
-       • Status: enabled
-```
+**Kenapa default Notice & Record (`ntfc`)?** User TIDAK dihapus saat expired —
+data uptime/bytes tetap bisa dilihat untuk audit. Plus log activation tersimpan
+di `/system script` untuk laporan akurat.
 
-### Creating Individual Hotspot Users
+### Saat profile dibuat
 
-```
-You:   buat user hotspot baru, username: tamu01, password: 123456, profile: 5rb
+Backend otomatis:
+1. Set `on-login` script di profile (sesuai mode + validity).
+2. Buat scheduler `<profile>service` interval 1 menit yang loop semua user
+   dalam profile, parse comment expiry datetime, dan apply aksi expired.
+3. Hardcode `status-autorefresh=1m`, `transparent-proxy` sesuai pilihan.
 
-Bot:   Buat user hotspot 'tamu01' dengan profile '5rb' di Kantor? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ user hotspot 'tamu01' dibuat (profile: 5rb)
-```
-
-### Generating Bulk Vouchers
-
-Generate multiple voucher users at once, like Mikhmon:
-
-```
-You:   generate 20 voucher profile 5rb
-
-Bot:   Generate 20 voucher hotspot profile '5rb' di Kantor? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ 20 voucher dibuat (profile: 5rb)
-       1. v8k3m2 / a9x7p1
-       2. v5n1q4 / b3r8w6
-       3. v2j6t9 / c4y2m8
-       ...
-```
-
-**Advanced voucher generation:**
-```
-generate 50 voucher profile 10rb, prefix VIP, limit uptime 3h, limit data 1G, comment "Batch April"
-```
-
-Parameters you can customize:
-- **count** -- how many vouchers (max 100 per batch)
-- **profile** -- which rate limit profile
-- **prefix** -- username prefix (e.g., "VIP" produces "VIPa3k8m2")
-- **username_length** -- random part length (default: 6)
-- **password_length** -- password length (default: 6)
-- **limit_uptime** -- time limit per user (e.g., "1h", "3h", "1d")
-- **limit_bytes_total** -- data limit per user (e.g., "100M", "1G")
-- **comment** -- comment attached to all generated users
-
-### Managing User Profiles
-
-**Create a new profile:**
-```
-You:   buat profil hotspot Premium, rate limit 5M/10M, shared users 2, session timeout 8h
-
-Bot:   Buat profile hotspot 'Premium'? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ profile 'Premium' dibuat (rate: 5M/10M, shared: 2)
-```
-
-**Update an existing profile:**
-```
-You:   ubah rate limit profil 5rb jadi 2M/3M
-```
-
-**Remove a profile:**
-```
-You:   hapus profil hotspot Trial
-```
-
-Note: You cannot remove a profile that still has users assigned to it. Reassign or remove those users first.
-
-### Enabling and Disabling Users
-
-**Disable (suspend) a user without deleting:**
-```
-You:   disable user hotspot tamu01
-Bot:   Disable user hotspot 'tamu01' di Kantor? (ya/tidak)
-You:   ya
-Bot:   ✅ user hotspot 'tamu01' di-disable
-```
-
-**Re-enable a disabled user:**
-```
-You:   enable user hotspot tamu01
-```
-
-### Searching for Users
-
-Search by exact or partial username match:
-
-```
-You:   cari user hotspot tamu
-Bot:   📋 Hasil pencarian 'tamu':
-       1. tamu01 — profile: 5rb — enabled
-       2. tamu02 — profile: 5rb — disabled
-       3. tamuvip — profile: Premium — enabled
-```
-
-### Bulk Operations
-
-**Enable multiple users at once:**
-```
-You:   enable user hotspot tamu01, tamu02, tamu03
-```
-
-**Disable multiple users:**
-```
-You:   disable user hotspot tamu01, tamu02, tamu03
-```
-
-**Remove multiple users:**
-```
-You:   hapus user hotspot tamu01, tamu02, tamu03
-```
-
-### Cleaning Up Expired and Disabled Users
-
-**Remove all disabled users (cleanup):**
-```
-You:   hapus semua user hotspot yang disabled
-
-Bot:   ⚠️ Ini akan menghapus SEMUA user hotspot yang disabled di Kantor. Tidak bisa di-undo!
-       Lanjut? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ 30 user disabled dihapus
-```
-
-**Remove expired users (exceeded uptime or data limits):**
-```
-You:   cleanup user hotspot yang expired
-
-Bot:   ⚠️ Ini akan menghapus user hotspot yang sudah melewati limit uptime/data.
-       Lanjut? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ 15 user expired dihapus
-```
-
-### Viewing Voucher Statistics
-
-Get a Mikhmon-like dashboard of user counts per profile:
-
-```
-You:   statistik voucher hotspot
-
-Bot:   📊 Hotspot Stats — Kantor
-       • Total: 450 users
-       • Enabled: 420
-       • Disabled: 30
-       • Per profile:
-         - 5rb: 200
-         - 10rb: 150
-         - Free: 80
-         - Premium: 20
-```
+Saat profile dihapus, `bgservice` scheduler otomatis ikut dibersihkan.
 
 ---
 
-## PPP/VPN Management
+## Generate Voucher
 
-### Viewing PPP Users and Connections
+**Reseller → Generate Voucher**
 
-**List all PPP secrets (user accounts):**
-```
-You:   list user PPP
-```
+Form bisa dipakai **dengan atau tanpa Jenis Voucher (Bot)** yang tersimpan.
 
-**List active PPP/VPN connections:**
-```
-You:   siapa yang konek VPN sekarang?
-```
+### Field
 
-**View PPP profiles:**
-```
-You:   list profil PPP
-```
+| Field | Keterangan |
+|-------|-----------|
+| Jumlah Voucher | 1–200 per generate |
+| Reseller | Opsional. Pilih reseller → diskon (%) auto-fill |
+| Diskon Reseller (%) | Diskon dari harga end-user. Bisa di-override |
+| Harga End User (Rp) | Harga jual ke konsumen akhir |
+| Mark Up (Rp) | Markup di atas harga end-user (di-skip kalau ada diskon) |
+| Jenis Voucher (opsional) | Pilih template tersimpan untuk auto-fill default |
+| Profil Hotspot * | Wajib kalau Jenis Voucher tidak dipilih |
+| Server / Router | Default = router default user |
+| Prefix | Awalan username (mis. `Mu`, `1J-`) |
+| Panjang Karakter | 3–8 karakter random |
+| Tipe Karakter | `Random abcd2345` / `Random ABCD2345` / `Random 1234` / dll |
+| Tipe Login | `Username = Password` (kode tunggal) atau `Username & Password` (terpisah) |
+| Limit Uptime | Opsional. Cap waktu pemakaian aktif (akumulasi sesi) |
+| Limit Quota (Mb) | Opsional. Cap total bytes |
 
-**Check VPN server config:**
-```
-You:   cek L2TP server
-You:   cek PPTP server
-You:   cek SSTP server
-```
+### Saat generate
 
-### Adding and Removing PPP Secrets
-
-**Add a PPP user:**
-```
-You:   tambah user PPP: nama vpn_budi, password pass123, service l2tp, profile default
-
-Bot:   Tambah PPP secret 'vpn_budi' (service=l2tp)? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ PPP secret 'vpn_budi' dibuat
-```
-
-**Remove a PPP user:**
-```
-You:   hapus user PPP vpn_budi
-```
-
-### Kicking Active Sessions
-
-```
-You:   kick session VPN yang aktif [session_id]
-```
-
-You need the session ID from listing active sessions first. The bot will ask for confirmation before disconnecting.
+1. Backend bikin N akun di `/ip hotspot user` dengan profile yang dipilih.
+2. Batch tercatat di tabel `VoucherBatch` (PostgreSQL) dengan info reseller,
+   harga, markup, dll.
+3. Hasil voucher (username/password) tampil di panel kanan untuk di-copy.
 
 ---
 
-## Firewall Management
+## Cetak Voucher
 
-### Viewing Rules
+**Reseller → Cetak Voucher**
 
-```
-You:   list firewall filter
-You:   list NAT rules
-You:   list mangle rules
-You:   list firewall raw
-You:   list active connections
-```
+Cetak voucher fisik dari batch yang sudah di-generate.
 
-### Adding and Removing Filter Rules
+### Filter
 
-**Add a firewall filter rule:**
-```
-You:   tambah firewall rule: chain forward, action drop, protocol tcp, dst port 445, comment "Block SMB"
+- **Mode**: `Terbaru` (1 batch terakhir) atau `Custom` (rentang tanggal)
+- **Reseller**: filter per reseller atau semua
+- **Profil Hotspot / Jenis Voucher**: filter per profil
+- **Tipe Cetak**:
+  - **Kartu A4 (custom jumlah/halaman)** — input 10–100 voucher per halaman, grid otomatis menyesuaikan
+  - **Thermal (58mm strip)** — 1 voucher per strip untuk printer thermal Bluetooth
+- **Tampilkan harga**: toggle untuk hide/show harga di voucher
 
-Bot:   Tambah firewall filter rule (chain=forward, action=drop, port 445)? (ya/tidak)
+### Layout dinamis (Kartu A4)
 
-You:   ya
+| Per Halaman | Grid | Tinggi Kartu | Density |
+|------------|------|-------------|---------|
+| 20 | 4×5 | 57.4mm | besar (vc-roomy) |
+| 40 | 5×8 | 35.9mm | medium |
+| 80 | 8×10 | 28.7mm | kecil (vc-small) |
+| 100 | 8×13 | 22.1mm | sangat kecil (vc-tiny) |
 
-Bot:   ✅ firewall filter rule ditambahkan
-```
+Font + padding auto-scale berdasarkan tinggi kartu.
 
-**Remove a filter rule:**
-```
-You:   hapus firewall rule [rule_id]
-```
+### Yang ditampilkan per voucher
 
-You can get rule IDs by listing the firewall rules first.
+- Nama hotspot (dari `Router.hotspotName` atau fallback `Router.name`)
+- Username (font monospace bold)
+- Validity (ter-translate ke "X Jam / X Hari")
+- Harga (prioritas: profile.sellPrice → batch.hargaEndUser → batch.pricePerUnit)
+- Nama reseller (kecil, italic) — kalau batch punya reseller
 
-### NAT Rules
+### Print
 
-**Add a NAT rule (e.g., port forwarding):**
-```
-You:   tambah NAT rule: chain dstnat, action dst-nat, protocol tcp, dst port 8080, to-addresses 192.168.1.100, to-ports 80
-
-Bot:   Tambah NAT rule (chain=dstnat, action=dst-nat)? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ NAT rule ditambahkan
-```
-
-**Remove a NAT rule:**
-```
-You:   hapus NAT rule [rule_id]
-```
-
-### Enabling and Disabling Rules
-
-Instead of deleting rules, you can temporarily disable them:
-
-```
-You:   disable firewall rule [rule_id]
-You:   enable firewall rule [rule_id]
-You:   disable NAT rule [rule_id]
-You:   enable NAT rule [rule_id]
-```
-
-### Address Lists
-
-**View address lists:**
-```
-You:   list address list
-```
-
-**Add an IP to an address list:**
-```
-You:   tambah IP 192.168.1.100 ke address list "blocked" dengan timeout 1h
-
-Bot:   Tambah 192.168.1.100 ke address list 'blocked'? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ 192.168.1.100 ditambahkan ke address list 'blocked'
-```
-
-**Remove from address list:**
-```
-You:   hapus entry [entry_id] dari address list
-```
+Klik **Cetak (N)** → browser native print dialog (`window.print()`). Sidebar dan
+header dashboard otomatis di-hide saat print, hanya konten voucher yang muncul.
 
 ---
 
-## Queue and Bandwidth Management
+## Setting Voucher (Bot)
 
-### Viewing Queues
+**Reseller → Setting Voucher (Bot)**
 
-```
-You:   list simple queue
-You:   list queue tree
-You:   list queue types
-```
+Template voucher yang dipakai bot Telegram reseller saat customer beli voucher.
 
-### Adding and Removing Bandwidth Limits
+Field utama:
+- **Nama Voucher** (display name, mis. "Voucher 1 Hari")
+- **Profile Hotspot** (link ke profile di MikroTik)
+- **Harga** (modal/cost) + **Mark Up**
+- **Limit Uptime / Quota** (opsional, cap di akun user voucher)
+- **Type Char / Type Login** / **Prefix** / **Panjang Karakter**
+- **Voucher Group** (multi-select) — control reseller mana yang boleh akses
+- **Voucher Color** — warna kartu voucher di Telegram
 
-**Add a simple queue (bandwidth limit):**
-```
-You:   buat simple queue: nama "limit-john", target 192.168.1.100/32, max limit 5M/10M
-
-Bot:   Buat simple queue 'limit-john' (target=192.168.1.100/32, limit=5M/10M)? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ simple queue 'limit-john' dibuat
-```
-
-**Remove a simple queue:**
-```
-You:   hapus simple queue [queue_id]
-```
-
-**Enable/disable a queue (without deleting):**
-```
-You:   disable queue [queue_id]
-You:   enable queue [queue_id]
-```
-
-### Queue Tree
-
-Queue tree entries can be viewed but not created through the bot (use Winbox for complex queue tree setups):
-
-```
-You:   list queue tree
-```
+> ⚠️ **Save di sini TIDAK menyentuh MikroTik** — hanya tersimpan di PostgreSQL.
+> Voucher fisik dibuat saat **Generate Voucher** atau saat reseller buy via bot.
 
 ---
 
-## Advanced Features
+## Laporan
 
-### Raw RouterOS API Queries
+**Reseller → Laporan**
 
-For features not covered by the built-in tools, you can query any RouterOS API path directly:
+### Status Sinkronisasi RouterOS
 
-```
-You:   query /ip/proxy
+Card di atas:
+- **Sinkron terakhir**: kapan auto-sync terakhir berhasil per router
+- **/system script (mikhmon)**: jumlah entri + estimasi bytes
+- Tombol **Sinkron Sekarang** — pull `/system script` ke PostgreSQL on-demand
+- Tombol **Bersihkan log lama** — hapus entri lebih lama dari N bulan (default 6,
+  preset 3/6/12/24, custom 1–120). Sync ke DB dulu, baru hapus dari router.
 
-Bot:   ⚠️ Raw API query ke path /ip/proxy di Kantor.
-       Ini langsung akses RouterOS API. Lanjut? (ya/tidak)
+### Voucher Lifecycle (3 angka)
 
-You:   ya
+| Metric | Sumber |
+|--------|--------|
+| **Generated** | Total voucher dari batch dengan source ≠ `mikhmon_import*` (= dashboard generate) |
+| **Activated (Realized)** | Total voucher dari batch `mikhmon_import:*` (dari sync /system script — momen login pertama). **Inilah pendapatan riil** |
+| **Belum Aktif (Stock)** | `Generated − Activated` |
+| **Activation Rate** | `Activated / Generated × 100%` |
 
-Bot:   Yakin nih? Ini bakal query /ip/proxy. Yakin? (ya/tidak)
+### Filter
 
-You:   ya
+- **Pilih Bulan** (default = bulan ini)
+- **Tanggal Custom** (opsional, override bulan)
+- **Filter Reseller** (semua atau spesifik)
 
-Bot:   [results from the router]
-```
+### Tabel Voucher Terjual
 
-**Examples of API paths you can query:**
-- `/ip/proxy` -- proxy settings
-- `/ip/socks` -- SOCKS proxy
-- `/certificate` -- certificates
-- `/system/note` -- system notes
-- `/interface/ethernet` -- ethernet settings
-- `/ip/traffic-flow` -- traffic flow config
+Klik baris batch → modal popup detail per voucher:
+- Username, Status (Belum aktif / Aktif / Hilang/Expired), Uptime, Comment expiry datetime
+- Summary chips per status
 
-### Cross-Router Health Check
+### Import Data Penjualan
 
-Get status of all your routers in one command:
-
-```
-You:   cek semua router
-You:   health check all
-
-Bot:   🟢 Kantor — online · CPU `8%` · `34 client`
-       🟢 Warnet — online · CPU `3%` · `12 client`
-       🔴 Rumah — OFFLINE
-```
-
-Alerts are included for high CPU (>80%) or critical memory (>90%).
-
-### Router Backup
-
-Create a backup file on the router:
-
-```
-You:   backup router Kantor
-
-Bot:   Buat backup di router Kantor? (ya/tidak)
-
-You:   ya
-
-Bot:   ✅ backup dibuat: backup.backup (tersimpan di filesystem router)
-```
-
-The backup file is stored on the router itself. Download it via Winbox or FTP.
-
-You can also try exporting the config as text:
-
-```
-You:   export config router Kantor
-```
-
-Note: Full `/export` may not be available via the API on all RouterOS versions. The bot will provide a summary of key sections as a fallback.
-
-### Scheduled Tasks
-
-**View scheduled tasks on the router:**
-```
-You:   list scheduler
-```
-
-**Add a scheduled task:**
-```
-You:   tambah scheduler: nama auto-backup, on-event "/system backup save name=auto", start-time 00:00:00, interval 1d
-```
-
-**Remove a scheduled task:**
-```
-You:   hapus scheduler auto-backup
-```
-
-### DNS Management
-
-**View DNS settings:**
-```
-You:   cek DNS settings
-```
-
-**List static DNS entries:**
-```
-You:   list DNS static
-```
-
-**Add a static DNS entry:**
-```
-You:   tambah DNS static: server.local -> 192.168.1.100
-```
-
-**Remove a static DNS entry:**
-```
-You:   hapus DNS static [entry_id]
-```
-
-### Static Routes
-
-**View routing table:**
-```
-You:   list routes
-```
-
-**Add a static route:**
-```
-You:   tambah route: destination 10.0.0.0/8, gateway 192.168.1.1
-```
-
-**Remove a static route:**
-```
-You:   hapus route [route_id]
-```
+Tombol di header — manual import script Mikhmon dari router untuk bulan tertentu.
 
 ---
 
-## Tips and Tricks
+## Log Aktivitas
 
-### Common Commands Cheat Sheet
+**System → Log Aktivitas**
 
-| What you want | What to say |
-|---------------|-------------|
-| System status | `cek status`, `info router`, `cek CPU` |
-| Client count | `berapa client online?` |
-| DHCP clients | `list DHCP lease`, `list client` |
-| Hotspot users | `list user hotspot`, `count user hotspot` |
-| Active hotspot | `siapa online di hotspot?` |
-| Create user | `buat user hotspot [name] [password] [profile]` |
-| Generate vouchers | `generate 20 voucher profile 5rb` |
-| Delete user | `hapus user hotspot [name]` |
-| Firewall rules | `list firewall`, `list NAT` |
-| Interface list | `list interface` |
-| Traffic check | `cek traffic ether1` |
-| Router health | `cek semua router` |
-| Logs | `tampilkan log` |
-| Backup | `backup router` |
-| Reboot | `reboot router` (double confirmation required) |
+Log real-time dari RouterOS, **default tampil event voucher saja**:
+- `voucher xxx login` — user voucher login
+- `voucher xxx logout (reason)` — user logout dengan alasan
+- `voucher xxx gagal login: ...` — percobaan login gagal
 
-### Best Practices
+### Filter Topik
 
-1. **Enable the API service on your router.** In Winbox: IP > Services > enable `api` on port 8728. Do NOT expose port 8728 to the public internet.
+| Pilihan | Yang ditampilkan |
+|---------|------------------|
+| **Voucher (login/logout/gagal)** ⭐ default | Hanya event hotspot user authentication |
+| **Semua event hotspot** | Semua log dengan topic `hotspot` |
+| **Semua topik** | Tanpa filter |
+| System / Firewall / DHCP / Wireless | Per topic standard MikroTik |
+| Error / Warning / Info | Per severity |
 
-2. **Use a dedicated RouterOS user for API access.** Create a separate user with `api` group permissions rather than using your main admin account.
-
-3. **Use tunnels for remote routers.** If your router is behind NAT, set up a tunnel service (e.g., `tunnel.my.id`) so the bot can reach it.
-
-4. **Use `count` commands instead of `list` for large datasets.** If you have 1000+ hotspot users, use `count user hotspot` instead of `list user hotspot` to avoid slow responses.
-
-5. **Use profiles for hotspot rate limits.** Create profiles like "5rb", "10rb", "Premium" and assign users to them rather than setting individual limits.
-
-6. **Generate vouchers in batches of 100 or less.** The bot limits bulk generation to 100 per request to prevent abuse.
-
-7. **Clean up regularly.** Use `hapus user expired` and `hapus user disabled` periodically to keep your hotspot user list manageable.
-
-8. **Specify the router name when you have multiple routers.** E.g., `cek CPU Kantor` instead of just `cek CPU` to avoid ambiguity.
-
-### Troubleshooting
-
-**"Router ga bisa dihubungi" / "Connection failed"**
-- Check that the router is powered on and connected to the network.
-- Verify the API service is enabled (IP > Services > api).
-- Check that the port is correct (default: 8728).
-- If using a tunnel, verify the tunnel is active.
-- Check firewall rules on the router -- make sure the API port is not blocked.
-
-**"User not found"**
-- Usernames are case-sensitive. Check the exact spelling.
-- Use the search function: `cari user hotspot [partial_name]`.
-
-**"Profile not found"**
-- List available profiles first: `list profil hotspot`.
-- Profile names are case-sensitive.
-
-**Bot does not respond**
-- Your Telegram ID may not be provisioned. Contact the admin.
-- The bot service may be down. Contact the admin.
-
-**Slow responses**
-- Listing all hotspot users on a router with 1000+ users can be slow. Use `count` instead.
-- The router may have high CPU load or a slow connection.
-
-**"Connection timeout"**
-- The router is taking too long to respond. Try again later.
-- Check the tunnel/network connection between the bot server and the router.
+Auto-refresh tiap 10 detik. Bisa pilih router & jumlah entri (50/100/200/500).
 
 ---
 
-## Language Support
+## Sinkronisasi & Maintenance
 
-The bot defaults to **casual Indonesian (bahasa gaul)**. If you write in English, it will reply in English. You can switch languages at any time by simply writing in your preferred language.
+### Auto-sync 1 jam
 
-## Confirmation Rules
+Background cron jalan tiap 1 jam, untuk setiap router yang terdaftar:
+- Pull `/system script` filter `comment=mikhmon` dari RouterOS
+- Upsert ke PostgreSQL `VoucherBatch` dengan source `mikhmon_import:YYYY-MM`
 
-| Operation Type | Confirmation |
-|----------------|-------------|
-| Read-only (view info, list data) | No confirmation needed |
-| Write operations (add/remove/enable/disable) | Single confirmation: "lanjut? (ya/tidak)" |
-| Dangerous operations (reboot, raw API, run scripts) | Double confirmation |
+**Tidak pernah hapus** dari router — itu operasi terpisah lewat tombol "Bersihkan
+log lama".
 
-To confirm: reply with `ya`, `yes`, `ok`, `lanjut`, `gas`, `sure`, `proceed`, or `oke`.
+### Cleanup script lama
 
-## Supported RouterOS Versions
+Tombol **Bersihkan log lama** di Reports:
+1. Pilih retention (1–120 bulan, preset 3/6/12/24)
+2. Klik **Preview Dulu (Dry-run)** → tampil `wouldDelete: N entries, kept: M, cutoff: YYYY-MM`
+3. Klik **Sinkron + Hapus N Script** → atomic operation:
+   - Sync semua script ke PostgreSQL dulu (data aman di DB)
+   - Lalu delete script lama dari `/system script` di RouterOS
 
-| Version | Support |
-|---------|---------|
-| RouterOS v6.x | Fully supported |
-| RouterOS v7.x | Fully supported |
+Disarankan jalan sebulan sekali kalau pemakaian voucher tinggi.
 
-The bot uses the binary API protocol on port 8728, which is available on both v6 and v7.
+### Auto-cleanup user expired
+
+Background cron tiap 5 menit hapus user dengan `limit-uptime` tercapai
+(legacy mechanism untuk batch lama yang tidak pakai bgservice).
+
+---
+
+## Pertanyaan Umum (FAQ)
+
+### Saya buat profile baru tapi voucher dari profile itu tidak hangus saat validity habis. Kenapa?
+
+Cek:
+1. **Expired Mode bukan `None`** — kalau None, on-login script tidak di-set, tidak ada bgservice scheduler.
+2. **Validity tidak kosong** — kalau kosong, mekanisme expiry mati.
+3. **bgservice scheduler aktif** — buka Winbox → System → Scheduler, cari `<nama_profile>service`, pastikan `disabled=no`.
+4. **User sudah login pertama kali** — kalau belum, comment expiry datetime belum di-set, scheduler tidak akan trigger.
+
+### Voucher dari Mikhmon (yang dibuat sebelum pakai dashboard ini) tampil di Reports?
+
+Ya, otomatis. Auto-sync setiap 1 jam pull semua `/system script` dengan
+`comment=mikhmon` ke PostgreSQL. Voucher Mikhmon tampil di tab "Voucher Terjual"
+dengan source `mikhmon_import:YYYY-MM`.
+
+### Generated 0 di Voucher Lifecycle, kenapa?
+
+Berarti semua voucher di rentang waktu yang dipilih berasal dari Mikhmon import
+(bukan dari dashboard generate). Ini wajar untuk data historis. Voucher yang
+di-generate via dashboard akan menambah angka Generated.
+
+### Saya hapus profile, tapi bgservice scheduler masih ada?
+
+Backend handler delete profile sudah cleanup `<profile>service` scheduler
+otomatis. Kalau masih ada, mungkin nama profile berbeda dari nama scheduler —
+hapus manual lewat Winbox → System → Scheduler.
+
+### Cetak voucher Thermal — header tidak ada logo
+
+Logo voucher belum di-render sebagai `<img>` (current limitation). Yang tampil:
+nama hotspot text, username, validity, harga, reseller. Logo URL tersimpan di
+Router setting tapi rendering masih placeholder.
+
+### Reseller bayar pakai apa?
+
+Lewat bot Telegram (Reseller Bot) — reseller buy voucher → debit saldo
+(`SaldoTransaction.type = VOUCHER_PURCHASE`). Saldo bisa di-top up via Bot Owner
+atau manual via Reseller List page.
+
+---
+
+## Versi & Update
+
+Dokumentasi ini di-update setiap kali ada perubahan UI/fitur. Cek log commit
+[di GitHub](https://github.com/codevjs/mikrotik-ai-agent) untuk perubahan terbaru.
+
+| Versi | Tanggal | Ringkasan |
+|-------|---------|-----------|
+| 2.0 | 2026-04-29 | Rewrite full bahasa Indonesia. Tambah dokumentasi: 5 expired mode, Cetak Voucher dynamic perPage, Voucher Lifecycle 3 angka, sync & cleanup tools, log filter voucher |
+| 1.0 | 2025 | Initial — fokus Telegram bot natural language commands |

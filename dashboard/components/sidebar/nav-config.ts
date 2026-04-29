@@ -88,7 +88,7 @@ export const navGroups: NavGroup[] = [
       { label: "Routers", href: "/routers", icon: Router },
       { label: "Tunnel", href: "/tunnel", icon: Cable },
       { label: "Users", href: "/users", icon: Users, adminOnly: true },
-      { label: "Logs", href: "/logs", icon: Terminal },
+      { label: "Log Aktivitas", href: "/logs", icon: Terminal },
       { label: "Communication", href: "/communication", icon: MessageSquare },
     ],
   },
@@ -98,7 +98,7 @@ export const navGroups: NavGroup[] = [
       { label: "Profile", href: "/profile", icon: UserCircle },
       { label: "Plan", href: "/plan", icon: CreditCard },
       { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
-      { label: "Docs", href: "/docs", icon: BookOpen },
+      { label: "Dokumentasi", href: "/docs", icon: BookOpen },
     ],
   },
 ]
