@@ -151,15 +151,20 @@ _MIKBOTAM_LEGACY_HEADER_RE = re.compile(
 
 
 def _parse_mikbotam_on_login(on_login: str) -> dict:
-    """Extract validity, lockUser, modalPrice, sellPrice from an on-login script header.
+    """Extract metadata from an on-login script header.
 
+    Returns: {validity, lockUser, modalPrice, sellPrice, expiredMode}.
     Recognises both the Mikhmon header (so the dashboard reads back correctly
     after a profile created/edited via Mikhmon UI) and our legacy Mikbotam-only
     header. Returns empty/zero values when neither matches.
 
     Mikhmon header shape: `:put (",<mode>,<modal>,<validity>,<sell>,<note>,<lock>,");`
+    where <mode> ∈ {rem, remc, ntf, ntfc}. Empty string → no expiry.
     """
-    empty = {"validity": "", "lockUser": False, "modalPrice": 0, "sellPrice": 0}
+    empty = {
+        "validity": "", "lockUser": False, "modalPrice": 0, "sellPrice": 0,
+        "expiredMode": "none",
+    }
     if not on_login:
         return empty
     m = _MIKHMON_HEADER_RE.search(on_login)
@@ -174,6 +179,7 @@ def _parse_mikbotam_on_login(on_login: str) -> dict:
             "lockUser": m.group("lock") == "Enable",
             "modalPrice": _to_int(m.group("price")),
             "sellPrice": _to_int(m.group("sell")),
+            "expiredMode": m.group("mode").strip().lower(),
         }
     m = _MIKBOTAM_LEGACY_HEADER_RE.search(on_login)
     if m:
@@ -182,50 +188,218 @@ def _parse_mikbotam_on_login(on_login: str) -> dict:
             "lockUser": m.group("lock") == "enable",
             "modalPrice": 0,
             "sellPrice": 0,
+            "expiredMode": "rem",  # legacy Mikbotam = remove-only
         }
     return empty
 
 
-def _build_mikbotam_on_login(validity: str, lock_user: bool) -> str:
-    """Build on-login script for calendar-based voucher expiry.
+_VALID_EXPIRED_MODES = {"rem", "remc", "ntf", "ntfc", "none", ""}
 
-    Body uses the lean Mikbotam scheduler pattern (no /system script logging
-    since transactions are persisted to PostgreSQL by the dashboard). Header
-    follows the Mikhmon convention so Mikhmon UI displays Expired Mode +
-    Validity columns correctly when viewing the same router.
+
+def _build_mikbotam_on_login(
+    validity: str,
+    lock_user: bool,
+    mode: str = "ntfc",
+    modal_price: int = 0,
+    sell_price: int = 0,
+) -> str:
+    """Build on-login script following Mikhmon literal pattern (full compat).
+
+    The script writes the voucher's expiry datetime into the user's `comment`
+    field on first login (via a temporary scheduler trick to obtain RouterOS's
+    `next-run` datetime). For `*c` modes it also writes a transaction log
+    entry to `/system script` (Mikhmon convention).
+
+    Modes (Mikhmon-aligned):
+      - "rem"   Remove          → bgservice will `/ip hotspot user remove`
+      - "remc"  Remove & Record → adds /system script log + remove
+      - "ntf"   Notice          → bgservice will `set limit-uptime=1s`
+      - "ntfc"  Notice & Record → adds /system script log + set uptime=1s
+      - "none"/""               → returns empty (no on-login script)
 
     Args:
         validity: RouterOS time string, e.g. "12h", "1d", "7d", "30d".
         lock_user: when True, bind the user account to the device's MAC at
             first login so the voucher can't be reused on a different SSID/AP.
+        mode: expiry mode (see above). Defaults to "ntfc" (Notice & Record).
+        modal_price: cost price written into header position #2 (Mikhmon).
+        sell_price: end-user sell price written into header position #4.
 
     References:
-        - github.com/mikbotam/Mikbotam (script body shape)
-        - Mikhmon header convention (Expired Mode + Validity discovery)
+        - laksa19/mikhmonv3 hotspot/adduserprofile.php (literal source)
     """
+    if mode in ("none", "") or not validity:
+        return ""
+    if mode not in _VALID_EXPIRED_MODES:
+        raise ValueError(f"invalid expired mode: {mode!r}")
+
     lock_label = "Enable" if lock_user else "Disable"
+    # Lock line — appended right before the closing braces (Mikhmon style).
     lock_line = (
-        '[/ip hotspot user set mac-address=$"macadd" [find where name=$user]];'
+        '; [:local mac $"mac-address"; /ip hotspot user set mac-address=$mac '
+        '[find where name=$user]]'
         if lock_user else ''
     )
-    return (
-        f':put (",remc,0,{validity},0,,{lock_label},");'
-        '{'
-        ':local date [/system clock get date ];'
-        ':local time [/system clock get time ];'
-        f':local uptime ({validity});'
-        ':local macadd $"mac-address";'
-        ':local ipaddresslocal $"address";'
-        f'{lock_line}'
-        '[/system scheduler add disabled=no interval=$uptime name=$user '
-        'on-event= "'
-        '[/ip hotspot active remove [find where user=$user]];'
-        '[/ip hotspot user remove [find where name=$user]];'
-        '[/ip hotspot cookie remove [find user=$user]];'
-        '[/sys sch re [find where name=$user]]'
-        '" start-date=$date start-time=$time];'
-        '}'
+    # Record line — only appended for *c modes (writes a transaction log
+    # entry to /system script with comment="mikhmon" for Reports parsing).
+    record_line = ''
+    if mode in ("remc", "ntfc"):
+        record_line = (
+            '; :local mac $"mac-address"'
+            '; :local time [/system clock get time ]'
+            '; /system script add '
+            f'name="$date-|-$time-|-$user-|-{modal_price}-|-$address-|-$mac-|-{validity}'
+            '-|-$comment" '
+            'owner="$month$year" source="$date" comment="mikhmon"'
+        )
+
+    # Header — drives Mikhmon UI columns (Expired Mode + Validity + prices).
+    header = (
+        f':put (",{mode},{modal_price},{validity},{sell_price},,{lock_label},");'
     )
+
+    # Body — first-login comment + scheduler trick (literal copy from Mikhmon
+    # adduserprofile.php#L65). Reformatted to one line for RouterOS storage.
+    body = (
+        '{'
+        ':local comment [ /ip hotspot user get [/ip hotspot user find where '
+        'name="$user"] comment]; '
+        ':local ucode [:pic $comment 0 2]; '
+        ':if ($ucode = "vc" or $ucode = "up" or $comment = "") do={ '
+        ':local date [ /system clock get date ];'
+        ':local year [ :pick $date 7 11 ];'
+        ':local month [ :pick $date 0 3 ]; '
+        f'/sys sch add name="$user" disable=no start-date=$date interval="{validity}"; '
+        ':delay 5s; '
+        ':local exp [ /sys sch get [ /sys sch find where name="$user" ] next-run]; '
+        ':local getxp [len $exp]; '
+        ':if ($getxp = 15) do={ '
+        ':local d [:pic $exp 0 6]; '
+        ':local t [:pic $exp 7 16]; '
+        ':local s ("/"); '
+        ':local exp ("$d$s$year $t"); '
+        '/ip hotspot user set comment="$exp" [find where name="$user"];'
+        '}; '
+        ':if ($getxp = 8) do={ '
+        '/ip hotspot user set comment="$date $exp" [find where name="$user"];'
+        '}; '
+        ':if ($getxp > 15) do={ '
+        '/ip hotspot user set comment="$exp" [find where name="$user"];'
+        '};'
+        ':delay 5s; '
+        '/sys sch remove [find where name="$user"]'
+    )
+
+    return header + body + record_line + lock_line + "}}"
+
+
+def _build_mikhmon_bgservice(profile_name: str, mode: str) -> str:
+    """Build per-profile bgservice scheduler script (Mikhmon literal copy).
+
+    Loops all hotspot users in the given profile, parses expiry datetime from
+    each user's `comment` field, compares to router clock, and runs the
+    expiry action when expired.
+
+    Action depends on mode:
+      - rem / remc → `/ip hotspot user remove $i`
+      - ntf / ntfc → `/ip hotspot user set limit-uptime=1s $i`
+
+    Reference: laksa19/mikhmonv3 hotspot/adduserprofile.php#L86 (literal).
+    """
+    if mode in ("rem", "remc"):
+        action = "remove"
+    elif mode in ("ntf", "ntfc"):
+        action = "set limit-uptime=1s"
+    else:
+        return ""
+
+    # Mikhmon literal — date/time integer helpers + foreach-user check.
+    return (
+        ':local dateint do={'
+        ':local montharray ( "jan","feb","mar","apr","may","jun","jul","aug",'
+        '"sep","oct","nov","dec" );'
+        ':local days [ :pick $d 4 6 ];'
+        ':local month [ :pick $d 0 3 ];'
+        ':local year [ :pick $d 7 11 ];'
+        ':local monthint ([ :find $montharray $month]);'
+        ':local month ($monthint + 1);'
+        ':if ( [len $month] = 1) do={'
+        ':local zero ("0");'
+        ':return [:tonum ("$year$zero$month$days")];'
+        '} else={'
+        ':return [:tonum ("$year$month$days")];'
+        '}'
+        '}; '
+        ':local timeint do={ '
+        ':local hours [ :pick $t 0 2 ]; '
+        ':local minutes [ :pick $t 3 5 ]; '
+        ':return ($hours * 60 + $minutes) ; '
+        '}; '
+        ':local date [ /system clock get date ]; '
+        ':local time [ /system clock get time ]; '
+        ':local today [$dateint d=$date] ; '
+        ':local curtime [$timeint t=$time] ; '
+        f':foreach i in [ /ip hotspot user find where profile="{profile_name}" ] do={{ '
+        ':local comment [ /ip hotspot user get $i comment]; '
+        ':local name [ /ip hotspot user get $i name]; '
+        ':local gettime [:pic $comment 12 20]; '
+        ':if ([:pic $comment 3] = "/" and [:pic $comment 6] = "/") do={'
+        ':local expd [$dateint d=$comment] ; '
+        ':local expt [$timeint t=$gettime] ; '
+        ':if (($expd < $today and $expt < $curtime) or '
+        '($expd < $today and $expt > $curtime) or '
+        '($expd = $today and $expt < $curtime)) do={ '
+        f'[ /ip hotspot user {action} $i ]; '
+        '[ /ip hotspot active remove [find where user=$name] ];'
+        '}'
+        '}'
+        '}}'
+    )
+
+
+def _sync_bgservice(api, profile_name: str, mode: str, validity: str) -> None:
+    """Add/update/remove the bgservice scheduler for a hotspot profile.
+
+    Mikhmon convention: 1 scheduler per profile that periodically loops users
+    and applies expiry action. Scheduler name = `<profile>service`.
+
+    Behaviour:
+      - mode in (rem, remc, ntf, ntfc) AND validity present → upsert scheduler
+        (interval=1m, on-event=bgservice script for that mode).
+      - mode == none / validity empty → remove existing scheduler if any.
+
+    Idempotent — safe to call on every profile add/update.
+    """
+    sched = api.path("system", "scheduler")
+    sched_name = f"{profile_name}service"
+    existing_id = None
+    for s in sched:
+        if s.get("name") == sched_name:
+            existing_id = s.get(".id")
+            break
+
+    needs_scheduler = (
+        validity and mode in {"rem", "remc", "ntf", "ntfc"}
+    )
+
+    if not needs_scheduler:
+        if existing_id:
+            sched.remove(existing_id)
+        return
+
+    on_event = _build_mikhmon_bgservice(profile_name, mode)
+    params = {
+        "name": sched_name,
+        "interval": "1m",
+        "start-time": "00:00:00",
+        "on-event": on_event,
+        "disabled": "no",
+        "comment": f"mikbotam-bgservice profile={profile_name}",
+    }
+    if existing_id:
+        sched.update(**{**params, ".id": existing_id})
+    else:
+        sched.add(**params)
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -768,6 +942,7 @@ class HealthHandler(BaseHTTPRequestHandler):
                                     "lockUser": meta["lockUser"],
                                     "modalPrice": meta["modalPrice"],
                                     "sellPrice": meta["sellPrice"],
+                                    "expiredMode": meta["expiredMode"],
                                 })
                         except Exception:
                             # Fallback: extract unique profile names from hotspot users
@@ -2007,8 +2182,11 @@ class HealthHandler(BaseHTTPRequestHandler):
     # ══════════════════════════════════════════════════════════════════
 
     def _handle_hotspot_profile_add(self, user_id):
-        """Add a new hotspot user profile (Mikbotam pattern: on-login script
-        + scheduler for calendar-based expiry)."""
+        """Add a new hotspot user profile (Mikhmon-style — full compat).
+
+        Generates on-login script + a per-profile bgservice scheduler that
+        periodically checks expiry. Supports 5 modes: rem, remc, ntf, ntfc, none.
+        """
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
@@ -2025,6 +2203,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             validity = (body.get("validity") or body.get("masaBerlaku") or "").strip()
             lock_user = bool(body.get("lockUser"))
             transparent_proxy = "yes" if body.get("transparentProxy") else "no"
+            # Default mode = ntfc (Notice & Record) — recommended for reporting.
+            mode = body.get("expiredMode") or body.get("mode") or "ntfc"
+            if mode not in _VALID_EXPIRED_MODES:
+                mode = "ntfc"
+            modal_price = int(body.get("modalPrice") or 0)
+            sell_price = int(body.get("sellPrice") or 0)
 
             add_params = {
                 "name": name,
@@ -2037,18 +2221,21 @@ class HealthHandler(BaseHTTPRequestHandler):
                 add_params["shared-users"] = str(body["sharedUsers"])
             if body.get("parentQueue"):
                 add_params["parent-queue"] = body["parentQueue"]
-            if validity:
-                add_params["on-login"] = _build_mikbotam_on_login(validity, lock_user)
+            if validity and mode != "none":
+                add_params["on-login"] = _build_mikbotam_on_login(
+                    validity, lock_user, mode, modal_price, sell_price,
+                )
 
             with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
                 api.path("ip", "hotspot", "user", "profile").add(**add_params)
+                _sync_bgservice(api, name, mode, validity)
 
             _send_json(self, {"status": "ok"})
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
     def _handle_hotspot_profile_update(self, user_id, name):
-        """Update an existing hotspot user profile (Mikbotam pattern)."""
+        """Update an existing hotspot user profile (Mikhmon-style)."""
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
@@ -2078,16 +2265,27 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if "transparentProxy" in body:
                     update_params["transparent-proxy"] = "yes" if body["transparentProxy"] else "no"
 
-                # Validity / lockUser → regenerate on-login script when either provided.
-                # Allow caller to send "onLogin" directly (e.g. from script editor) to override.
+                # Detect expired-mode / validity changes → regenerate on-login + bgservice.
+                # Allow caller to send "onLogin" directly (from script editor) to override.
+                regen_keys = {"validity", "masaBerlaku", "lockUser", "expiredMode",
+                              "mode", "modalPrice", "sellPrice"}
                 if "onLogin" in body:
                     update_params["on-login"] = body["onLogin"]
-                elif "validity" in body or "masaBerlaku" in body or "lockUser" in body:
+                elif regen_keys & body.keys():
                     validity = (body.get("validity") or body.get("masaBerlaku") or "").strip()
                     lock_user = bool(body.get("lockUser"))
+                    mode = body.get("expiredMode") or body.get("mode") or "ntfc"
+                    if mode not in _VALID_EXPIRED_MODES:
+                        mode = "ntfc"
+                    modal_price = int(body.get("modalPrice") or 0)
+                    sell_price = int(body.get("sellPrice") or 0)
                     update_params["on-login"] = (
-                        _build_mikbotam_on_login(validity, lock_user) if validity else ""
+                        _build_mikbotam_on_login(
+                            validity, lock_user, mode, modal_price, sell_price,
+                        )
+                        if validity and mode != "none" else ""
                     )
+                    _sync_bgservice(api, name, mode, validity)
 
                 resource.update(**update_params)
 
@@ -2096,7 +2294,7 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     def _handle_hotspot_profile_delete(self, user_id, name):
-        """Delete a hotspot user profile."""
+        """Delete a hotspot user profile + companion bgservice scheduler."""
         try:
             registry = _get_registry()
             conn = registry.resolve(user_id, None)
@@ -2111,6 +2309,8 @@ class HealthHandler(BaseHTTPRequestHandler):
                     _send_json(self, {"error": f"Profile '{name}' not found"}, 404)
                     return
                 resource.remove(item_id)
+                # Cleanup companion bgservice scheduler if any.
+                _sync_bgservice(api, name, "none", "")
             _send_json(self, {"status": "ok"})
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
@@ -2141,6 +2341,7 @@ class HealthHandler(BaseHTTPRequestHandler):
                             "lockUser": meta["lockUser"],
                             "modalPrice": meta["modalPrice"],
                             "sellPrice": meta["sellPrice"],
+                            "expiredMode": meta["expiredMode"],
                         })
                         return
                 _send_json(self, {"error": f"Profile '{name}' not found"}, 404)

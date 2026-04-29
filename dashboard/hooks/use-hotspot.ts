@@ -49,6 +49,7 @@ export interface HotspotProfile {
   lockUser?: boolean
   modalPrice?: number    // posisi 2 di header — harga modal/cost
   sellPrice?: number     // posisi 4 di header — harga jual end-user
+  expiredMode?: string   // rem | remc | ntf | ntfc | none
 }
 
 export interface HotspotProfileInput {
@@ -61,6 +62,9 @@ export interface HotspotProfileInput {
   parentQueue?: string
   onLogin?: string           // optional override (script editor)
   router?: string
+  expiredMode?: string       // rem | remc | ntf | ntfc | none (default ntfc)
+  modalPrice?: number
+  sellPrice?: number
 }
 
 export interface SimpleQueue {

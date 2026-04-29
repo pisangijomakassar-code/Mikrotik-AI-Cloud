@@ -25,11 +25,14 @@ const EMPTY: HotspotProfileInput = {
   parentQueue: "",
 }
 
-type ExpiredMode = "none" | "remove"
+type ExpiredMode = "ntfc" | "remc" | "ntf" | "rem" | "none"
 
 const EXPIRED_MODE_OPTIONS: { value: ExpiredMode; label: string; hint: string }[] = [
-  { value: "remove", label: "Remove — voucher dihapus saat validity habis", hint: "Pakai /system scheduler ala Mikbotam." },
-  { value: "none",   label: "None — tidak auto-expire",                     hint: "User dikelola manual. Validity diabaikan." },
+  { value: "ntfc", label: "Notice & Record (RECOMMENDED)", hint: "Voucher dinonaktifkan saat expired (user tetap di RouterOS, uptime/bytes tetap bisa dilihat). Tulis log transaksi ke /system script untuk laporan." },
+  { value: "remc", label: "Remove & Record",               hint: "Voucher dihapus saat expired. Log transaksi tetap ada di /system script untuk laporan." },
+  { value: "ntf",  label: "Notice (no log)",               hint: "Voucher dinonaktifkan saat expired. Tidak ada log activation — laporan tidak akurat." },
+  { value: "rem",  label: "Remove (no log)",               hint: "Voucher dihapus saat expired. Tidak ada log — laporan tidak akurat." },
+  { value: "none", label: "None — tidak auto-expire",      hint: "User dikelola manual. Validity diabaikan." },
 ]
 
 const DEFAULT_ON_LOGIN_SCRIPT = `/ip hotspot user
@@ -50,7 +53,7 @@ export default function HotspotProfilesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<HotspotProfile | null>(null)
   const [form, setForm] = useState<HotspotProfileInput>(EMPTY)
-  const [expiredMode, setExpiredMode] = useState<ExpiredMode>("remove")
+  const [expiredMode, setExpiredMode] = useState<ExpiredMode>("ntfc")
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [scriptDialog, setScriptDialog] = useState<HotspotProfile | null>(null)
@@ -60,11 +63,11 @@ export default function HotspotProfilesPage() {
   function openAdd() {
     setEditTarget(null)
     setForm(EMPTY)
-    setExpiredMode("remove")
+    setExpiredMode("ntfc")
     setDialogOpen(true)
   }
 
-  function openEdit(p: HotspotProfile & { validity?: string; lockUser?: boolean; transparentProxy?: string }) {
+  function openEdit(p: HotspotProfile & { validity?: string; lockUser?: boolean; transparentProxy?: string; expiredMode?: string }) {
     const validity = p.validity ?? ""
     setEditTarget(p)
     setForm({
@@ -76,7 +79,15 @@ export default function HotspotProfilesPage() {
       transparentProxy: p.transparentProxy === "yes",
       parentQueue: p.parentQueue ?? "",
     })
-    setExpiredMode(validity ? "remove" : "none")
+    // Resolve mode from server (parsed from on-login header). Fallback rules:
+    //   - validity empty → "none"
+    //   - server returns rem/remc/ntf/ntfc → use as-is
+    //   - else default to "ntfc" (current recommended)
+    const serverMode = (p.expiredMode ?? "").toLowerCase() as ExpiredMode
+    const validModes: ExpiredMode[] = ["ntfc", "remc", "ntf", "rem", "none"]
+    setExpiredMode(
+      !validity ? "none" : (validModes.includes(serverMode) ? serverMode : "ntfc")
+    )
     setDialogOpen(true)
   }
 
@@ -87,14 +98,15 @@ export default function HotspotProfilesPage() {
 
   async function handleSave() {
     if (!form.name.trim()) { toast.error("Nama profil wajib diisi"); return }
-    if (expiredMode === "remove" && !form.validity?.trim()) {
-      toast.error("Validity wajib diisi saat Expired Mode = Remove (atau ganti ke None)")
+    if (expiredMode !== "none" && !form.validity?.trim()) {
+      toast.error("Validity wajib diisi saat Expired Mode bukan None")
       return
     }
     // When mode = none, force-empty validity & lockUser → backend skips on-login.
-    const payload: HotspotProfileInput = expiredMode === "none"
-      ? { ...form, validity: "", lockUser: false }
-      : form
+    const payload: HotspotProfileInput & { expiredMode?: ExpiredMode } =
+      expiredMode === "none"
+        ? { ...form, validity: "", lockUser: false, expiredMode: "none" }
+        : { ...form, expiredMode }
     setSaving(true)
     try {
       if (editTarget) {
@@ -288,7 +300,7 @@ export default function HotspotProfilesPage() {
                   {EXPIRED_MODE_OPTIONS.find((o) => o.value === expiredMode)?.hint}
                 </p>
               </div>
-              {expiredMode === "remove" && (
+              {expiredMode !== "none" && (
                 <div className="space-y-1.5">
                   <label className={lbl}>Validity (masa berlaku sejak login pertama)</label>
                   <Input
@@ -317,7 +329,7 @@ export default function HotspotProfilesPage() {
                 </datalist>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {expiredMode === "remove" && (
+                {expiredMode !== "none" && (
                   <div className="space-y-1.5">
                     <label className={lbl}>Lock User (MAC binding)</label>
                     <select
