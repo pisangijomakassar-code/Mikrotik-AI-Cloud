@@ -14,6 +14,40 @@ interface SyncRouterEntry {
   scriptBytesEstimate: number | null
 }
 
+interface BatchDetailVoucher {
+  username: string
+  password: string
+  status: "unused" | "active" | "removed" | "unknown"
+  uptime: string
+  comment: string
+  profile: string
+  disabled: boolean
+}
+
+interface BatchDetail {
+  batch: {
+    id: string
+    createdAt: string
+    routerName: string
+    profile: string
+    count: number
+    pricePerUnit: number
+    hargaEndUser: number
+    markUp: number
+    discount: number
+    source: string
+    reseller: { id: string; name: string } | null
+  }
+  summary: {
+    total: number
+    unused: number
+    active: number
+    removed: number
+    unknown: number
+  }
+  vouchers: BatchDetailVoucher[]
+}
+
 function timeAgo(iso: string | undefined): string {
   if (!iso) return "—"
   const diff = Date.now() - new Date(iso).getTime()
@@ -117,6 +151,11 @@ export default function ReportsPage() {
   const [syncStatus, setSyncStatus] = useState<SyncRouterEntry[]>([])
   const [syncing, setSyncing] = useState(false)
 
+  // Per-batch detail drawer
+  const [detailBatchId, setDetailBatchId] = useState<string | null>(null)
+  const [detailData, setDetailData] = useState<BatchDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+
   // Cleanup dialog state
   const [cleanupOpen, setCleanupOpen] = useState(false)
   const [cleanupRetention, setCleanupRetention] = useState(6)
@@ -206,6 +245,20 @@ export default function ReportsPage() {
     setCleanupDryRun(null)
     setCleanupOpen(true)
   }
+
+  // Fetch detail when batchId selected (drill-down).
+  useEffect(() => {
+    if (!detailBatchId) { setDetailData(null); return }
+    let cancelled = false
+    setDetailLoading(true)
+    setDetailData(null)
+    fetch(`/api/vouchers/${detailBatchId}/detail`)
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) setDetailData(j) })
+      .catch(() => { if (!cancelled) toast.error("Gagal memuat detail batch") })
+      .finally(() => { if (!cancelled) setDetailLoading(false) })
+    return () => { cancelled = true }
+  }, [detailBatchId])
 
   const handleMonthChange = (yearMonth: string) => {
     setSelectedMonth(yearMonth)
@@ -707,7 +760,11 @@ export default function ReportsPage() {
                   {data.batches.length === 0 ? (
                     <tr><td colSpan={8} className="px-6 py-12 text-center text-sm text-slate-500">Tidak ada data</td></tr>
                   ) : data.batches.map((b) => (
-                    <tr key={b.id} className="hover:bg-muted/50 transition-colors">
+                    <tr
+                      key={b.id}
+                      onClick={() => setDetailBatchId(b.id)}
+                      className="hover:bg-muted/50 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3.5 text-xs text-slate-400 whitespace-nowrap">{new Date(b.createdAt).toLocaleDateString("id-ID")}</td>
                       <td className="px-5 py-3.5 text-xs text-foreground">{b.routerName}</td>
                       <td className="px-5 py-3.5"><span className="text-xs px-2 py-0.5 rounded bg-muted text-primary">{b.profile}</span></td>
@@ -755,6 +812,122 @@ export default function ReportsPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Per-batch detail drawer */}
+      {detailBatchId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setDetailBatchId(null)}
+        >
+          <div
+            className="bg-[#0f1623] border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div>
+                <h3 className="text-base font-bold text-white">Detail Batch</h3>
+                {detailData && (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    <span className="font-mono-tech">{detailData.batch.id.slice(0, 8)}…</span>
+                    {" · "}
+                    {new Date(detailData.batch.createdAt).toLocaleString("id-ID")}
+                    {" · "}
+                    Profile <span className="text-primary font-mono-tech">{detailData.batch.profile}</span>
+                    {detailData.batch.reseller && <> · Reseller <span className="text-foreground">{detailData.batch.reseller.name}</span></>}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setDetailBatchId(null)}
+                className="text-slate-500 hover:text-slate-200 transition-colors px-2 py-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <div className="p-12 text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+                <p className="text-xs text-slate-500">Memuat detail voucher...</p>
+              </div>
+            ) : detailData ? (
+              <>
+                {/* Summary chips */}
+                <div className="px-5 py-3 border-b border-white/5 flex flex-wrap gap-2 text-[11px]">
+                  <span className="px-2 py-1 rounded bg-muted text-foreground font-bold">
+                    Total: {detailData.summary.total}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-400">
+                    Belum aktif: {detailData.summary.unused}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-tertiary/10 text-tertiary">
+                    Aktif: {detailData.summary.active}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-destructive/10 text-destructive">
+                    Hilang/expired: {detailData.summary.removed}
+                  </span>
+                  {detailData.summary.unknown > 0 && (
+                    <span className="px-2 py-1 rounded bg-slate-500/10 text-slate-400">
+                      Tidak diketahui: {detailData.summary.unknown}
+                    </span>
+                  )}
+                </div>
+
+                {/* Voucher table */}
+                <div className="flex-1 overflow-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-surface-lowest/80 sticky top-0">
+                      <tr>
+                        {["Username", "Status", "Uptime", "Comment / Expiry"].map((h) => (
+                          <th key={h} className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/10">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {detailData.vouchers.map((v) => (
+                        <tr key={v.username} className="hover:bg-muted/30">
+                          <td className="px-4 py-2 font-mono-tech font-bold text-foreground">{v.username}</td>
+                          <td className="px-4 py-2">
+                            <StatusPill status={v.status} />
+                          </td>
+                          <td className="px-4 py-2 font-mono-tech text-slate-400">{v.uptime || "—"}</td>
+                          <td className="px-4 py-2 font-mono-tech text-[10px] text-slate-500 max-w-[250px] truncate" title={v.comment}>
+                            {v.comment || "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="p-12 text-center text-sm text-slate-500">Gagal memuat data</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function StatusPill({ status }: { status: BatchDetailVoucher["status"] }) {
+  const styles: Record<BatchDetailVoucher["status"], string> = {
+    unused:  "bg-amber-500/10 text-amber-400",
+    active:  "bg-tertiary/10 text-tertiary",
+    removed: "bg-destructive/10 text-destructive",
+    unknown: "bg-slate-500/10 text-slate-400",
+  }
+  const labels: Record<BatchDetailVoucher["status"], string> = {
+    unused:  "Belum aktif",
+    active:  "Aktif",
+    removed: "Hilang/Expired",
+    unknown: "?",
+  }
+  return (
+    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${styles[status]}`}>
+      {labels[status]}
+    </span>
   )
 }
