@@ -43,6 +43,9 @@ export interface CreateRouterInput {
   userId: string;
   // MikroTik DNS settings
   dnsHotspot?: string;
+  // Hotspot branding (untuk header voucher cetak)
+  hotspotName?: string;
+  hotspotLogoUrl?: string;
   // Telegram bot integration (optional)
   telegramOwnerUsername?: string;
   telegramOwnerId?: string;

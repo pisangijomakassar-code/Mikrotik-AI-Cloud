@@ -91,6 +91,10 @@ model Router {
   // MikroTik DNS settings (for hotspot landing)
   dnsHotspot      String    @default("")
 
+  // Hotspot branding (used when printing voucher cards)
+  hotspotName     String    @default("")  // Display name di header voucher (kosong = pakai `name`)
+  hotspotLogoUrl  String    @default("")  // URL/path logo (kosong = no logo)
+
   // Telegram bot integration (optional, for per-router notifications)
   telegramOwnerUsername String @default("")
   telegramOwnerId       String @default("")

@@ -71,6 +71,8 @@ export async function createRouter(data: CreateRouterInput) {
       isDefault: data.isDefault ?? false,
       userId: data.userId,
       dnsHotspot: data.dnsHotspot ?? "",
+      hotspotName: data.hotspotName ?? "",
+      hotspotLogoUrl: data.hotspotLogoUrl ?? "",
       telegramOwnerUsername: data.telegramOwnerUsername ?? "",
       telegramOwnerId: data.telegramOwnerId ?? "",
       botToken: encryptedBotToken,
@@ -94,6 +96,8 @@ export async function updateRouter(id: string, data: Partial<CreateRouterInput>)
     updateData.passwordEnc = await encryptPassword(data.password)
   }
   if (data.dnsHotspot !== undefined) updateData.dnsHotspot = data.dnsHotspot
+  if (data.hotspotName !== undefined) updateData.hotspotName = data.hotspotName
+  if (data.hotspotLogoUrl !== undefined) updateData.hotspotLogoUrl = data.hotspotLogoUrl
   if (data.telegramOwnerUsername !== undefined) updateData.telegramOwnerUsername = data.telegramOwnerUsername
   if (data.telegramOwnerId !== undefined) updateData.telegramOwnerId = data.telegramOwnerId
   if (data.botUsername !== undefined) updateData.botUsername = data.botUsername

@@ -44,6 +44,11 @@ export interface HotspotProfile {
   onLogin?: string
   onLogout?: string
   price?: number
+  // Parsed from on-login Mikhmon header (kosong/0 kalau profil non-Mikhmon)
+  validity?: string
+  lockUser?: boolean
+  modalPrice?: number    // posisi 2 di header — harga modal/cost
+  sellPrice?: number     // posisi 4 di header — harga jual end-user
 }
 
 export interface HotspotProfileInput {

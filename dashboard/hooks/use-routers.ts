@@ -16,6 +16,9 @@ export interface RouterData {
   createdAt: string
   // MikroTik DNS settings
   dnsHotspot?: string
+  // Hotspot branding (untuk cetak voucher)
+  hotspotName?: string
+  hotspotLogoUrl?: string
   // Telegram bot integration (optional)
   telegramOwnerUsername?: string
   telegramOwnerId?: string

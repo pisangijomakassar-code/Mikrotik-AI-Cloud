@@ -9,6 +9,7 @@ import { PrintVoucherSheet } from "@/components/print-voucher-sheet"
 import { useVoucherTypes } from "@/hooks/use-voucher-types"
 import { useResellers } from "@/hooks/use-resellers"
 import { useRouters } from "@/hooks/use-routers"
+import { useHotspotProfiles } from "@/hooks/use-hotspot"
 
 const TYPE_CHAR_OPTIONS = [
   "Random abcd2345",
@@ -31,8 +32,10 @@ export default function GenerateVoucherPage() {
   const { data: voucherTypes, isLoading: loadingTypes } = useVoucherTypes()
   const { data: resellers, isLoading: loadingResellers } = useResellers()
   const { data: routers } = useRouters()
+  const { data: hotspotProfiles, isLoading: loadingProfiles } = useHotspotProfiles()
 
   const [selectedTypeId, setSelectedTypeId] = useState("")
+  const [directProfile, setDirectProfile] = useState("")
   const [resellerId, setResellerId] = useState("")
   const [routerName, setRouterName] = useState("")
   const [count, setCount] = useState(10)
@@ -88,8 +91,11 @@ export default function GenerateVoucherPage() {
   }
 
   async function handleGenerate() {
-    if (!selectedTypeId) { toast.error("Pilih jenis voucher terlebih dahulu"); return }
-    if (!selectedType) return
+    const profileToUse = selectedType?.profile ?? directProfile.trim()
+    if (!profileToUse) {
+      toast.error("Pilih Jenis Voucher atau Profil Hotspot")
+      return
+    }
 
     const qty = Math.max(1, Math.min(count, 200))
     setGenerating(true)
@@ -101,19 +107,21 @@ export default function GenerateVoucherPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          profile: selectedType.profile,
+          profile: profileToUse,
           count: qty,
           prefix,
           routerName: routerName || "",
           passwordLength: charLen,
           usernameLength: charLen,
-          server: selectedType.server !== "all" ? selectedType.server : "",
+          server: selectedType && selectedType.server !== "all" ? selectedType.server : "",
           typeChar,
           typeLogin,
           limitUptime: limitUptime || "",
           limitQuota: limitQuota ? parseInt(limitQuota) : undefined,
           resellerId: resellerId || null,
-          pricePerUnit: hargaEndUser ? parseInt(hargaEndUser) : selectedType.harga,
+          pricePerUnit: hargaEndUser
+            ? parseInt(hargaEndUser)
+            : (selectedType?.harga ?? 0),
           discount: diskon,
           markUp: markup,
         }),
@@ -242,23 +250,20 @@ export default function GenerateVoucherPage() {
               </div>
             </div>
 
-            {/* Jenis Voucher */}
+            {/* Jenis Voucher (opsional — auto-fill defaults) */}
             <div className="space-y-1.5">
-              <label className={lbl}>Jenis Voucher *</label>
+              <label className={lbl}>Jenis Voucher (opsional)</label>
               <Select value={selectedTypeId || "__none__"} onValueChange={(v) => handleSelectType(v === "__none__" ? "" : v)} disabled={loadingTypes}>
                 <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
-                  <SelectValue placeholder={loadingTypes ? "Memuat jenis voucher..." : "Pilih jenis voucher..."} />
+                  <SelectValue placeholder={loadingTypes ? "Memuat jenis voucher..." : "Pilih untuk auto-fill, atau skip"} />
                 </SelectTrigger>
                 <SelectContent className="bg-muted border-border text-foreground">
-                  {filteredTypes.length === 0 ? (
-                    <SelectItem value="__none__" disabled>Tidak ada jenis voucher</SelectItem>
-                  ) : (
-                    filteredTypes.map((vt) => (
-                      <SelectItem key={vt.id} value={vt.id}>
-                        {vt.namaVoucher} — {vt.profile}
-                      </SelectItem>
-                    ))
-                  )}
+                  <SelectItem value="__none__">— Tidak pakai (isi Profil Hotspot manual) —</SelectItem>
+                  {filteredTypes.map((vt) => (
+                    <SelectItem key={vt.id} value={vt.id}>
+                      {vt.namaVoucher} — {vt.profile}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {selectedType && (
@@ -268,6 +273,26 @@ export default function GenerateVoucherPage() {
                 </div>
               )}
             </div>
+
+            {/* Profil Hotspot — dipakai kalau Jenis Voucher tidak dipilih */}
+            {!selectedTypeId && (
+              <div className="space-y-1.5">
+                <label className={lbl}>Profil Hotspot *</label>
+                <Select value={directProfile || "__none__"} onValueChange={(v) => setDirectProfile(v === "__none__" ? "" : v)} disabled={loadingProfiles}>
+                  <SelectTrigger className="w-full bg-muted border-none text-foreground text-sm">
+                    <SelectValue placeholder={loadingProfiles ? "Memuat profil..." : "Pilih profil hotspot di MikroTik"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-muted border-border text-foreground">
+                    <SelectItem value="__none__" disabled>Pilih profil...</SelectItem>
+                    {hotspotProfiles?.map((p) => (
+                      <SelectItem key={p.name} value={p.name}>
+                        {p.name} {p.rateLimit ? <span className="text-muted-foreground text-xs">({p.rateLimit})</span> : null}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Server / Router */}
             <div className="space-y-1.5">
@@ -357,7 +382,7 @@ export default function GenerateVoucherPage() {
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
-              disabled={generating || !selectedTypeId}
+              disabled={generating || (!selectedTypeId && !directProfile)}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-headline font-bold text-sm bg-linear-to-br from-primary to-primary-container text-primary-foreground hover:brightness-105 transition-all disabled:opacity-50"
             >
               {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Zap className="h-4 w-4" /> Generate {count} Voucher</>}

@@ -25,6 +25,8 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
 
   // MikroTik DNS settings
   const [dnsHotspot, setDnsHotspot] = useState(router.dnsHotspot ?? "")
+  const [hotspotName, setHotspotName] = useState(router.hotspotName ?? "")
+  const [hotspotLogoUrl, setHotspotLogoUrl] = useState(router.hotspotLogoUrl ?? "")
 
   // Telegram bot integration (optional)
   const [telegramOwnerUsername, setTelegramOwnerUsername] = useState(router.telegramOwnerUsername ?? "")
@@ -60,6 +62,8 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
     setLabel(router.label ?? "")
     setIsDefault(router.isDefault)
     setDnsHotspot(router.dnsHotspot ?? "")
+    setHotspotName(router.hotspotName ?? "")
+    setHotspotLogoUrl(router.hotspotLogoUrl ?? "")
     setTelegramOwnerUsername(router.telegramOwnerUsername ?? "")
     setTelegramOwnerId(router.telegramOwnerId ?? "")
     setBotToken("")
@@ -116,6 +120,8 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
       label: label.trim() || "",
       isDefault,
       dnsHotspot: dnsHotspot.trim(),
+      hotspotName: hotspotName.trim(),
+      hotspotLogoUrl: hotspotLogoUrl.trim(),
       telegramOwnerUsername: telegramOwnerUsername.trim(),
       telegramOwnerId: telegramOwnerId.trim(),
       botUsername: botUsername.trim(),
@@ -258,19 +264,45 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
               )}
             </div>
 
-            {/* ── MikroTik DNS ── */}
+            {/* ── Hotspot Branding (untuk cetak voucher & QR login) ── */}
             <div className="pt-4 border-t border-border">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">MikroTik DNS</h4>
-              <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Hotspot Branding</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    DNS Hotspot <span className="text-muted-foreground/40 normal-case">(URL login QR)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="e.g. toko.net"
+                    type="text"
+                    value={dnsHotspot}
+                    onChange={(e) => setDnsHotspot(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                    Nama Hotspot <span className="text-muted-foreground/40 normal-case">(header voucher)</span>
+                  </label>
+                  <Input
+                    className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                    placeholder="e.g. Cafe WiFi"
+                    type="text"
+                    value={hotspotName}
+                    onChange={(e) => setHotspotName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 mt-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
-                  DNS Hotspot <span className="text-muted-foreground/40 normal-case">(Opsional)</span>
+                  Logo Hotspot URL <span className="text-muted-foreground/40 normal-case">(opsional, untuk header voucher)</span>
                 </label>
                 <Input
                   className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
-                  placeholder="e.g. toko.net"
+                  placeholder="https://.../logo.png"
                   type="text"
-                  value={dnsHotspot}
-                  onChange={(e) => setDnsHotspot(e.target.value)}
+                  value={hotspotLogoUrl}
+                  onChange={(e) => setHotspotLogoUrl(e.target.value)}
                 />
               </div>
             </div>
