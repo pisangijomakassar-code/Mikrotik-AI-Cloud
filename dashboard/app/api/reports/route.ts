@@ -72,8 +72,30 @@ export async function GET(request: NextRequest) {
     .filter((t) => t.type === "TOP_DOWN")
     .reduce((s, t) => s + t.amount, 0)
 
+  // Breakdown — Generated (dashboard) vs Activated (mikhmon_import sync).
+  // Each activation creates a separate VoucherBatch with source="mikhmon_import:YYYY-MM"
+  // when synced from /system script. Generated batches use source="dashboard".
+  const isActivation = (s: string) => s.startsWith("mikhmon_import")
+  const generatedBatches = batches.filter((b) => !isActivation(b.source))
+  const activatedBatches = batches.filter((b) => isActivation(b.source))
+  const totalGenerated = generatedBatches.reduce((s, b) => s + b.count, 0)
+  const totalActivated = activatedBatches.reduce((s, b) => s + b.count, 0)
+  const totalUnused = Math.max(0, totalGenerated - totalActivated)
+  const generatedRevenue = generatedBatches.reduce((s, b) => s + b.totalCost, 0)
+  const activatedRevenue = activatedBatches.reduce((s, b) => s + b.totalCost, 0)
+  const activationRate = totalGenerated > 0
+    ? Math.min(100, Math.round((totalActivated / totalGenerated) * 100))
+    : null
+
   return Response.json({
-    summary: { totalVouchers, totalRevenue, totalTopUp, totalTopDown, totalResellers: resellers.length },
+    summary: {
+      totalVouchers, totalRevenue, totalTopUp, totalTopDown,
+      totalResellers: resellers.length,
+      // New breakdown:
+      totalGenerated, totalActivated, totalUnused,
+      generatedRevenue, activatedRevenue,
+      activationRate,
+    },
     batches,
     transactions,
     resellers,

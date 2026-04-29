@@ -63,6 +63,13 @@ interface Summary {
   totalTopUp: number
   totalTopDown: number
   totalResellers: number
+  // New (Phase 3): breakdown Generated vs Activated
+  totalGenerated: number
+  totalActivated: number
+  totalUnused: number
+  generatedRevenue: number
+  activatedRevenue: number
+  activationRate: number | null
 }
 
 interface ReportData {
@@ -587,6 +594,46 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+
+      {/* Voucher Lifecycle — Generated vs Activated */}
+      {data && (
+        <div className="mb-6">
+          <div className="flex items-baseline justify-between mb-2 px-1">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">Voucher Lifecycle</h3>
+            {data.summary.activationRate !== null && (
+              <span className="text-[10px] text-muted-foreground/60">
+                Activation rate: <strong className="text-primary">{data.summary.activationRate}%</strong>
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-surface-low rounded-2xl border border-border/20 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Ticket className="h-4 w-4 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Generated</span>
+              </div>
+              <p className="text-2xl font-headline font-bold text-foreground">{data.summary.totalGenerated.toLocaleString("id-ID")}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">{formatRupiah(data.summary.generatedRevenue)} potensi</p>
+            </div>
+            <div className="bg-surface-low rounded-2xl border border-border/20 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-tertiary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Activated (Realized)</span>
+              </div>
+              <p className="text-2xl font-headline font-bold text-foreground">{data.summary.totalActivated.toLocaleString("id-ID")}</p>
+              <p className="text-xs text-tertiary/80 mt-1">{formatRupiah(data.summary.activatedRevenue)} pendapatan</p>
+            </div>
+            <div className="bg-surface-low rounded-2xl border border-border/20 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Database className="h-4 w-4 text-amber-400" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Belum Aktif (Stock)</span>
+              </div>
+              <p className="text-2xl font-headline font-bold text-foreground">{data.summary.totalUnused.toLocaleString("id-ID")}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Voucher belum login pertama</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       {data && (
