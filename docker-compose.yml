@@ -47,6 +47,7 @@ services:
       AUTH_TRUST_HOST: "true"
       WG_SERVER_PUBKEY: ${WG_SERVER_PUBKEY:-}
       OVPN_SERVER_HOST: ${VPS_HOST:-localhost}
+      AGENT_HEALTH_URL: http://mikrotik-agent:8080
     volumes:
       - ./config:/app/config
       - ./docs:/app/docs:ro

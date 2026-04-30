@@ -17,7 +17,7 @@ import threading
 import time
 
 logger = logging.getLogger("health_server")
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -60,14 +60,18 @@ def _vpncmd(*args):
     cmd = [
         docker, "exec", _SOFTETHER_CONTAINER,
         "/usr/vpnserver/vpncmd",
-        f"/SERVER:localhost:{_SOFTETHER_PORT}",
+        f"localhost:{_SOFTETHER_PORT}",
+        "/SERVER",
         f"/PASSWORD:{password}",
         f"/HUB:{_SOFTETHER_HUB}",
         "/CMD",
         *args,
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=15,
+            stdin=subprocess.DEVNULL,
+        )
         return result.returncode, result.stdout + result.stderr
     except subprocess.TimeoutExpired:
         return 1, "vpncmd timed out"
@@ -2909,7 +2913,7 @@ def _expired_cleanup_cron(interval_seconds=300):
 
 
 def start_health_server(port=8080):
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     print(f"Health server started on port {port}")

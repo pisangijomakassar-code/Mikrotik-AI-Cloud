@@ -233,6 +233,8 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error("Failed to create tunnel:", error)
     const message = error instanceof Error ? error.message : "Failed to create tunnel"
-    return Response.json({ error: message }, { status: 500 })
+    const cause = error instanceof Error ? (error as NodeJS.ErrnoException).cause : undefined
+    const causeMsg = cause instanceof Error ? cause.message : (cause ? String(cause) : undefined)
+    return Response.json({ error: message, cause: causeMsg }, { status: 500 })
   }
 }
