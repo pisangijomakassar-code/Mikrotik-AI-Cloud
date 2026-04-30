@@ -142,6 +142,7 @@ class RouterRegistryPG:
                 t.method              as tunnel_method,
                 t.status              as tunnel_status,
                 t."vpnAssignedIp"     as tunnel_vpn_ip,
+                t."apiPort"           as tunnel_api_port,
                 tp."localPort"        as tunnel_api_local_port
             FROM "Router" r
             LEFT JOIN "Tunnel" t   ON t."routerId" = r.id
@@ -175,7 +176,8 @@ class RouterRegistryPG:
                     "tunnel_method": row[13],
                     "tunnel_status": row[14],
                     "tunnel_vpn_ip": row[15],
-                    "tunnel_api_local_port": row[16],
+                    "tunnel_api_port": row[16],
+                    "tunnel_api_local_port": row[17],
                 }
             )
         return result
@@ -214,9 +216,23 @@ class RouterRegistryPG:
                         "Router %s has CLOUDFLARE tunnel but no localPort assigned yet",
                         r.get("name"),
                     )
-            elif tunnel_method in ("SSTP", "OVPN", "WIREGUARD"):
-                # Untuk VPN-based tunnels, router dapat IP dari VPN server
-                # (vpnAssignedIp). Dari VPS, router reachable di vpn_ip:8728.
+            elif tunnel_method == "OVPN":
+                # OVPN: VPN subnet (10.9.0.0/16) hidup di dalam container
+                # mikrotik-openvpn — agent container tidak punya route ke sana.
+                # Sebagai gantinya konek via DNAT di openvpn container:
+                #   mikrotik-openvpn:apiPort -> 10.9.x.y:8728
+                api_port = r.get("tunnel_api_port")
+                if api_port:
+                    host = "mikrotik-openvpn"
+                    port = api_port
+                else:
+                    logger.warning(
+                        "Router %s has OVPN tunnel but no apiPort yet",
+                        r.get("name"),
+                    )
+            elif tunnel_method in ("SSTP", "WIREGUARD"):
+                # Untuk SSTP/WG, router dapat IP dari VPN server.
+                # Dari VPS, router reachable di vpn_ip:8728 (assume routing OK).
                 vpn_ip = r.get("tunnel_vpn_ip")
                 if vpn_ip:
                     host = vpn_ip
