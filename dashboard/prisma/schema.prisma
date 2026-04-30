@@ -66,6 +66,7 @@ model User {
   voucherBatches         VoucherBatch[]
   voucherProfileSettings VoucherProfileSetting[]
   voucherTypes           VoucherType[]
+  trafficSnapshots       TrafficSnapshot[]
   resellerBotToken       String?
 
   @@index([telegramId])
@@ -395,3 +396,23 @@ model VoucherBatch {
   @@index([createdAt])
 }
 
+
+model TrafficSnapshot {
+  // Snapshot counter /interface dari RouterOS — di-poll cron tiap 10 menit.
+  // Untuk hitung delta antar snapshot → monthly bandwidth usage.
+  // Reboot detection: kalau current < previous → counter reset; pakai current
+  // sebagai base baru.
+  // Retention 12 bulan rolling — auto-cleanup mingguan.
+  id          String   @id @default(cuid())
+  routerName  String
+  interfaceName String
+  txBytes     BigInt
+  rxBytes     BigInt
+  takenAt     DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, routerName, interfaceName, takenAt])
+  @@index([takenAt])
+}

@@ -132,6 +132,28 @@ Top bar polling setiap **30 detik**, dengan optimasi:
 Plus **server-side cache 25 detik** di agent — 100 user yang buka dashboard tetap
 hanya ~2 query/menit ke RouterOS.
 
+### Network Throughput — tabs
+
+Card Network Throughput di dashboard punya 3 tab:
+
+| Tab | Sumber data | Reset kapan? |
+|-----|-------------|--------------|
+| **Sejak Reboot** | Counter live `/interface` dari RouterOS | Otomatis nol saat router reboot |
+| **Bulan Ini** | Akumulasi delta snapshot dari TrafficSnapshot DB | Tanggal 1 setiap bulan |
+| **30 Hari** | Akumulasi delta snapshot 30 hari terakhir | Rolling — selalu 30 hari ke belakang dari hari ini |
+
+**Cara kerja "Bulan Ini" / "30 Hari"**
+
+- Agent jalankan cron tiap **10 menit** → ambil counter `tx-byte/rx-byte` semua
+  interface running, simpan ke tabel `TrafficSnapshot`.
+- Saat dibuka, dashboard hitung **delta antar snapshot berurutan** lalu sum.
+  Reboot terdeteksi otomatis: kalau counter lebih kecil dari sebelumnya → dianggap
+  reset, sample tsb dipakai sebagai base baru (delta tidak negatif).
+- **Retention 12 bulan**. Cron mingguan otomatis hapus snapshot yang lebih lama.
+
+**Spek kapasitas**: 100 user × 1 router × ~10 interface × snapshot tiap 10 menit
+× 12 bulan ≈ ~1.7 GB. Negligible untuk PostgreSQL.
+
 ---
 
 ## Hotspot Profile

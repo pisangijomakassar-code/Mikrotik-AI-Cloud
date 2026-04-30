@@ -505,6 +505,21 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_mikhmon_sync_status(user_id)
             return
 
+        # Bandwidth dari TrafficSnapshot (di-poll cron 10 menit).
+        # ?router=<name>&year=<y>&month=<m> → bulan tsb
+        # ?router=<name>&start=<iso>&end=<iso> → rentang custom (mis. 30 hari)
+        if path.startswith("/router-traffic-monthly/"):
+            user_id = path.split("/router-traffic-monthly/")[1].strip("/")
+            router_name = params.get("router", [None])[0]
+            year = int(params.get("year", [0])[0]) or None
+            month = int(params.get("month", [0])[0]) or None
+            start = params.get("start", [None])[0]
+            end = params.get("end", [None])[0]
+            self._handle_router_traffic_monthly(
+                user_id, router_name, year, month, start, end,
+            )
+            return
+
         # IP pools (used as hotspot address-pool)
         if path.startswith("/ip-pools/"):
             user_id = path.split("/ip-pools/")[1]
@@ -685,6 +700,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             if user_id:
                 self._handle_mikhmon_import(user_id)
                 return
+
+        # Manual traffic cleanup — body: {retentionMonths: 12, dryRun: false}.
+        if path.startswith("/router-traffic-cleanup/"):
+            user_id = path.split("/router-traffic-cleanup/")[1].strip("/")
+            self._handle_router_traffic_cleanup(user_id)
+            return
 
         # AI agent stop/start
         if path == "/agent/stop":
@@ -1271,6 +1292,84 @@ class HealthHandler(BaseHTTPRequestHandler):
                 })
 
             _send_json(self, {"routers": entries})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_router_traffic_monthly(
+        self, user_id, router_name=None, year=None, month=None,
+        start=None, end=None,
+    ):
+        """GET /router-traffic-monthly/<user_id>
+
+        Mode bulan: ?year=&month=
+        Mode range: ?start=<iso>&end=<iso>  (override year/month)
+        Default: bulan ini.
+        """
+        try:
+            from datetime import datetime as _dt, timezone as _tz
+
+            # Resolve router name (default kalau tidak diisi).
+            if not router_name:
+                try:
+                    registry = _get_registry()
+                    conn = registry.resolve(user_id, None)
+                    router_name = conn.get("name", "") if conn else ""
+                except Exception:
+                    router_name = ""
+
+            vdb = _get_voucher_db()
+            if not vdb:
+                _send_json(self, {"error": "DB unavailable"}, 503)
+                return
+
+            start_dt = end_dt = None
+            if start and end:
+                try:
+                    start_dt = _dt.fromisoformat(start.replace("Z", "+00:00"))
+                    end_dt = _dt.fromisoformat(end.replace("Z", "+00:00"))
+                    if start_dt.tzinfo is None:
+                        start_dt = start_dt.replace(tzinfo=_tz.utc)
+                    if end_dt.tzinfo is None:
+                        end_dt = end_dt.replace(tzinfo=_tz.utc)
+                except Exception:
+                    start_dt = end_dt = None
+
+            data = vdb.get_monthly_traffic(
+                user_id, router_name,
+                year=year, month=month, start=start_dt, end=end_dt,
+            )
+            data["router"] = router_name
+            if start_dt and end_dt:
+                data["start"] = start_dt.isoformat()
+                data["end"] = end_dt.isoformat()
+            else:
+                now = _dt.utcnow()
+                data["year"] = year or now.year
+                data["month"] = month or now.month
+            _send_json(self, data)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_router_traffic_cleanup(self, user_id):
+        """POST /router-traffic-cleanup/<user_id>
+
+        Body: {"retentionMonths": 12, "dryRun": false}
+
+        Hapus snapshot lebih lama dari N bulan. dryRun=true cuma return count
+        tanpa delete (placeholder, belum diimplementasikan dryRun di DB layer).
+        """
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length) or b"{}") if length else {}
+            retention = int(body.get("retentionMonths", 12))
+
+            vdb = _get_voucher_db()
+            if not vdb:
+                _send_json(self, {"error": "DB unavailable"}, 503)
+                return
+
+            removed = vdb.cleanup_old_snapshots(retention_months=retention)
+            _send_json(self, {"removed": removed, "retentionMonths": retention})
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
@@ -2706,6 +2805,76 @@ def _mikhmon_sync_cron(interval_seconds=3600):
             logger.warning("Mikhmon sync cron error: %s", e)
 
 
+def _traffic_snapshot_cron(interval_seconds=600):
+    """Background cron: tiap 10 menit, ambil counter /interface dari setiap router
+    yang terdaftar dan simpan ke TrafficSnapshot.
+
+    Dipakai untuk hitung bandwidth bulanan (delta antar snapshot). Reboot
+    detection di-handle saat query (kalau current < previous, skip delta).
+    """
+    import logging
+    logger = logging.getLogger("traffic_snapshot_cron")
+    logger.info("Traffic snapshot cron started (interval=%ds)", interval_seconds)
+
+    while True:
+        time.sleep(interval_seconds)
+        try:
+            vdb = _get_voucher_db()
+            if not vdb:
+                continue
+            registry = _get_registry()
+            pairs = vdb.list_all_user_router_pairs()
+            for telegram_id, router_name in pairs:
+                try:
+                    conn = registry.resolve(telegram_id, router_name)
+                    if not conn:
+                        continue
+                    with _connect(
+                        conn["host"], conn["port"], conn["username"], conn["password"]
+                    ) as api:
+                        for iface in api.path("/interface"):
+                            # Skip down interfaces — counter tetap (waste row).
+                            running = iface.get("running")
+                            if running not in (True, "true"):
+                                continue
+                            name = iface.get("name", "")
+                            if not name:
+                                continue
+                            tx = int(iface.get("tx-byte", 0) or 0)
+                            rx = int(iface.get("rx-byte", 0) or 0)
+                            vdb.save_traffic_snapshot(
+                                telegram_id, router_name, name, tx, rx,
+                            )
+                except Exception as e:
+                    logger.warning(
+                        "Traffic snapshot failed for %s/%s: %s",
+                        telegram_id, router_name, e,
+                    )
+        except Exception as e:
+            logger.warning("Traffic snapshot cron error: %s", e)
+
+
+def _traffic_cleanup_cron(interval_seconds=7 * 24 * 3600, retention_months=12):
+    """Background cron: tiap minggu, hapus snapshot > retention_months."""
+    import logging
+    logger = logging.getLogger("traffic_cleanup_cron")
+    logger.info(
+        "Traffic cleanup cron started (interval=%ds, retention=%dmo)",
+        interval_seconds, retention_months,
+    )
+    while True:
+        time.sleep(interval_seconds)
+        try:
+            vdb = _get_voucher_db()
+            if not vdb:
+                continue
+            removed = vdb.cleanup_old_snapshots(retention_months=retention_months)
+            if removed:
+                logger.info("Traffic cleanup: removed %d old snapshot rows", removed)
+        except Exception as e:
+            logger.warning("Traffic cleanup cron error: %s", e)
+
+
 def _expired_cleanup_cron(interval_seconds=300):
     """Background cron: every 5 minutes, remove expired hotspot users for all routers.
 
@@ -2753,6 +2922,16 @@ def start_health_server(port=8080):
         sync_thread = threading.Thread(target=_mikhmon_sync_cron, args=(3600,), daemon=True)
         sync_thread.start()
         print("Mikhmon sync cron started (every 1 hour)")
+
+        traffic_thread = threading.Thread(target=_traffic_snapshot_cron, args=(600,), daemon=True)
+        traffic_thread.start()
+        print("Traffic snapshot cron started (every 10 minutes)")
+
+        traffic_cleanup_thread = threading.Thread(
+            target=_traffic_cleanup_cron, args=(7 * 24 * 3600, 12), daemon=True,
+        )
+        traffic_cleanup_thread.start()
+        print("Traffic cleanup cron started (weekly, retention 12 months)")
 
 
 if __name__ == "__main__":

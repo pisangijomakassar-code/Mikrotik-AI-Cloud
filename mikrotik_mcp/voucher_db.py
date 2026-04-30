@@ -427,3 +427,123 @@ class VoucherDB:
             )
             row = cur.fetchone()
             return row[0] if row else None
+
+    # ── TrafficSnapshot ──
+
+    def save_traffic_snapshot(
+        self,
+        telegram_id: str,
+        router_name: str,
+        interface_name: str,
+        tx_bytes: int,
+        rx_bytes: int,
+    ) -> bool:
+        """Persist one /interface counter snapshot. Returns True on success."""
+        if not self._pool:
+            return False
+        with self._conn() as conn:
+            cur = conn.cursor()
+            user_id = self._get_user_id(cur, telegram_id)
+            if not user_id:
+                return False
+            cur.execute(
+                """
+                INSERT INTO "TrafficSnapshot"
+                  ("id", "routerName", "interfaceName", "txBytes", "rxBytes",
+                   "takenAt", "userId")
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    _cuid_like(), router_name, interface_name,
+                    int(tx_bytes), int(rx_bytes), _now(), user_id,
+                ),
+            )
+            return True
+
+    def get_monthly_traffic(
+        self,
+        telegram_id: str,
+        router_name: str,
+        year: int | None = None,
+        month: int | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+    ) -> dict:
+        """Sum delta tx/rx bytes per-interface untuk rentang waktu tertentu.
+
+        Bisa dipanggil 2 mode:
+          - year+month → seluruh bulan tsb (default kalau range tdk diisi)
+          - start+end  → rentang custom (mis. 30 hari terakhir)
+
+        Reboot detection: kalau current < previous, counter reset → skip delta
+        (sample tsb jadi base baru saja).
+
+        Returns: {"interfaces": [{name, txBytes, rxBytes}], "totalTx", "totalRx"}.
+        """
+        if not self._pool:
+            return {"interfaces": [], "totalTx": 0, "totalRx": 0}
+
+        if start is not None and end is not None:
+            period_start, period_end = start, end
+        else:
+            if year is None or month is None:
+                now = _now()
+                year = year or now.year
+                month = month or now.month
+            period_start = datetime(year, month, 1, tzinfo=timezone.utc)
+            if month == 12:
+                period_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            else:
+                period_end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+
+        with self._conn() as conn:
+            cur = conn.cursor()
+            user_id = self._get_user_id(cur, telegram_id)
+            if not user_id:
+                return {"interfaces": [], "totalTx": 0, "totalRx": 0}
+
+            cur.execute(
+                """
+                SELECT "interfaceName", "txBytes", "rxBytes", "takenAt"
+                FROM "TrafficSnapshot"
+                WHERE "userId" = %s AND "routerName" = %s
+                  AND "takenAt" >= %s AND "takenAt" < %s
+                ORDER BY "interfaceName", "takenAt"
+                """,
+                (user_id, router_name, period_start, period_end),
+            )
+            rows = cur.fetchall()
+
+        per_iface: dict[str, dict] = {}
+        prev_per_iface: dict[str, tuple[int, int]] = {}
+        for iface, tx, rx, _taken in rows:
+            tx, rx = int(tx), int(rx)
+            entry = per_iface.setdefault(iface, {"name": iface, "txBytes": 0, "rxBytes": 0})
+            prev = prev_per_iface.get(iface)
+            if prev is not None:
+                ptx, prx = prev
+                # Reboot guard — counter only goes up. Skip if it dropped.
+                if tx >= ptx:
+                    entry["txBytes"] += tx - ptx
+                if rx >= prx:
+                    entry["rxBytes"] += rx - prx
+            prev_per_iface[iface] = (tx, rx)
+
+        ifaces = list(per_iface.values())
+        total_tx = sum(i["txBytes"] for i in ifaces)
+        total_rx = sum(i["rxBytes"] for i in ifaces)
+        return {"interfaces": ifaces, "totalTx": total_tx, "totalRx": total_rx}
+
+    def cleanup_old_snapshots(self, retention_months: int = 12) -> int:
+        """Delete snapshots older than retention_months. Returns rows removed."""
+        if not self._pool:
+            return 0
+        from datetime import timedelta
+        cutoff = _now() - timedelta(days=retention_months * 31)
+        with self._conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'DELETE FROM "TrafficSnapshot" WHERE "takenAt" < %s',
+                (cutoff,),
+            )
+            return cur.rowcount or 0

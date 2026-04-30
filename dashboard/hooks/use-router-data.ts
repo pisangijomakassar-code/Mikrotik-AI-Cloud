@@ -33,6 +33,59 @@ export function useRouterTraffic() {
   })
 }
 
+// --- Monthly / range traffic (dari TrafficSnapshot, sumber DB) ---
+interface MonthlyInterface {
+  name: string
+  txBytes: number
+  rxBytes: number
+}
+
+export interface MonthlyTrafficData {
+  router: string
+  interfaces: MonthlyInterface[]
+  totalTx: number
+  totalRx: number
+  year?: number
+  month?: number
+  start?: string
+  end?: string
+  error?: string
+}
+
+interface MonthlyTrafficArgs {
+  router?: string
+  year?: number
+  month?: number
+  start?: string
+  end?: string
+  enabled?: boolean
+}
+
+export function useRouterTrafficMonthly(args: MonthlyTrafficArgs = {}) {
+  const { router, year, month, start, end, enabled = true } = args
+  const qs = new URLSearchParams()
+  if (router) qs.set("router", router)
+  if (year) qs.set("year", String(year))
+  if (month) qs.set("month", String(month))
+  if (start) qs.set("start", start)
+  if (end) qs.set("end", end)
+  return useQuery<MonthlyTrafficData>({
+    queryKey: ["router-traffic-monthly", router, year, month, start, end],
+    queryFn: async () => {
+      try {
+        return await apiClient.get<MonthlyTrafficData>(
+          `/api/routers/traffic-monthly?${qs.toString()}`,
+        )
+      } catch {
+        return { router: router || "", interfaces: [], totalTx: 0, totalRx: 0 }
+      }
+    },
+    enabled,
+    refetchInterval: 60_000, // 1 menit cukup, data berubah lambat
+    staleTime: 30_000,
+  })
+}
+
 // --- Router logs (real-time, no LLM) ---
 interface RouterLog {
   time: string
