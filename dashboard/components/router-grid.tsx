@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 import { EditRouterDialog } from "@/components/edit-router-dialog"
 import { TunnelStatusBadge } from "@/components/tunnel-status-badge"
 import { TunnelManageDialog } from "@/components/tunnel-manage-dialog"
+import { AddTunnelDialog } from "@/components/add-tunnel-dialog"
 import type { TunnelStatus, TunnelMethod } from "@/lib/types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
@@ -250,6 +251,13 @@ export function RouterGrid() {
                               routerName={router.name}
                               tunnelMethod={((router as { tunnel?: { method: TunnelMethod } }).tunnel?.method) ?? "CLOUDFLARE"}
                               tunnelStatus={(router as { tunnel?: { status: TunnelStatus } }).tunnel?.status ?? null}
+                            />
+                          )}
+                          {(router as { connectionMethod?: string }).connectionMethod !== "TUNNEL" && (
+                            <AddTunnelDialog
+                              routerId={router.id}
+                              routerName={router.name}
+                              routerLanIpDefault={(router as { host?: string }).host ?? "192.168.88.1"}
                             />
                           )}
                           <button
