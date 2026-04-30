@@ -2511,11 +2511,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                     check=True, capture_output=True
                 )
                 if vpn_ip:
-                    gw_parts = vpn_ip.rsplit('.', 1)
-                    gateway_ip = gw_parts[0] + ".1"
+                    # topology subnet: ifconfig-push <ip> <netmask>
+                    # Server runs `server 10.9.0.0 255.255.0.0`, so all clients share /16
                     subprocess.run(
                         [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} {gateway_ip}' > /config/ccd/{username}"],
+                         f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} 255.255.0.0' > /config/ccd/{username}"],
                         check=True, capture_output=True
                     )
                 _send_json(self, {"ok": True, "action": "created", "username": username})
