@@ -5,6 +5,25 @@ import { generateSstpRouterConfig } from "@/lib/services/sstp-tunnel.service"
 import { generateOvpnScript } from "@/lib/services/ovpn-tunnel.service"
 import { generateWireguardScript } from "@/lib/services/wg-tunnel.service"
 
+const AGENT_URL = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
+
+async function decryptSecret(ciphertext: string): Promise<string> {
+  if (!ciphertext.startsWith("gAAAAA")) return ciphertext
+  try {
+    const res = await fetch(`${AGENT_URL}/decrypt-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: ciphertext }),
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      const data = await res.json() as { plaintext?: string }
+      if (data.plaintext) return data.plaintext
+    }
+  } catch { /* fall through — return ciphertext as-is */ }
+  return ciphertext
+}
+
 // GET /api/tunnels/[routerId]/setup
 // Returns everything the user needs to configure their router.
 // For SSTP, vpnPassword is stored as-is by createSstpTunnel (plaintext) and
@@ -69,13 +88,16 @@ export async function GET(
 
     if (tunnel.method === "OVPN") {
       const vpsHost = process.env.VPS_HOST || ""
-      const script = tunnel.vpnUsername && tunnel.vpnPassword
+      const plainPassword = tunnel.vpnPassword
+        ? await decryptSecret(tunnel.vpnPassword)
+        : null
+      const script = tunnel.vpnUsername && plainPassword
         ? generateOvpnScript({
             vpsHost,
             vpnIp: tunnel.vpnAssignedIp ?? "",
             ovpnHost: vpsHost,
             username: tunnel.vpnUsername,
-            password: tunnel.vpnPassword,  // stored plaintext by ovpn service
+            password: plainPassword,
             winboxPort: tunnel.winboxPort ?? 0,
           })
         : null
@@ -84,7 +106,7 @@ export async function GET(
         method: "OVPN",
         vpsHost,
         username: tunnel.vpnUsername,
-        password: tunnel.vpnPassword,
+        password: plainPassword,
         vpnIp: tunnel.vpnAssignedIp,
         winboxPort: tunnel.winboxPort,
         script,
@@ -94,12 +116,15 @@ export async function GET(
 
     if (tunnel.method === "WIREGUARD") {
       const vpsHost = process.env.VPS_HOST || ""
+      const plainPrivKey = tunnel.wgClientPrivKey
+        ? await decryptSecret(tunnel.wgClientPrivKey)
+        : null
       const script = tunnel.wgServerPubKey
         ? generateWireguardScript({
             vpsHost,
             vpnIp: tunnel.vpnAssignedIp ?? "",
             serverPubKey: tunnel.wgServerPubKey,
-            clientPrivKey: tunnel.wgClientPrivKey ?? "",  // encrypted — displayed as-is or decrypted upstream
+            clientPrivKey: plainPrivKey ?? "",
             winboxPort: tunnel.winboxPort ?? 0,
           })
         : null

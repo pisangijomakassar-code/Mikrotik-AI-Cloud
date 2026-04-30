@@ -268,12 +268,36 @@ function OvpnInstructions({
         </div>
       </div>
 
-      {/* Script block */}
+      {/* Step 1: Download CA cert */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 rounded-full bg-orange-400/20 text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">
+            1
+          </span>
+          <p className="text-sm font-semibold text-foreground">Unduh &amp; import CA Certificate ke router</p>
+        </div>
+        <div className="ml-8 space-y-2">
+          <a
+            href="/api/tunnels/ovpn-ca"
+            download="ca.crt"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-400/10 hover:bg-orange-400/20 text-orange-400 text-xs font-medium transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Unduh ca.crt
+          </a>
+          <p className="text-xs text-slate-500">
+            Upload <code className="text-orange-300">ca.crt</code> ke router via Winbox Files, lalu jalankan di Terminal:{" "}
+            <code className="text-orange-300">/certificate import file-name=ca.crt</code>
+          </p>
+        </div>
+      </div>
+
+      {/* Step 2: Script block */}
       {script && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-orange-400/20 text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">
-              1
+              2
             </span>
             <p className="text-sm font-semibold text-foreground">Jalankan script di RouterOS Terminal</p>
           </div>
@@ -288,7 +312,7 @@ function OvpnInstructions({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-orange-400/20 text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">
-              2
+              3
             </span>
             <p className="text-sm font-semibold text-foreground">Akses Winbox via tunnel</p>
           </div>

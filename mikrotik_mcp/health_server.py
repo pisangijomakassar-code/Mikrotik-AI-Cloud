@@ -594,6 +594,22 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_chat_completions()
             return
 
+        # Decrypt a router password (called by Next.js dashboard to display to user)
+        if path == "/decrypt-password":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length))
+                ciphertext = body.get("password", "")
+                if not ciphertext:
+                    _send_json(self, {"error": "password required"}, 400)
+                    return
+                from server import registry
+                plaintext = registry.crypto.decrypt(ciphertext)
+                _send_json(self, {"plaintext": plaintext})
+            except Exception as e:
+                _send_json(self, {"error": str(e)}, 500)
+            return
+
         # Encrypt a router password (called by Next.js dashboard before saving to DB)
         if path == "/encrypt-password":
             try:
@@ -670,6 +686,10 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         if path == "/ovpn-user":
             self._handle_ovpn_user(None)
+            return
+
+        if path == "/ovpn-ca":
+            self._handle_ovpn_ca()
             return
 
         # AI insight
@@ -2517,6 +2537,31 @@ class HealthHandler(BaseHTTPRequestHandler):
                 _send_json(self, {"ok": True, "action": "deleted", "username": username})
             else:
                 _send_json(self, {"error": "action must be create or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_ovpn_ca(self):
+        """Return the OpenVPN CA certificate (PEM) for download by the dashboard."""
+        try:
+            docker = shutil.which("docker")
+            if not docker:
+                _send_json(self, {"error": "docker CLI not found"}, 500)
+                return
+            result = subprocess.run(
+                [docker, "exec", "mikrotik-openvpn", "cat", "/config/pki/ca.crt"],
+                capture_output=True, text=True, timeout=10,
+                stdin=subprocess.DEVNULL,
+            )
+            if result.returncode != 0:
+                _send_json(self, {"error": f"ca.crt not found: {result.stderr[:200]}"}, 404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-pem-file")
+            self.send_header("Content-Disposition", 'attachment; filename="ca.crt"')
+            body = result.stdout.encode()
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 

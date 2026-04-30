@@ -165,15 +165,14 @@ services:
           memory: 32M
 
   openvpn:
-    image: lscr.io/linuxserver/openvpn-as:latest
+    build:
+      context: ./docker/openvpn
+      dockerfile: Dockerfile
     container_name: mikrotik-openvpn
     cap_add:
       - NET_ADMIN
-    environment:
-      PUID: 1000
-      PGID: 1000
-      TZ: Asia/Jakarta
-      INTERFACE: eth0
+    devices:
+      - /dev/net/tun
     volumes:
       - ovpn-data:/config
     ports:
@@ -185,9 +184,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
-        reservations:
           memory: 64M
+        reservations:
+          memory: 32M
 
 volumes:
   nanobot-data:
