@@ -171,12 +171,14 @@ export function AddRouterWizard() {
         }),
       })
       const data = await res.json()
-      if (res.ok) {
+      // API selalu return HTTP 200 dgn body {success:bool, message:str}.
+      // Cek field success — bukan res.ok.
+      if (res.ok && data.success === true) {
         setTestStatus("success")
         setTestMessage(data.message ?? "Terhubung")
       } else {
         setTestStatus("failed")
-        setTestMessage(data.error ?? "Gagal koneksi")
+        setTestMessage(data.message ?? data.error ?? "Gagal koneksi")
       }
     } catch (err) {
       setTestStatus("failed")
