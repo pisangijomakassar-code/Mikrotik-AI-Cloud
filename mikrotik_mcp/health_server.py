@@ -2416,6 +2416,10 @@ class HealthHandler(BaseHTTPRequestHandler):
         """Manage WireGuard peers: add or delete."""
         try:
             import subprocess, json
+            docker = shutil.which("docker")
+            if not docker:
+                _send_json(self, {"error": "docker CLI not found — ensure /var/run/docker.sock is mounted and docker binary is in PATH"}, 500)
+                return
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
             action = body.get("action", "add")
@@ -2426,16 +2430,14 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if not pub_key or not vpn_ip:
                     _send_json(self, {"error": "pubKey and vpnIp required"}, 400)
                     return
-                # Add peer to WireGuard
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-wireguard", "wg", "set", "wg0",
+                    [docker, "exec", "mikrotik-wireguard", "wg", "set", "wg0",
                      "peer", pub_key, "allowed-ips", f"{vpn_ip}/32",
                      "persistent-keepalive", "25"],
                     check=True, capture_output=True
                 )
-                # Persist config
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
+                    [docker, "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
                     capture_output=True
                 )
                 _send_json(self, {"ok": True, "action": "added", "peer": pub_key})
@@ -2445,12 +2447,12 @@ class HealthHandler(BaseHTTPRequestHandler):
                     _send_json(self, {"error": "pubKey required"}, 400)
                     return
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-wireguard", "wg", "set", "wg0",
+                    [docker, "exec", "mikrotik-wireguard", "wg", "set", "wg0",
                      "peer", pub_key, "remove"],
                     check=True, capture_output=True
                 )
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
+                    [docker, "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
                     capture_output=True
                 )
                 _send_json(self, {"ok": True, "action": "deleted", "peer": pub_key})
@@ -2462,7 +2464,11 @@ class HealthHandler(BaseHTTPRequestHandler):
     def _handle_ovpn_user(self, user_id):
         """Manage OpenVPN users: create or delete."""
         try:
-            import subprocess, json, hashlib, os
+            import subprocess, json, hashlib
+            docker = shutil.which("docker")
+            if not docker:
+                _send_json(self, {"error": "docker CLI not found — ensure /var/run/docker.sock is mounted and docker binary is in PATH"}, 500)
+                return
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length)) if content_length else {}
             action = body.get("action", "create")
@@ -2474,21 +2480,17 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if not username or not password:
                     _send_json(self, {"error": "username and password required"}, 400)
                     return
-                # Hash password with SHA-256
                 pw_hash = hashlib.sha256(password.encode()).hexdigest()
-                # Write to users file in OpenVPN container
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
                      f"echo '{username}:{pw_hash}' >> /config/users.txt"],
                     check=True, capture_output=True
                 )
-                # Write CCD file for static IP assignment
                 if vpn_ip:
-                    # CCD: ifconfig-push CLIENT_IP GATEWAY_IP
                     gw_parts = vpn_ip.rsplit('.', 1)
                     gateway_ip = gw_parts[0] + ".1"
                     subprocess.run(
-                        ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
                          f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} {gateway_ip}' > /config/ccd/{username}"],
                         check=True, capture_output=True
                     )
@@ -2498,15 +2500,13 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if not username:
                     _send_json(self, {"error": "username required"}, 400)
                     return
-                # Remove from users file
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
                      f"sed -i '/^{username}:/d' /config/users.txt"],
                     check=True, capture_output=True
                 )
-                # Remove CCD file
                 subprocess.run(
-                    ["docker", "exec", "mikrotik-openvpn", "sh", "-c",
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
                      f"rm -f /config/ccd/{username}"],
                     capture_output=True
                 )
