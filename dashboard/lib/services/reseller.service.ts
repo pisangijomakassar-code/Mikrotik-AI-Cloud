@@ -8,10 +8,14 @@ import type {
 } from "../types"
 
 // ── Reseller CRUD ──
+//
+// Resellers are scoped per Router (1 router N resellers; 1 reseller = 1 router).
+// All queries take an optional `routerId`. When provided, only resellers
+// belonging to that router are returned/created.
 
-export async function listResellers(userId: string) {
+export async function listResellers(userId: string, routerId?: string) {
   return prisma.reseller.findMany({
-    where: { userId },
+    where: { userId, ...(routerId ? { routerId } : {}) },
     include: { _count: { select: { voucherBatches: true } } },
     orderBy: { createdAt: "desc" },
   })
@@ -26,7 +30,11 @@ export async function getReseller(resellerId: string, userId: string) {
   return reseller
 }
 
-export async function createReseller(userId: string, data: CreateResellerInput) {
+export async function createReseller(
+  userId: string,
+  routerId: string,
+  data: CreateResellerInput,
+) {
   return prisma.reseller.create({
     data: {
       name: data.name,
@@ -37,6 +45,7 @@ export async function createReseller(userId: string, data: CreateResellerInput) 
       voucherGroup: data.voucherGroup ?? "default",
       uplink: data.uplink ?? "",
       userId,
+      routerId,
     },
   })
 }

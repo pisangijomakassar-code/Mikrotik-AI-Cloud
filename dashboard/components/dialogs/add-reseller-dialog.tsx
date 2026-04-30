@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { addResellerSchema, type AddResellerFormData } from "@/lib/schemas"
 import { useCreateReseller } from "@/hooks/use-resellers"
 import { useVoucherTypes } from "@/hooks/use-voucher-types"
+import { useActiveRouter } from "@/components/active-router-context"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -17,7 +18,8 @@ interface AddResellerDialogProps {
 }
 
 export function AddResellerDialog({ open, onOpenChange }: AddResellerDialogProps) {
-  const createReseller = useCreateReseller()
+  const { activeRouter } = useActiveRouter()
+  const createReseller = useCreateReseller(activeRouter || undefined)
   const { data: voucherTypes } = useVoucherTypes()
 
   const voucherGroups = useMemo(() => {

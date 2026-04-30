@@ -42,8 +42,9 @@ export interface TransactionData {
 
 // ── Fetch helpers ──
 
-async function fetchResellers(): Promise<ResellerData[]> {
-  return apiClient.get<ResellerData[]>("/api/resellers")
+async function fetchResellers(routerName?: string): Promise<ResellerData[]> {
+  const qs = routerName ? `?router=${encodeURIComponent(routerName)}` : ""
+  return apiClient.get<ResellerData[]>(`/api/resellers${qs}`)
 }
 
 async function fetchReseller(id: string): Promise<ResellerData> {
@@ -70,10 +71,10 @@ async function fetchTransactions(
 
 // ── Queries ──
 
-export function useResellers() {
+export function useResellers(routerName?: string) {
   return useQuery<ResellerData[]>({
-    queryKey: ["resellers"],
-    queryFn: fetchResellers,
+    queryKey: ["resellers", routerName ?? ""],
+    queryFn: () => fetchResellers(routerName),
   })
 }
 
@@ -106,11 +107,11 @@ export function useTransactions(
 
 // ── Mutations ──
 
-export function useCreateReseller() {
+export function useCreateReseller(routerName?: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: CreateResellerInput) => {
-      return apiClient.post<ResellerData>("/api/resellers", data)
+      return apiClient.post<ResellerData>("/api/resellers", { ...data, routerName })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["resellers"] })

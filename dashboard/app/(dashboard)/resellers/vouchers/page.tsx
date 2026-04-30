@@ -6,6 +6,7 @@ import { PrintVoucherSheet } from "@/components/print-voucher-sheet"
 import { useQueryClient } from "@tanstack/react-query"
 import { useAllVouchers } from "@/hooks/use-vouchers"
 import { useResellers } from "@/hooks/use-resellers"
+import { useActiveRouter } from "@/components/active-router-context"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
 import { cn } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -163,7 +164,8 @@ export default function VoucherHistoryPage() {
   const [showGenerate, setShowGenerate] = useState(false)
   const pageSize = 20
 
-  const { data: resellers } = useResellers()
+  const { activeRouter } = useActiveRouter()
+  const { data: resellers } = useResellers(activeRouter || undefined)
   const { data: vouchersData, isLoading } = useAllVouchers({
     source: sourceFilter || undefined,
     resellerId: resellerFilter || undefined,

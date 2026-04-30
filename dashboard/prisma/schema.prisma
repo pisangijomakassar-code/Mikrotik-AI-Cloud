@@ -106,6 +106,7 @@ model Router {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   activityLogs ActivityLog[]
+  resellers    Reseller[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -291,13 +292,17 @@ model Reseller {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routerId String
+  router   Router @relation(fields: [routerId], references: [id], onDelete: Cascade)
 
   transactions   SaldoTransaction[]
   voucherBatches VoucherBatch[]
 
+  @@unique([routerId, name])  // nama reseller unik per router
   @@index([userId])
+  @@index([routerId])
   @@index([telegramId])
 }
 

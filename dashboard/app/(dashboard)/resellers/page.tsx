@@ -12,6 +12,7 @@ import {
   type ResellerData,
 } from "@/hooks/use-resellers"
 import { useVoucherTypes } from "@/hooks/use-voucher-types"
+import { useActiveRouter } from "@/components/active-router-context"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { AddResellerDialog } from "@/components/dialogs/add-reseller-dialog"
 import { TableSkeleton } from "@/components/table-skeleton"
@@ -22,7 +23,8 @@ import { toast } from "sonner"
 import Link from "next/link"
 
 export default function ResellersPage() {
-  const { data: resellers, isLoading } = useResellers()
+  const { activeRouter } = useActiveRouter()
+  const { data: resellers, isLoading } = useResellers(activeRouter || undefined)
   const { data: voucherTypes } = useVoucherTypes()
   const updateReseller = useUpdateReseller()
   const deleteReseller = useDeleteReseller()
