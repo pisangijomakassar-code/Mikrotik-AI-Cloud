@@ -48,10 +48,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (session.user.role !== "ADMIN") {
-    return Response.json({ error: "Forbidden" }, { status: 403 })
-  }
-
   try {
     const body = await request.json()
     const { routerId, method, routerLanIp, enabledPorts } = body
@@ -60,10 +56,13 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "routerId and method are required" }, { status: 400 })
     }
 
-    // Verify the router belongs to a user this admin can manage
+    // Verify the router belongs to the current user
     const router = await prisma.router.findUnique({ where: { id: routerId } })
     if (!router) {
       return Response.json({ error: "Router not found" }, { status: 404 })
+    }
+    if (router.userId !== session.user.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 })
     }
 
     // Check tunnel doesn't already exist
