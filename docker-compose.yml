@@ -177,7 +177,9 @@ services:
       - ovpn-data:/config
     ports:
       - "1194:1194/tcp"
+      # Winbox port pool: 18291-18500 (~210 routers). API port pool: 18728-18937.
       - "18291-18500:18291-18500/tcp"
+      - "18728-18937:18728-18937/tcp"
     networks:
       - internal
       - vpn
