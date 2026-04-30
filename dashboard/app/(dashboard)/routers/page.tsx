@@ -2,7 +2,7 @@
 
 import { Router } from "lucide-react"
 import { RouterGrid } from "@/components/router-grid"
-import { AddRouterDialog } from "@/components/add-router-dialog"
+import { AddRouterWizard } from "@/components/add-router-wizard"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
@@ -40,7 +40,7 @@ export default function RoutersPage() {
               Map View
             </button>
           </div>
-          <AddRouterDialog />
+          <AddRouterWizard />
         </div>
       </div>
       {view === "table" ? (
