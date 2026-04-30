@@ -2,14 +2,25 @@ FROM python:3.11-slim AS base
 
 WORKDIR /app
 
-# System deps + Docker CLI static binary (docker.io tidak ada di Debian 13)
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl gettext-base inotify-tools && \
-    rm -rf /var/lib/apt/lists/* && \
-    ARCH=$(dpkg --print-architecture) && \
-    curl -fsSL "https://download.docker.com/linux/static/stable/${ARCH}/docker-27.5.1.tgz" | \
-    tar -xz --strip-components=1 -C /usr/local/bin docker/docker && \
-    chmod +x /usr/local/bin/docker
+    rm -rf /var/lib/apt/lists/*
+
+# Docker CLI static binary (docker.io package tidak include binary di Debian 13)
+# dpkg returns amd64/arm64 tapi Docker URL pakai x86_64/aarch64
+RUN DPKG_ARCH=$(dpkg --print-architecture) && \
+    case "$DPKG_ARCH" in \
+      amd64) DOCKER_ARCH=x86_64 ;; \
+      arm64) DOCKER_ARCH=aarch64 ;; \
+      *) DOCKER_ARCH=$DPKG_ARCH ;; \
+    esac && \
+    curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-27.5.1.tgz" \
+      -o /tmp/docker.tgz && \
+    tar -xz --strip-components=1 -C /usr/local/bin -f /tmp/docker.tgz docker/docker && \
+    rm /tmp/docker.tgz && \
+    chmod +x /usr/local/bin/docker && \
+    docker --version
 
 # Install cloudflared (for tunnel manager)
 RUN ARCH=$(dpkg --print-architecture) && \
