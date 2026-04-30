@@ -2,10 +2,14 @@ FROM python:3.11-slim AS base
 
 WORKDIR /app
 
-# System deps (gettext-base provides envsubst; docker.io provides CLI for VPN management)
+# System deps + Docker CLI static binary (docker.io tidak ada di Debian 13)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl gettext-base inotify-tools docker.io && \
-    rm -rf /var/lib/apt/lists/*
+    git curl gettext-base inotify-tools && \
+    rm -rf /var/lib/apt/lists/* && \
+    ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://download.docker.com/linux/static/stable/${ARCH}/docker-27.5.1.tgz" | \
+    tar -xz --strip-components=1 -C /usr/local/bin docker/docker && \
+    chmod +x /usr/local/bin/docker
 
 # Install cloudflared (for tunnel manager)
 RUN ARCH=$(dpkg --print-architecture) && \
