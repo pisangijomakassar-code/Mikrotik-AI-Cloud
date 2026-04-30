@@ -58,45 +58,45 @@ export function RouterQuickStatsPills() {
   const cpu = data?.cpu ?? 0
 
   return (
-    <div className="hidden md:flex items-center gap-1.5 text-[10px] font-mono-tech">
+    <div className="hidden md:flex items-center gap-1.5 text-xs font-mono-tech">
       {/* LLM/Agent status */}
       <Pill
-        icon={<Sparkles className={cn("h-3 w-3", llmReady ? "text-tertiary" : "text-destructive")} />}
+        icon={<Sparkles className={cn("h-3.5 w-3.5", llmReady ? "text-tertiary" : "text-destructive")} />}
         label={llmReady ? "LLM ready" : "LLM down"}
         labelClass={llmReady ? "text-tertiary" : "text-destructive"}
       />
 
       {/* CPU */}
       <Pill
-        icon={<Cpu className={cn("h-3 w-3", pillColor(cpu))} />}
+        icon={<Cpu className={cn("h-3.5 w-3.5", pillColor(cpu))} />}
         label={`CPU ${cpu}%`}
         labelClass={pillColor(cpu)}
       />
 
       {/* Memory */}
       <Pill
-        icon={<MemoryStick className={cn("h-3 w-3", pillColor(memPct))} />}
+        icon={<MemoryStick className={cn("h-3.5 w-3.5", pillColor(memPct))} />}
         label={`RAM ${memPct}%`}
         labelClass={pillColor(memPct)}
       />
 
       {/* HDD */}
       <Pill
-        icon={<HardDrive className={cn("h-3 w-3", pillColor(hddPct))} />}
+        icon={<HardDrive className={cn("h-3.5 w-3.5", pillColor(hddPct))} />}
         label={`HDD ${hddPct}%`}
         labelClass={pillColor(hddPct)}
       />
 
       {/* Hotspot client (active session) */}
       <Pill
-        icon={<Wifi className="h-3 w-3 text-primary" />}
+        icon={<Wifi className="h-3.5 w-3.5 text-primary" />}
         label={`${data?.hotspot.activeSessions ?? 0}`}
         title="Active session"
       />
 
       {/* Total users */}
       <Pill
-        icon={<Users className="h-3 w-3 text-primary" />}
+        icon={<Users className="h-3.5 w-3.5 text-primary" />}
         label={`${data?.hotspot.totalUsers ?? 0}`}
         title="Total user voucher"
       />
@@ -108,12 +108,12 @@ export function RouterQuickStatsPills() {
           className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
           title="Polling pause (idle 30 menit) — klik untuk refresh"
         >
-          <Pause className="h-3 w-3" />
+          <Pause className="h-3.5 w-3.5" />
           paused
-          <RefreshCw className="h-3 w-3" />
+          <RefreshCw className="h-3.5 w-3.5" />
         </button>
       ) : isFetching ? (
-        <RefreshCw className="h-3 w-3 text-muted-foreground/40 animate-spin ml-1" />
+        <RefreshCw className="h-3.5 w-3.5 text-muted-foreground/40 animate-spin ml-1" />
       ) : null}
     </div>
   )
@@ -133,7 +133,7 @@ function Pill({
       title={title}
     >
       {icon}
-      <span className={cn("text-[10px]", labelClass ?? "text-foreground")}>{label}</span>
+      <span className={cn("text-xs", labelClass ?? "text-foreground")}>{label}</span>
     </div>
   )
 }
