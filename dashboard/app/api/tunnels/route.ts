@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (method === "OVPN") {
-      const { username, password, vpnIp, winboxPort, subnetOctet, routerOctet } =
+      const { username, password, vpnIp, winboxPort, apiPort, subnetOctet, routerOctet } =
         await createOvpnTunnel(router.id, prisma)
 
       const tunnel = await prisma.tunnel.create({
@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
           vpnPassword: password,
           vpnAssignedIp: vpnIp,
           winboxPort,
+          apiPort,
           subnetOctet,
           routerOctet,
           routerLanIp: lanIp,

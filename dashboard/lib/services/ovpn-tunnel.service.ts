@@ -26,6 +26,7 @@ const OVPN_PORT  = process.env.OVPN_PORT        || "1194"
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const WINBOX_PORT_START = 18291
+const API_PORT_START    = 18728
 const SUBNET_OCTET_MIN  = 1
 const SUBNET_OCTET_MAX  = 253
 const ROUTER_OCTET_MIN  = 2
@@ -37,6 +38,7 @@ export interface TunnelWithPorts {
   id: string
   method: string
   winboxPort: number | null
+  apiPort: number | null
   subnetOctet: number | null
   routerOctet: number | null
   vpnUsername: string | null
@@ -52,6 +54,7 @@ export interface CreateOvpnTunnelResult {
   password: string      // Fernet-encrypted
   vpnIp: string         // e.g. "10.9.1.2"
   winboxPort: number    // e.g. 18292
+  apiPort: number       // e.g. 18729
   subnetOctet: number
   routerOctet: number
 }
@@ -196,6 +199,15 @@ async function allocateWinboxPort(prisma: PrismaClient): Promise<number> {
   return maxPort + 1
 }
 
+async function allocateApiPort(prisma: PrismaClient): Promise<number> {
+  const result = await prisma.tunnel.aggregate({
+    where: { apiPort: { not: null } },
+    _max: { apiPort: true },
+  })
+  const maxPort = result._max.apiPort ?? API_PORT_START - 1
+  return maxPort + 1
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -217,9 +229,10 @@ export async function createOvpnTunnel(
 ): Promise<CreateOvpnTunnelResult> {
   const { username, password } = generateOvpnCredentials(routerId)
 
-  const [{ subnetOctet, routerOctet }, winboxPort] = await Promise.all([
+  const [{ subnetOctet, routerOctet }, winboxPort, apiPort] = await Promise.all([
     allocateOvpnAddress(routerId, prismaClient),
     allocateWinboxPort(prismaClient),
+    allocateApiPort(prismaClient),
   ])
 
   const vpnIp = `10.9.${subnetOctet}.${routerOctet}`
@@ -228,7 +241,7 @@ export async function createOvpnTunnel(
   const res = await fetch(`${AGENT_URL}/ovpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "create", username, password, vpnIp, winboxPort }),
+    body: JSON.stringify({ action: "create", username, password, vpnIp, winboxPort, apiPort }),
   })
 
   if (!res.ok) {
@@ -243,6 +256,7 @@ export async function createOvpnTunnel(
     password: encryptedPassword,
     vpnIp,
     winboxPort,
+    apiPort,
     subnetOctet,
     routerOctet,
   }
@@ -310,6 +324,7 @@ export async function deleteOvpnTunnel(
       action: "delete",
       username,
       winboxPort: tunnel.winboxPort,
+      apiPort: tunnel.apiPort,
     }),
   })
 

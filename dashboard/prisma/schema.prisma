@@ -127,6 +127,7 @@ model Tunnel {
 
   // WireGuard / OVPN shared fields
   winboxPort            Int?         // external port on VPS for Winbox forwarding (e.g. 18291)
+  apiPort               Int?         // external port on VPS for MikroTik API (8728) forwarding
   subnetOctet           Int?         // customer /24 subnet index (10.8.X.0 or 10.9.X.0)
   routerOctet           Int?         // router IP within subnet (10.8.X.Y)
   wgClientPrivKey       String?      // WG client private key (Fernet encrypted)

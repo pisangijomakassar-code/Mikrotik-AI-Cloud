@@ -2509,7 +2509,39 @@ class HealthHandler(BaseHTTPRequestHandler):
             password = body.get("password", "")
             vpn_ip = body.get("vpnIp", "")
             winbox_port = body.get("winboxPort")
+            api_port = body.get("apiPort")
             WINBOX_DEST = 8291
+            API_DEST = 8728
+
+            def _add_forward(pub_port, dest_port):
+                pub_port_str = str(int(pub_port))
+                fwd_line = f"{pub_port_str}:{vpn_ip}:{dest_port}"
+                subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"iptables -t nat -C PREROUTING -p tcp --dport {pub_port_str} -j DNAT --to-destination {vpn_ip}:{dest_port} 2>/dev/null || "
+                     f"iptables -t nat -A PREROUTING -p tcp --dport {pub_port_str} -j DNAT --to-destination {vpn_ip}:{dest_port}"],
+                    capture_output=True
+                )
+                subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"iptables -C FORWARD -p tcp -d {vpn_ip} --dport {dest_port} -j ACCEPT 2>/dev/null || "
+                     f"iptables -A FORWARD -p tcp -d {vpn_ip} --dport {dest_port} -j ACCEPT"],
+                    capture_output=True
+                )
+                subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"grep -qF '{fwd_line}' /config/forwards.txt 2>/dev/null || echo '{fwd_line}' >> /config/forwards.txt"],
+                    capture_output=True
+                )
+
+            def _del_forward(pub_port):
+                pub_port_str = str(int(pub_port))
+                subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                     f"iptables-save -t nat | grep -- '--dport {pub_port_str}' | sed 's/^-A /-D /' | while read r; do iptables -t nat $r; done; "
+                     f"sed -i '/^{pub_port_str}:/d' /config/forwards.txt"],
+                    capture_output=True
+                )
 
             if action == "create":
                 if not username or not password:
@@ -2530,29 +2562,12 @@ class HealthHandler(BaseHTTPRequestHandler):
                         check=True, capture_output=True
                     )
 
-                # Add iptables DNAT for Winbox port forwarding
-                if winbox_port and vpn_ip:
-                    pub_port = str(int(winbox_port))
-                    fwd_line = f"{pub_port}:{vpn_ip}:{WINBOX_DEST}"
-                    # Apply rules now (idempotent: skip if already present)
-                    subprocess.run(
-                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"iptables -t nat -C PREROUTING -p tcp --dport {pub_port} -j DNAT --to-destination {vpn_ip}:{WINBOX_DEST} 2>/dev/null || "
-                         f"iptables -t nat -A PREROUTING -p tcp --dport {pub_port} -j DNAT --to-destination {vpn_ip}:{WINBOX_DEST}"],
-                        capture_output=True
-                    )
-                    subprocess.run(
-                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"iptables -C FORWARD -p tcp -d {vpn_ip} --dport {WINBOX_DEST} -j ACCEPT 2>/dev/null || "
-                         f"iptables -A FORWARD -p tcp -d {vpn_ip} --dport {WINBOX_DEST} -j ACCEPT"],
-                        capture_output=True
-                    )
-                    # Persist for container restarts
-                    subprocess.run(
-                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"grep -qF '{fwd_line}' /config/forwards.txt 2>/dev/null || echo '{fwd_line}' >> /config/forwards.txt"],
-                        capture_output=True
-                    )
+                # Add iptables DNAT for Winbox + API port forwarding
+                if vpn_ip:
+                    if winbox_port:
+                        _add_forward(winbox_port, WINBOX_DEST)
+                    if api_port:
+                        _add_forward(api_port, API_DEST)
 
                 _send_json(self, {"ok": True, "action": "created", "username": username})
 
@@ -2570,17 +2585,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                      f"rm -f /config/ccd/{username}"],
                     capture_output=True
                 )
-                # Remove iptables DNAT if winboxPort provided
+                # Remove iptables DNAT for any forwarded ports
                 if winbox_port:
-                    pub_port = str(int(winbox_port))
-                    # Drop matching DNAT rule (port-based, vpn_ip optional in matcher)
-                    subprocess.run(
-                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"iptables-save -t nat | grep -- '--dport {pub_port}' | sed 's/^-A /-D /' | while read r; do iptables -t nat $r; done; "
-                         f"iptables-save | grep -E -- '-A FORWARD .*--dport {WINBOX_DEST}.*-d ' | sed 's/^-A /-D /' | while read r; do iptables $r; done; "
-                         f"sed -i '/^{pub_port}:/d' /config/forwards.txt"],
-                        capture_output=True
-                    )
+                    _del_forward(winbox_port)
+                if api_port:
+                    _del_forward(api_port)
                 _send_json(self, {"ok": True, "action": "deleted", "username": username})
             else:
                 _send_json(self, {"error": "action must be create or delete"}, 400)

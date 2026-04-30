@@ -39,6 +39,7 @@ export interface TunnelSetupResponse {
   // OVPN + WIREGUARD shared fields
   vpnIp?: string | null
   winboxPort?: number | null
+  apiPort?: number | null
   vpsHost?: string
   script?: string | null
   // WIREGUARD fields

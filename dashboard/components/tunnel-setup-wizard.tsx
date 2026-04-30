@@ -237,6 +237,7 @@ function OvpnInstructions({
   password,
   vpnIp,
   winboxPort,
+  apiPort,
   vpsHost,
 }: {
   script?: string | null
@@ -244,6 +245,7 @@ function OvpnInstructions({
   password?: string | null
   vpnIp?: string | null
   winboxPort?: number | null
+  apiPort?: number | null
   vpsHost?: string
 }) {
   return (
@@ -264,6 +266,9 @@ function OvpnInstructions({
           <CredentialRow label="VPN IP" value={vpnIp} />
           {winboxPort != null && (
             <CredentialRow label="Winbox Port" value={String(winboxPort)} />
+          )}
+          {apiPort != null && (
+            <CredentialRow label="API Port" value={String(apiPort)} />
           )}
         </div>
       </div>
@@ -290,12 +295,15 @@ function OvpnInstructions({
             <span className="w-6 h-6 rounded-full bg-orange-400/20 text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">
               2
             </span>
-            <p className="text-sm font-semibold text-foreground">Akses Winbox via tunnel</p>
+            <p className="text-sm font-semibold text-foreground">Akses router via tunnel</p>
           </div>
-          <div className="ml-8">
-            <CredentialRow label="Alamat Winbox" value={`${vpsHost}:${winboxPort}`} />
+          <div className="ml-8 space-y-1.5">
+            <CredentialRow label="Winbox" value={`${vpsHost}:${winboxPort}`} />
+            {apiPort != null && (
+              <CredentialRow label="API (8728)" value={`${vpsHost}:${apiPort}`} />
+            )}
             <p className="text-xs text-slate-500 mt-2">
-              Gunakan alamat di atas di kolom "Connect To" Winbox setelah tunnel terhubung.
+              Setelah tunnel terhubung, gunakan alamat di atas. Winbox: kolom "Connect To". API: untuk MikroTik API client / dashboard polling.
             </p>
           </div>
         </div>
@@ -450,6 +458,7 @@ export function TunnelSetupWizard({
                 password={setupQuery.data?.password}
                 vpnIp={setupQuery.data?.vpnIp}
                 winboxPort={setupQuery.data?.winboxPort}
+                apiPort={setupQuery.data?.apiPort}
                 vpsHost={setupQuery.data?.vpsHost}
               />
             ) : (

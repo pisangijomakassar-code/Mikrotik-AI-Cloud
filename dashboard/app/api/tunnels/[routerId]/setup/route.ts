@@ -109,6 +109,7 @@ export async function GET(
         password: plainPassword,
         vpnIp: tunnel.vpnAssignedIp,
         winboxPort: tunnel.winboxPort,
+        apiPort: tunnel.apiPort,
         script,
         ports: tunnel.ports,
       })
