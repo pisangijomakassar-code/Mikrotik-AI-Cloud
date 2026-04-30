@@ -433,6 +433,14 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_router_traffic(path.split("/router-traffic/")[1])
             return
 
+        # Bundled quick stats for top-bar UI (CPU/RAM/HDD + hotspot counts).
+        # ?router=<name> optional. Cached server-side 25s untuk hemat load di RB.
+        if path.startswith("/router-quickstats/"):
+            user_id = path.split("/router-quickstats/")[1].strip("/")
+            router_name = params.get("router", [None])[0]
+            self._handle_router_quickstats(user_id, router_name)
+            return
+
         # Router system logs (real-time, no LLM)
         if path.startswith("/router-logs/"):
             parts = path.split("/router-logs/")[1].split("/")
@@ -758,6 +766,82 @@ class HealthHandler(BaseHTTPRequestHandler):
                     status["error"] = str(e)
                 results.append(status)
             _send_json(self, results)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_router_quickstats(self, user_id, router_name=None):
+        """Bundled quick stats for top-bar pills (CPU/RAM/HDD + hotspot counts).
+
+        Server-side cache 25 detik per (user_id, router_name) — multiple
+        dashboard tabs/users yang polling 30s tidak akan menggandakan beban
+        ke RouterOS. Cache stale ditrigger refresh dari RB sekali, semua
+        client share hasil.
+        """
+        try:
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            cache_key = (user_id, conn.get("name", ""))
+            now = time.time()
+
+            cached = _quickstats_cache.get(cache_key)
+            if cached and (now - cached["fetchedAt"]) < _QUICKSTATS_TTL:
+                _send_json(self, cached["data"])
+                return
+
+            with _connect(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                # /system resource — 1 row, ~1ms di RB
+                resource = list(api.path("system", "resource"))
+                r = resource[0] if resource else {}
+
+                free_mem = int(r.get("free-memory", 0))
+                total_mem = int(r.get("total-memory", 1))
+                free_hdd = int(r.get("free-hdd-space", 0))
+                total_hdd = int(r.get("total-hdd-space", 1))
+                cpu_load = int(r.get("cpu-load", 0))
+                uptime = r.get("uptime", "")
+                board = r.get("board-name", "")
+                version = r.get("version", "")
+
+                # Hotspot counts — index lookup, fast
+                try:
+                    users = list(api.path("ip", "hotspot", "user"))
+                    active = list(api.path("ip", "hotspot", "active"))
+                    total_users = len(users)
+                    active_sessions = len(active)
+                    disabled_users = sum(
+                        1 for u in users
+                        if str(u.get("disabled", "false")).lower() == "true"
+                    )
+                except Exception:
+                    total_users = active_sessions = disabled_users = 0
+
+            data = {
+                "router": conn.get("name", ""),
+                "cpu": cpu_load,
+                "memory": {
+                    "free": free_mem,
+                    "total": total_mem,
+                    "percent": round((1 - free_mem / total_mem) * 100, 1) if total_mem else 0,
+                },
+                "hdd": {
+                    "free": free_hdd,
+                    "total": total_hdd,
+                    "percent": round((1 - free_hdd / total_hdd) * 100, 1) if total_hdd else 0,
+                },
+                "uptime": uptime,
+                "board": board,
+                "version": version,
+                "hotspot": {
+                    "totalUsers": total_users,
+                    "activeSessions": active_sessions,
+                    "disabledUsers": disabled_users,
+                    "enabledUsers": total_users - disabled_users,
+                },
+                "fetchedAt": int(now),
+            }
+
+            _quickstats_cache[cache_key] = {"fetchedAt": now, "data": data}
+            _send_json(self, data)
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 
@@ -2548,6 +2632,12 @@ def _parse_mikhmon_script_name(script_name: str) -> dict | None:
 # Resets on agent restart — UI can fall back to "never synced" or use the
 # latest VoucherBatch.createdAt with source LIKE 'mikhmon_import:%' from DB.
 _mikhmon_last_sync: dict = {}
+
+# Server-side cache untuk /router-quickstats — TTL 25 detik. Multiple dashboard
+# tab/user yang polling tiap 30s tidak menggandakan beban ke RB. Reset saat
+# agent restart.
+_quickstats_cache: dict = {}
+_QUICKSTATS_TTL = 25.0  # seconds
 
 
 def _mikhmon_sync_cron(interval_seconds=3600):

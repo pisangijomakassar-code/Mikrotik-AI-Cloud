@@ -9,6 +9,7 @@ import { useSidebar } from "@/components/sidebar-context"
 import { navGroups } from "@/components/sidebar/nav-config"
 import { CollapsibleGroup } from "@/components/sidebar/collapsible-group"
 import { PlanCard } from "@/components/sidebar/plan-card"
+import { ActiveRouterCard } from "@/components/sidebar/active-router-card"
 
 const STORAGE_KEY = "sidebar-groups"
 
@@ -108,7 +109,7 @@ export function Sidebar() {
       </button>
 
       {/* Logo */}
-      <div className="p-6 flex flex-col gap-1">
+      <div className="px-6 pt-6 pb-2 flex flex-col gap-1">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#06b6d4] to-[#4cd7f6] flex items-center justify-center">
             <Brain className="h-5 w-5 text-[#00424f]" />
@@ -123,6 +124,9 @@ export function Sidebar() {
           </div>
         </div>
       </div>
+
+      {/* Active Router Selector — global state, persists ke localStorage */}
+      <ActiveRouterCard />
 
       {/* Navigation */}
       <nav className="flex-1 mt-2 overflow-y-auto font-headline text-sm tracking-tight">

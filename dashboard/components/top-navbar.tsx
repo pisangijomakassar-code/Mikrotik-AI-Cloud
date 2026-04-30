@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { useSidebar } from "@/components/sidebar-context"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { RouterQuickStatsPills } from "@/components/router-quickstats-pills"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,13 +21,14 @@ export function TopNavBar() {
 
   return (
     <header className="flex items-center justify-between px-4 lg:px-8 lg:ml-64 w-full lg:w-[calc(100%-16rem)] h-16 sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border font-headline font-medium">
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <button
           onClick={toggle}
           className="p-2 text-muted-foreground hover:text-primary transition-colors lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
+        <RouterQuickStatsPills />
       </div>
       <div className="flex items-center gap-4">
         <button
