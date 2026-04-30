@@ -9,14 +9,15 @@ Untuk perintah Telegram bot natural language, lihat [API_REFERENCE.md](./API_REF
 
 1. [Konsep Inti](#konsep-inti)
 2. [Setup Awal](#setup-awal)
-3. [Hotspot Profile](#hotspot-profile)
-4. [Generate Voucher](#generate-voucher)
-5. [Cetak Voucher](#cetak-voucher)
-6. [Setting Voucher (Bot)](#setting-voucher-bot)
-7. [Laporan](#laporan)
-8. [Log Aktivitas](#log-aktivitas)
-9. [Sinkronisasi & Maintenance](#sinkronisasi--maintenance)
-10. [Pertanyaan Umum (FAQ)](#pertanyaan-umum-faq)
+3. [Navigasi Dashboard](#navigasi-dashboard)
+4. [Hotspot Profile](#hotspot-profile)
+5. [Generate Voucher](#generate-voucher)
+6. [Cetak Voucher](#cetak-voucher)
+7. [Setting Voucher (Bot)](#setting-voucher-bot)
+8. [Laporan](#laporan)
+9. [Log Aktivitas](#log-aktivitas)
+10. [Sinkronisasi & Maintenance](#sinkronisasi--maintenance)
+11. [Pertanyaan Umum (FAQ)](#pertanyaan-umum-faq)
 
 ---
 
@@ -68,6 +69,68 @@ Field:
 - **Nama** + **WhatsApp**
 - **Diskon (%)** — auto-applied saat reseller pilih voucher
 - **Voucher Group** — filter jenis voucher yang boleh diakses reseller (default `default`)
+
+---
+
+## Navigasi Dashboard
+
+### Router Aktif (Sidebar)
+
+Di **bawah brand "MikroTik AI"** ada card **"Router aktif"** yang menampilkan
+nama router yang sedang aktif untuk semua menu.
+
+```
+┌──────────────────────────┐
+│ 🤖 MikroTik AI           │
+│    AI-Driven Network     │
+├──────────────────────────┤
+│ 📡 ROUTER AKTIF          │
+│ ┌──────────────────────┐ │
+│ │ ummi              ▼  │ │   ← klik untuk ganti
+│ └──────────────────────┘ │
+└──────────────────────────┘
+```
+
+Klik card → modal popup dengan daftar semua router milik kamu beserta status
+(online/warning/offline). Pilihan tersimpan di browser (localStorage), semua
+menu akan otomatis menampilkan data router yang dipilih.
+
+Card menjadi tombol "+ Tambah Router" kalau kamu belum punya router terdaftar.
+
+### Top Bar — Status Real-time
+
+Di header atas (sebelah kanan tombol menu) ada deretan pill status real-time
+untuk router aktif:
+
+```
+🟢 LLM ready · CPU 14% · RAM 17% · HDD 42% · 📶 38 · 👥 587
+```
+
+| Pill | Sumber data |
+|------|-------------|
+| 🟢/🔴 LLM ready/down | Health agent backend |
+| CPU | `/system resource` cpu-load |
+| RAM | `(total - free) / total × 100` |
+| HDD | `(total - free) / total × 100` |
+| 📶 N | Active hotspot session sekarang |
+| 👥 N | Total user voucher di RouterOS |
+
+Warna otomatis: **hijau** kalau aman (<70%), **kuning** warning (70-84%), **merah**
+critical (≥85%).
+
+### Smart polling (hemat resource RouterOS)
+
+Top bar polling setiap **30 detik**, dengan optimasi:
+
+| Kondisi | Polling? |
+|---------|----------|
+| Tab aktif & user aktif | ✅ Tiap 30 detik |
+| Tab dashboard di background (Ctrl+Tab/Alt+Tab) | ⏸ Pause otomatis (Page Visibility API) |
+| User idle > 30 menit (no mouse/keyboard) | ⏸ Pause + tampil pill "paused" + tombol Refresh |
+| Kembali fokus / klik Refresh | ▶ Refresh sekali + lanjut polling 30s |
+
+Plus **server-side cache 25 detik** di agent — 100 user yang buka dashboard tetap
+hanya ~2 query/menit ke RouterOS.
 
 ---
 
@@ -353,5 +416,6 @@ Dokumentasi ini di-update setiap kali ada perubahan UI/fitur. Cek log commit
 
 | Versi | Tanggal | Ringkasan |
 |-------|---------|-----------|
+| 2.1 | 2026-04-30 | Tambah section "Navigasi Dashboard" — Router Aktif selector di sidebar, Top Bar quickstats pills (CPU/RAM/HDD/client/users) dengan smart polling (Page Visibility + idle 30 menit) |
 | 2.0 | 2026-04-29 | Rewrite full bahasa Indonesia. Tambah dokumentasi: 5 expired mode, Cetak Voucher dynamic perPage, Voucher Lifecycle 3 angka, sync & cleanup tools, log filter voucher |
 | 1.0 | 2025 | Initial — fokus Telegram bot natural language commands |
