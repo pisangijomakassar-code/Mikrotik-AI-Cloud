@@ -692,6 +692,10 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_ovpn_ca()
             return
 
+        if path == "/tunnel-probe":
+            self._handle_tunnel_probe()
+            return
+
         # AI insight
         if path.startswith("/ai-insight/"):
             user_id = path.split("/ai-insight/")[1].strip("/")
@@ -2486,7 +2490,12 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": str(e)}, 500)
 
     def _handle_ovpn_user(self, user_id):
-        """Manage OpenVPN users: create or delete."""
+        """Manage OpenVPN users: create or delete.
+
+        On create: also sets up iptables DNAT inside mikrotik-openvpn so
+        VPS:winboxPort -> vpnIp:8291 (Winbox), persisted to /config/forwards.txt
+        so it survives container restart (entrypoint.sh re-applies on boot).
+        """
         try:
             import subprocess, json, hashlib
             docker = shutil.which("docker")
@@ -2499,6 +2508,8 @@ class HealthHandler(BaseHTTPRequestHandler):
             username = body.get("username", "")
             password = body.get("password", "")
             vpn_ip = body.get("vpnIp", "")
+            winbox_port = body.get("winboxPort")
+            WINBOX_DEST = 8291
 
             if action == "create":
                 if not username or not password:
@@ -2518,6 +2529,31 @@ class HealthHandler(BaseHTTPRequestHandler):
                          f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} 255.255.0.0' > /config/ccd/{username}"],
                         check=True, capture_output=True
                     )
+
+                # Add iptables DNAT for Winbox port forwarding
+                if winbox_port and vpn_ip:
+                    pub_port = str(int(winbox_port))
+                    fwd_line = f"{pub_port}:{vpn_ip}:{WINBOX_DEST}"
+                    # Apply rules now (idempotent: skip if already present)
+                    subprocess.run(
+                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                         f"iptables -t nat -C PREROUTING -p tcp --dport {pub_port} -j DNAT --to-destination {vpn_ip}:{WINBOX_DEST} 2>/dev/null || "
+                         f"iptables -t nat -A PREROUTING -p tcp --dport {pub_port} -j DNAT --to-destination {vpn_ip}:{WINBOX_DEST}"],
+                        capture_output=True
+                    )
+                    subprocess.run(
+                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                         f"iptables -C FORWARD -p tcp -d {vpn_ip} --dport {WINBOX_DEST} -j ACCEPT 2>/dev/null || "
+                         f"iptables -A FORWARD -p tcp -d {vpn_ip} --dport {WINBOX_DEST} -j ACCEPT"],
+                        capture_output=True
+                    )
+                    # Persist for container restarts
+                    subprocess.run(
+                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                         f"grep -qF '{fwd_line}' /config/forwards.txt 2>/dev/null || echo '{fwd_line}' >> /config/forwards.txt"],
+                        capture_output=True
+                    )
+
                 _send_json(self, {"ok": True, "action": "created", "username": username})
 
             elif action == "delete":
@@ -2534,9 +2570,47 @@ class HealthHandler(BaseHTTPRequestHandler):
                      f"rm -f /config/ccd/{username}"],
                     capture_output=True
                 )
+                # Remove iptables DNAT if winboxPort provided
+                if winbox_port:
+                    pub_port = str(int(winbox_port))
+                    # Drop matching DNAT rule (port-based, vpn_ip optional in matcher)
+                    subprocess.run(
+                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
+                         f"iptables-save -t nat | grep -- '--dport {pub_port}' | sed 's/^-A /-D /' | while read r; do iptables -t nat $r; done; "
+                         f"iptables-save | grep -E -- '-A FORWARD .*--dport {WINBOX_DEST}.*-d ' | sed 's/^-A /-D /' | while read r; do iptables $r; done; "
+                         f"sed -i '/^{pub_port}:/d' /config/forwards.txt"],
+                        capture_output=True
+                    )
                 _send_json(self, {"ok": True, "action": "deleted", "username": username})
             else:
                 _send_json(self, {"error": "action must be create or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_tunnel_probe(self):
+        """TCP probe to a VPN client IP via the openvpn container's network namespace.
+
+        Body: {"vpnIp": "10.9.1.2", "port": 8728}
+        Returns: {"reachable": true|false}
+        """
+        try:
+            import subprocess, json
+            docker = shutil.which("docker")
+            if not docker:
+                _send_json(self, {"error": "docker CLI not found"}, 500)
+                return
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            vpn_ip = body.get("vpnIp", "")
+            port = int(body.get("port", 8728))
+            if not vpn_ip:
+                _send_json(self, {"error": "vpnIp required"}, 400)
+                return
+            result = subprocess.run(
+                [docker, "exec", "mikrotik-openvpn", "nc", "-z", "-w", "2", vpn_ip, str(port)],
+                capture_output=True, timeout=5
+            )
+            _send_json(self, {"reachable": result.returncode == 0})
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 

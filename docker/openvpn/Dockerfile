@@ -1,6 +1,6 @@
 FROM alpine:3.19
 
-RUN apk add --no-cache openvpn openssl bash
+RUN apk add --no-cache openvpn openssl bash iptables netcat-openbsd
 
 COPY server.conf /etc/openvpn/server.conf
 COPY auth-check.sh /etc/openvpn/auth-check.sh

@@ -177,6 +177,7 @@ services:
       - ovpn-data:/config
     ports:
       - "1194:1194/tcp"
+      - "18291-18500:18291-18500/tcp"
     networks:
       - internal
       - vpn

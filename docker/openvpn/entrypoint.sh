@@ -35,8 +35,24 @@ fi
 mkdir -p "$CCD_DIR"
 touch "$USERS_FILE"
 
+FORWARDS_FILE=/config/forwards.txt
+touch "$FORWARDS_FILE"
+
 # Enable IP forwarding
 echo 1 > /proc/sys/net/ipv4/ip_forward 2>/dev/null || true
+
+# Setup base NAT rules (MASQUERADE outbound traffic on tun0 for return packets)
+iptables -t nat -C POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
+
+# Restore port forwards from /config/forwards.txt (one rule per line: <publicPort>:<vpnIp>:<destPort>)
+while IFS=: read -r PUB_PORT VPN_IP DEST_PORT; do
+    [ -z "$PUB_PORT" ] && continue
+    iptables -t nat -C PREROUTING -p tcp --dport "$PUB_PORT" -j DNAT --to-destination "$VPN_IP:$DEST_PORT" 2>/dev/null || \
+        iptables -t nat -A PREROUTING -p tcp --dport "$PUB_PORT" -j DNAT --to-destination "$VPN_IP:$DEST_PORT"
+    iptables -C FORWARD -p tcp -d "$VPN_IP" --dport "$DEST_PORT" -j ACCEPT 2>/dev/null || \
+        iptables -A FORWARD -p tcp -d "$VPN_IP" --dport "$DEST_PORT" -j ACCEPT
+done < "$FORWARDS_FILE"
 
 echo "[ovpn] Starting OpenVPN server on port 1194/tcp..."
 exec openvpn --config /etc/openvpn/server.conf

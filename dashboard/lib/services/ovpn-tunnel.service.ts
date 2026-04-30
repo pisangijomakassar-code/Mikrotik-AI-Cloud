@@ -228,7 +228,7 @@ export async function createOvpnTunnel(
   const res = await fetch(`${AGENT_URL}/ovpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "create", username, password, vpnIp }),
+    body: JSON.stringify({ action: "create", username, password, vpnIp, winboxPort }),
   })
 
   if (!res.ok) {
