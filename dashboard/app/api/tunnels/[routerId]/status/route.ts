@@ -3,6 +3,28 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { getCloudflareTunnelStatus } from "@/lib/services/cloudflare-tunnel.service"
 import { getSstpTunnelStatus } from "@/lib/services/sstp-tunnel.service"
+import net from "net"
+
+// Cek konektivitas TCP ke vpn_ip:port. Dipakai untuk OVPN/WG karena OS-level
+// service-nya tdk punya endpoint status terpisah — kalau router-nya konek ke
+// VPN, port API-nya (8728) accessible dari VPS.
+function tcpProbe(host: string, port: number, timeoutMs = 2000): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket()
+    let settled = false
+    const done = (ok: boolean) => {
+      if (settled) return
+      settled = true
+      socket.destroy()
+      resolve(ok)
+    }
+    socket.setTimeout(timeoutMs)
+    socket.once("connect", () => done(true))
+    socket.once("error", () => done(false))
+    socket.once("timeout", () => done(false))
+    socket.connect(port, host)
+  })
+}
 
 // GET /api/tunnels/[routerId]/status
 // Polls the external service for live tunnel status and syncs it to the DB.
@@ -36,6 +58,14 @@ export async function GET(
       liveStatus = await getCloudflareTunnelStatus(tunnel.cloudflareTunnelId)
     } else if (tunnel.method === "SSTP" && tunnel.vpnUsername) {
       liveStatus = await getSstpTunnelStatus(tunnel.vpnUsername)
+    } else if (
+      (tunnel.method === "OVPN" || tunnel.method === "WIREGUARD") &&
+      tunnel.vpnAssignedIp
+    ) {
+      // TCP probe ke API port (8728) router lewat VPN IP — kalau bisa konek,
+      // berarti router aktif di tunnel.
+      const reachable = await tcpProbe(tunnel.vpnAssignedIp, 8728, 2000)
+      liveStatus = reachable ? "CONNECTED" : "PENDING"
     } else {
       liveStatus = "PENDING"
     }

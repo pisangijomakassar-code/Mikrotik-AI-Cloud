@@ -214,15 +214,17 @@ class RouterRegistryPG:
                         "Router %s has CLOUDFLARE tunnel but no localPort assigned yet",
                         r.get("name"),
                     )
-            elif tunnel_method == "SSTP":
+            elif tunnel_method in ("SSTP", "OVPN", "WIREGUARD"):
+                # Untuk VPN-based tunnels, router dapat IP dari VPN server
+                # (vpnAssignedIp). Dari VPS, router reachable di vpn_ip:8728.
                 vpn_ip = r.get("tunnel_vpn_ip")
                 if vpn_ip:
                     host = vpn_ip
                     port = 8728
                 else:
                     logger.warning(
-                        "Router %s has SSTP tunnel but no vpnAssignedIp yet",
-                        r.get("name"),
+                        "Router %s has %s tunnel but no vpnAssignedIp yet",
+                        r.get("name"), tunnel_method,
                     )
 
         return {
