@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Cloud, Shield, X, CheckCircle2, MessageCircle, Network, Wifi } from "lucide-react"
+import { Cloud, Shield, X, CheckCircle2, MessageCircle, Network, Wifi, ChevronDown, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -262,8 +262,52 @@ export function TunnelActivateDialog({
               onChange={(e) => setRouterLanIp(e.target.value)}
             />
             <p className="text-[10px] text-muted-foreground/70 ml-1">
-              IP router di jaringan LAN lokal
+              IP router MikroTik di jaringan LAN lokal (default RouterOS: 192.168.88.1)
             </p>
+
+            {/* Help block — cara cek IP router */}
+            <details className="group rounded-lg border border-border bg-muted/30 mt-2">
+              <summary className="flex items-center gap-2 cursor-pointer px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors list-none">
+                <HelpCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="font-medium">Belum tahu IP router? Cara ceknya</span>
+                <ChevronDown className="h-3.5 w-3.5 ml-auto group-open:rotate-180 transition-transform" />
+              </summary>
+              <div className="px-4 pb-3 pt-1 text-xs text-muted-foreground/90 space-y-3 leading-relaxed">
+                <div>
+                  <p className="font-semibold text-foreground mb-1">A. Dari Winbox / WebFig (paling cepat)</p>
+                  <p>Konek ke MikroTik via Winbox lokal, lalu Terminal:</p>
+                  <pre className="bg-background/60 border border-border rounded px-2 py-1.5 mt-1 font-mono-tech text-[11px] overflow-x-auto">
+{`/ip address print where interface=bridge`}
+                  </pre>
+                  <p className="mt-1">Lihat kolom <code className="text-primary">ADDRESS</code> — itu IP LAN router (mis. <code className="text-primary">192.168.88.1/24</code> → isi <code className="text-primary">192.168.88.1</code>).</p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-foreground mb-1">B. Dari laptop yang konek ke router</p>
+                  <p>Kalau laptop sudah konek ke MikroTik (lewat WiFi/LAN), gateway = IP router.</p>
+                  <ul className="list-disc ml-5 space-y-1 mt-1">
+                    <li>Windows: <code className="text-primary">ipconfig</code> → cari <code>Default Gateway</code></li>
+                    <li>Mac/Linux: <code className="text-primary">ip route | grep default</code> atau <code>netstat -nr | grep default</code></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-foreground mb-1">C. Belum punya MikroTik aktif? (kasus baru install)</p>
+                  <p>Default MikroTik fresh: <code className="text-primary">192.168.88.1</code>. Kalau RouterOS-nya baru direset, langsung pakai itu.</p>
+                </div>
+
+                <div>
+                  <p className="font-semibold text-foreground mb-1">D. Router di belakang modem ISP (Indihome / FirstMedia / dsb)</p>
+                  <p>Topologi typical: <code className="text-primary">Modem ISP → MikroTik → LAN/WiFi</code>. IP yang diisi di sini adalah <strong>IP MikroTik di sisi LAN</strong> (yang ke laptop), <em>bukan</em> IP modem atau IP publik. Contoh:</p>
+                  <ul className="list-disc ml-5 space-y-1 mt-1">
+                    <li>Modem Indihome biasanya <code>192.168.1.1</code> ← <strong>jangan</strong> isi ini</li>
+                    <li>MikroTik dapat IP dari modem (mis. <code>192.168.1.2</code>) → ini IP WAN-nya MikroTik, juga <strong>jangan</strong> isi</li>
+                    <li>MikroTik kasih IP ke laptop dari subnet sendiri (mis. <code>192.168.88.x</code>) → gateway laptop = <code className="text-primary">192.168.88.1</code> ← <strong>ini</strong> yang diisi</li>
+                  </ul>
+                  <p className="mt-1 text-[11px] italic text-muted-foreground/70">Tunnel akan forward port lewat IP LAN ini supaya dashboard bisa konek ke MikroTik tanpa port-forward di modem ISP.</p>
+                </div>
+              </div>
+            </details>
           </div>
 
           {/* Port selection (Cloudflare only) */}
