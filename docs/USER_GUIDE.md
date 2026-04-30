@@ -51,15 +51,50 @@ trigger manual lewat tombol "Sinkron Sekarang" di halaman Laporan.
 
 **System → Routers → Tambah Router**
 
-Field penting:
-- **Nama** — identifier (e.g. `ummi`)
-- **Host & Port** — IP/hostname RouterOS API + port (default 8728)
-- **Username & Password** — credential MikroTik dengan API access
+Wizard 5 langkah, pilih salah satu jalur sesuai kondisi jaringan router:
 
-**Section "Hotspot Branding"** (opsional, untuk cetak voucher):
-- **DNS Hotspot** — DNS hotspot router (untuk QR code login)
-- **Nama Hotspot** — display name di header voucher cetak (kalau kosong → fallback ke nama router)
-- **Logo Hotspot URL** — URL gambar logo (opsional)
+#### Jalur A — IP Publik / Akses Langsung
+
+Cocok jika router sudah dapat diakses dari internet (IP publik statik, atau
+port-forwarding yang sudah aktif).
+
+1. **Prasyarat** — centang daftar: RouterOS API diaktifkan, credential siap
+2. **Metode Koneksi** — pilih "IP Publik / Akses Langsung"
+3. **Detail Router** — isi Nama, Host:Port, Username, Password, lalu klik
+   **Test Koneksi** (harus hijau sebelum bisa lanjut)
+4. Router langsung terdaftar dan aktif
+
+#### Jalur B — Tunnel (NAT / Tanpa IP Publik)
+
+Cocok jika router berada di belakang NAT ISP (Indihome, dll.) dan tidak bisa
+diakses langsung dari internet.
+
+1. **Prasyarat** — centang daftar
+2. **Metode Koneksi** — pilih "Tunnel" *(direkomendasikan untuk NAT)*
+3. **Detail Router** — isi Nama dan IP LAN router (hanya untuk identifikasi,
+   tidak diuji koneksi)
+4. **Konfigurasi Tunnel** — pilih metode tunnel:
+   - **Cloudflare** — tunnel tanpa buka port, koneksi via `cloudflared`
+   - **SSTP** — VPN SSTP bawaan RouterOS, client certificate otomatis
+   - **OpenVPN** — file `.ovpn` di-generate, import ke RouterOS
+   - **WireGuard** — peer key exchange, modern & cepat
+5. **Script Setup** — salin script yang di-generate, jalankan di terminal
+   RouterOS, lalu klik **Verifikasi Koneksi** — dashboard polling status otomatis
+   sampai CONNECTED
+
+> **Batas slot router** tergantung plan: FREE = 1, PRO = 2, PREMIUM = 5.
+> Tombol "Tambah Router" akan disabled jika slot sudah penuh.
+
+#### Cara cek IP LAN router (langkah 3 Jalur B)
+
+Jika tidak tahu IP LAN router, gunakan salah satu cara:
+
+- **Terminal Winbox / SSH**: `ip address print` → lihat interface `bridge` atau `ether1`
+- **Laptop terhubung ke router**: `ipconfig` (Windows) atau `ip a` (Linux/Mac) →
+  lihat Default Gateway
+- **Fresh install**: default IP RouterOS adalah `192.168.88.1`
+- **Modem provider (Indihome, dll.)**: masuk admin modem → lihat tabel DHCP
+  client atau "Connected Devices" → cari nama device RouterBoard
 
 ### 2. Tambah Reseller (opsional)
 
@@ -438,6 +473,7 @@ Dokumentasi ini di-update setiap kali ada perubahan UI/fitur. Cek log commit
 
 | Versi | Tanggal | Ringkasan |
 |-------|---------|-----------|
+| 2.2 | 2026-04-30 | Wizard tambah router gabungkan router + tunnel ke 1 alur (5 langkah, Jalur A/B). Update section Setup Awal. |
 | 2.1 | 2026-04-30 | Tambah section "Navigasi Dashboard" — Router Aktif selector di sidebar, Top Bar quickstats pills (CPU/RAM/HDD/client/users) dengan smart polling (Page Visibility + idle 30 menit) |
 | 2.0 | 2026-04-29 | Rewrite full bahasa Indonesia. Tambah dokumentasi: 5 expired mode, Cetak Voucher dynamic perPage, Voucher Lifecycle 3 angka, sync & cleanup tools, log filter voucher |
 | 1.0 | 2025 | Initial — fokus Telegram bot natural language commands |
