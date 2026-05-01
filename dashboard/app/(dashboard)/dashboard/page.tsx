@@ -295,18 +295,24 @@ function BarChartCard({ title, subtitle, data, color, loading, empty }: {
         <p className="text-xs text-muted-foreground py-8 text-center">{empty}</p>
       ) : (
         // Vertical column chart: bars naik dari bawah, label di bawah.
+        // Pakai PIXEL height (bukan %) — items-end + flex-1 + percent height tidak compute reliably.
         <div>
           <div className="flex items-end gap-1 h-40 mb-1">
             {data.map((d, i) => {
-              const h = Math.max(2, Math.round((d.value / max) * 100))
+              const h = Math.max(2, Math.round((d.value / max) * 158))  // px out of 160 (h-40)
               return (
-                <div key={`${d.label}-${i}`} className="flex-1 flex flex-col items-center justify-end group relative">
-                  <div
-                    className="w-full rounded-t transition-all hover:opacity-80"
-                    style={{ height: `${h}%`, background: `linear-gradient(180deg, ${color}, ${color}aa)` }}
-                  />
+                <div
+                  key={`${d.label}-${i}`}
+                  className="flex-1 group relative cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{
+                    height: `${h}px`,
+                    background: `linear-gradient(180deg, ${color}, ${color}aa)`,
+                    borderRadius: "4px 4px 0 0",
+                  }}
+                  title={d.sub}
+                >
                   {d.sub && (
-                    <div className="absolute -top-6 px-1.5 py-0.5 bg-card border border-border rounded text-[10px] opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-card border border-border rounded text-[10px] opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none z-10">
                       {d.sub}
                     </div>
                   )}
