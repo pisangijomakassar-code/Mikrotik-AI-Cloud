@@ -44,4 +44,4 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN sed -i 's/\r//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gateway"]
+CMD ["serve", "--port", "18790", "--host", "0.0.0.0"]
