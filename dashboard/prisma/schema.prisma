@@ -282,6 +282,7 @@ model Invoice {
 enum ResellerStatus {
   ACTIVE
   INACTIVE
+  PENDING
 }
 
 enum SaldoTransactionType {
