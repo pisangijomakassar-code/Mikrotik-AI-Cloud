@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useResellers } from "@/hooks/use-resellers"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 
 type PrintMode = "latest" | "custom"
 type PrintTemplate = "a4" | "thermal"
@@ -78,8 +79,9 @@ function resolvePrice(
 }
 
 export default function CetakVoucherPage() {
-  const { data: resellers } = useResellers()
-  const { data: profiles } = useHotspotProfiles()
+  const { activeRouter } = useActiveRouter()
+  const { data: resellers } = useResellers(activeRouter || undefined)
+  const { data: profiles } = useHotspotProfiles(activeRouter || undefined)
 
   const today = new Date().toISOString().slice(0, 10)
   const [mode, setMode] = useState<PrintMode>("latest")

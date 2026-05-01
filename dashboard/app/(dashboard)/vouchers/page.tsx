@@ -56,9 +56,11 @@ export default function GenerateVoucherPage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [showPrint, setShowPrint] = useState(false)
 
-  // Sync routerName with active router from top bar
+  // Sync routerName with active router from top bar + reset reseller selection
+  // (reseller di router lain tidak valid)
   useEffect(() => {
     if (activeRouter) setRouterName(activeRouter)
+    setResellerId("")
   }, [activeRouter])
 
   const selectedReseller = resellers?.find((r) => r.id === resellerId)

@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { useSendTelegram } from "@/hooks/use-telegram"
 import { useResellers } from "@/hooks/use-resellers"
+import { useActiveRouter } from "@/components/active-router-context"
 import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
 import { MESSAGE_TEMPLATES, MAX_MESSAGE_CHARS } from "@/lib/constants/message-templates"
@@ -59,7 +60,8 @@ export default function CommunicationPage() {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  const { data: resellers, isLoading: resellersLoading } = useResellers()
+  const { activeRouter } = useActiveRouter()
+  const { data: resellers, isLoading: resellersLoading } = useResellers(activeRouter || undefined)
   const sendMutation = useSendTelegram()
 
   const resellerList: Reseller[] = useMemo(() => {

@@ -287,6 +287,11 @@ export default function ReportsPage() {
 
   useEffect(() => { fetchReport() }, [fetchReport])
 
+  // Reset reseller filter saat router berubah — reseller di router lain tidak valid
+  useEffect(() => {
+    setResellerFilter("")
+  }, [activeRouter])
+
   async function openImportDialog() {
     setImportOpen(true)
     setLoadingDbMonths(true)
