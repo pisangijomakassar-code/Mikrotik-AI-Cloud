@@ -12,22 +12,38 @@ import {
 
 // Feed log voucher real-time untuk dashboard utama. Filter ke event hotspot
 // (login/logout/gagal) saja — tidak ada noise system/dhcp/wireless.
-export function VoucherActivityFeed() {
+//
+// Default: panel kompak h-[420px], fetch 50 baris log mentah dari RouterOS.
+// Pakai prop `height` & `fetchCount` untuk override (misal halaman /logs lawas).
+interface VoucherActivityFeedProps {
+  height?: string     // Tailwind class. "h-[420px]" default.
+  fetchCount?: number // Default 50.
+}
+
+export function VoucherActivityFeed({
+  height = "h-[420px]",
+  fetchCount = 50,
+}: VoucherActivityFeedProps = {}) {
   const { activeRouter } = useActiveRouter()
   const { data, isLoading, isFetching, refetch } = useRouterLogs(
     activeRouter || undefined,
-    200,
+    fetchCount,
   )
 
   const allLogs = data?.logs ?? []
+  // Filter dua lapis:
+  //   1. topics WAJIB include "hotspot" — buang admin/ssh login yang juga
+  //      match parser longgar (contoh: "user admin logged in via ssh").
+  //   2. parsed.kind != null — hanya event login/logout/login-failed.
   const voucherLogs = allLogs
+    .filter((l) => l.topics?.toLowerCase().includes("hotspot"))
     .map((l) => ({ ...l, parsed: parseHotspotMessage(l.message) }))
     .filter((l) => l.parsed.kind !== null)
     .reverse()  // terbaru di atas
 
   return (
-    <div className="card-glass rounded-xl p-6 min-h-[calc(100vh-8rem)] flex flex-col shadow-2xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className={`card-glass rounded-xl p-5 ${height} flex flex-col shadow-2xl`}>
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Ticket className="h-5 w-5 text-primary" />
           <h3 className="font-headline font-bold text-lg text-foreground">
