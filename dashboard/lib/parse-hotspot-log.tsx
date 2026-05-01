@@ -14,25 +14,50 @@ export interface ParsedHotspotLog {
 // Format yang teramati dari MikroTik:
 //   "user xxx logged in"                                  → login
 //   "logged in (mac=AA:BB:CC..)"                          → login
+//   "xxx (192.168.4.x): logged in"                        → login (Mikhmon style)
+//   "xxx (192.168.4.x): log in by mac-cookie"             → login
 //   "user xxx logged out (lease-expired|user-logout|...)" → logout
+//   "xxx (192.168.4.x): logged out: keepalive timeout"    → logout
 //   "user xxx login failed: invalid username or password" → login-failed
-//   "vc1234: login failed: ..."                           → login-failed
+//   "xxx login failed: no more sessions are allowed for user" → login-failed
 export function parseHotspotMessage(msg: string): ParsedHotspotLog {
   const lower = msg.toLowerCase()
+
+  // Pattern Mikhmon: "USERNAME (IP): action..." — handle dulu krn lebih spesifik.
+  const mikhmonMatch = msg.match(/^([^\s(]+)\s*\(([^)]+)\):\s*(.+)$/)
+  if (mikhmonMatch) {
+    const username = mikhmonMatch[1]
+    const action = mikhmonMatch[3].toLowerCase()
+    if (action.includes("logged out") || action.includes("log out")) {
+      // Reason setelah ":" atau di parentheses
+      const reasonMatch = mikhmonMatch[3].match(/(?:logged?\s+out)[:\s]+(.+)$/i)
+      return { kind: "logout", username, reason: reasonMatch?.[1]?.trim() }
+    }
+    if (action.includes("logged in") || action.includes("log in")) {
+      return { kind: "login", username }
+    }
+    if (action.includes("login failed") || action.includes("login fail")) {
+      const reasonMatch = mikhmonMatch[3].match(/login\s+fail(?:ed)?[:\s]+(.+)$/i)
+      return { kind: "login-failed", username, reason: reasonMatch?.[1]?.trim() }
+    }
+  }
+
+  // Pattern login failed klasik (lebih spesifik dari login biasa)
   const failedMatch = msg.match(
-    /(?:user\s+)?["']?([^"',:\s]+)["']?[:\s].*login\s+failed(?:[:\s]+(.+?))?$/i,
+    /(?:user\s+)?["']?([^"',:\s()]+)["']?[:\s].*login\s+failed(?:[:\s]+(.+?))?$/i,
   )
   if (failedMatch) {
     return { kind: "login-failed", username: failedMatch[1], reason: failedMatch[2]?.trim() }
   }
-  if (lower.includes("logged in") || lower.includes("login ok") || lower.includes("login")) {
-    if (lower.includes("logged in") || lower.includes("login ok")) {
-      const m = msg.match(/(?:user\s+)?["']?([^"',:\s]+)["']?\s+(?:->\s*)?logged in/i)
-      return { kind: "login", username: m?.[1] ?? "" }
-    }
+
+  // Pattern logged in klasik
+  if (lower.includes("logged in") || lower.includes("login ok")) {
+    const m = msg.match(/(?:user\s+)?["']?([^"',:\s()]+)["']?\s+(?:->\s*)?logged in/i)
+    return { kind: "login", username: m?.[1] ?? "" }
   }
+
   if (lower.includes("logged out")) {
-    const m = msg.match(/(?:user\s+)?["']?([^"',:\s]+)["']?\s+(?:->\s*)?logged out(?:\s*\(([^)]+)\))?/i)
+    const m = msg.match(/(?:user\s+)?["']?([^"',:\s()]+)["']?\s+(?:->\s*)?logged out(?:\s*\(([^)]+)\))?/i)
     return { kind: "logout", username: m?.[1] ?? "", reason: m?.[2] }
   }
   return { kind: null, username: "" }
