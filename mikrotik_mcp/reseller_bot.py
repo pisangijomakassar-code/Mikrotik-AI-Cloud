@@ -114,8 +114,10 @@ def _get_bot_texts() -> dict:
         return BOT_TEXT_DEFAULTS.copy()
 
 
-def _get_users_with_bot_token() -> list[dict]:
-    """Query all User rows that have a non-null resellerBotToken."""
+def _get_routers_with_bot_token() -> list[dict]:
+    """Query all Router rows that have a non-null botToken (Fernet-encrypted).
+    Return: [{router_id, router_name, bot_token_enc, owner_telegram_id, owner_user_id}]
+    """
     if not DATABASE_URL:
         return []
     import psycopg2
@@ -125,16 +127,18 @@ def _get_users_with_bot_token() -> list[dict]:
         conn.autocommit = True
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            'SELECT "id", "telegramId", "resellerBotToken" '
-            'FROM "User" '
-            'WHERE "resellerBotToken" IS NOT NULL AND "resellerBotToken" != \'\''
+            '''SELECT r."id" AS router_id, r."name" AS router_name,
+                      r."botToken" AS bot_token_enc, r."botUsername" AS bot_username,
+                      u."telegramId" AS owner_telegram_id, u."id" AS owner_user_id
+               FROM "Router" r JOIN "User" u ON u."id" = r."userId"
+               WHERE r."botToken" IS NOT NULL AND r."botToken" != '' '''
         )
         rows = [dict(r) for r in cur.fetchall()]
         cur.close()
         conn.close()
         return rows
     except Exception as exc:
-        logger.error("Failed to query users with resellerBotToken: %s", exc)
+        logger.error("Failed to query routers with botToken: %s", exc)
         return []
 
 
@@ -157,12 +161,26 @@ def _get_registry():
 # ---------------------------------------------------------------------------
 
 class ResellerBot:
-    """One bot instance per ISP owner (User)."""
+    """One bot instance per Router (1 router = 1 bot Telegram).
 
-    def __init__(self, bot_token: str, owner_telegram_id: str, vdb: VoucherDB):
+    Setiap aksi di bot ini scoped ke router_id + router_name. Reseller yg /daftar
+    via bot ini auto-assigned ke router ini. Owner commands (/topup, /resource,
+    /netwatch) defaultnya target router ini.
+    """
+
+    def __init__(
+        self,
+        bot_token: str,
+        owner_telegram_id: str,
+        vdb: VoucherDB,
+        router_id: str = "",
+        router_name: str = "",
+    ):
         self.bot_token = bot_token
         self.owner_telegram_id = owner_telegram_id
         self.vdb = vdb
+        self.router_id = router_id      # router yg di-handle bot ini
+        self.router_name = router_name  # nama router (untuk resolve via registry)
         self.texts = _get_bot_texts()
         # In-memory pending deposit requests (dep_id → {reseller_id, amount, photo_file_id, ...})
         # Note: lost on bot restart — for production-grade, simpan ke DB sebagai SaldoTransaction
@@ -624,9 +642,8 @@ class ResellerBot:
 
         try:
             reg = _get_registry()
-            # Resolve router via Reseller.routerId (kunci 1 reseller = 1 router).
-            # Fallback ke default kalau routerName kosong (legacy data).
-            target_router = reseller.get("routerName") or None
+            # 1 bot = 1 router. Voucher dibuat di router yg di-handle bot ini.
+            target_router = self.router_name or reseller.get("routerName") or None
             conn = reg.resolve(owner_tid, target_router)
         except Exception as exc:
             logger.error("Router resolve failed: %s", exc)
@@ -886,13 +903,13 @@ class ResellerBot:
     # ── Owner approve / reject registration ────────────────────
 
     async def _owner_approve_registration(self, query, owner_telegram_id: str, reg_id: str) -> None:
-        """Approve pending reseller registration: insert ke Reseller table + notif user."""
+        """Approve pending reseller registration: insert ke Reseller table + notif user.
+        1 bot = 1 router → reseller auto-assigned ke router yg di-handle bot ini."""
         reg = self._pending_regs.get(reg_id)
         if not reg:
             await query.answer("Registrasi sudah diproses atau expired.", show_alert=True)
             return
 
-        # Resolve owner internal user_id + default router
         try:
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
@@ -902,16 +919,20 @@ class ResellerBot:
                     await query.answer("Owner user not found.", show_alert=True); return
                 user_internal_id = row[0]
 
-                # Pilih router default
-                cur.execute(
-                    'SELECT id FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC LIMIT 1',
-                    (user_internal_id,),
-                )
-                rrow = cur.fetchone()
-                if not rrow:
-                    await query.answer("Owner belum punya router. Tambah router dulu.", show_alert=True)
-                    return
-                router_id = rrow[0]
+                # 1 bot = 1 router. Auto-assign ke self.router_id (router yg di-handle bot ini).
+                if self.router_id:
+                    router_id = self.router_id
+                else:
+                    # Fallback: pilih router default user
+                    cur.execute(
+                        'SELECT id FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC LIMIT 1',
+                        (user_internal_id,),
+                    )
+                    rrow = cur.fetchone()
+                    if not rrow:
+                        await query.answer("Owner belum punya router.", show_alert=True)
+                        return
+                    router_id = rrow[0]
 
                 # Insert reseller (default values)
                 import secrets, string
@@ -1290,8 +1311,8 @@ class ResellerBot:
             return
 
         owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id) if reseller else self.owner_telegram_id
-        # Reseller dikunci ke 1 router (Reseller.routerId). Owner pakai router default.
-        target_router = (reseller.get("routerName") if reseller else None) or None
+        # 1 bot = 1 router. Cek user di router yg di-handle bot ini.
+        target_router = self.router_name or (reseller.get("routerName") if reseller else None) or None
         try:
             reg = _get_registry()
             conn = reg.resolve(owner_tid, target_router)
@@ -1560,16 +1581,17 @@ class ResellerBot:
             return [r[0] for r in cur.fetchall()]
 
     async def _resolve_owner_router(self, update, context, action_label: str) -> str | None:
-        """Resolve router buat owner command:
-        - args[0] dikasih → pakai itu langsung
-        - kalau tidak ada arg + 1 router → auto pakai
-        - kalau tidak ada arg + >1 router → tampil inline picker (callback adminr|<action>|<router>)
-          dan return None (caller bail; click button → callback handler trigger _do_xxx ulang)
+        """Resolve router buat owner command. 1 bot = 1 router → default ke self.router_name.
+        - args[0] dikasih → pakai itu langsung (kalau owner mau target router lain)
+        - else → return self.router_name (router yg di-handle bot ini)
         """
-        telegram_id = str(update.effective_user.id)
         args = context.args or []
         if args:
             return args[0]
+        if self.router_name:
+            return self.router_name
+        # Fallback: legacy behavior (kalau bot belum di-bind ke router specific)
+        telegram_id = str(update.effective_user.id)
         routers = self._list_owner_routers(telegram_id)
         if not routers:
             await update.message.reply_text("⚠️ Tidak ada router terdaftar. Tambah dulu via dashboard.")
@@ -1579,8 +1601,7 @@ class ResellerBot:
         buttons = [[InlineKeyboardButton(r, callback_data=f"adminr|{action_label}|{r}")] for r in routers]
         buttons.append([InlineKeyboardButton("❌ Batal", callback_data="menu")])
         await update.message.reply_text(
-            f"📡 Pilih router untuk `/{action_label}`:",
-            parse_mode="Markdown",
+            f"📡 Pilih router untuk /{action_label}:",
             reply_markup=InlineKeyboardMarkup(buttons),
         )
         return None
@@ -2010,35 +2031,58 @@ def _run_bot_in_thread(app: "Application", owner_telegram_id: str = "") -> None:
 
 
 def start_reseller_bots() -> list[threading.Thread]:
-    """Query DB for all users with resellerBotToken, start a bot for each.
-
-    Returns list of started daemon threads (one per bot).
+    """Query DB for all Routers with botToken, start a bot for each (1 router = 1 bot).
+    Returns list of started daemon threads.
     """
     if not _PTB_AVAILABLE:
         logger.warning("python-telegram-bot not available -- skipping reseller bots")
         return []
 
-    users = _get_users_with_bot_token()
-    if not users:
-        logger.info("No users with resellerBotToken configured -- no reseller bots to start")
+    routers = _get_routers_with_bot_token()
+    if not routers:
+        logger.info("No routers with botToken configured -- no reseller bots to start")
         return []
 
     vdb = VoucherDB(DATABASE_URL)
+
+    # Get registry for crypto.decrypt (Fernet)
+    try:
+        registry = _get_registry()
+        crypto = registry.crypto
+    except Exception as exc:
+        logger.error("Failed to get registry crypto: %s", exc)
+        return []
+
     threads: list[threading.Thread] = []
+    for r in routers:
+        try:
+            token = crypto.decrypt(r["bot_token_enc"]) if r["bot_token_enc"] else ""
+        except Exception as exc:
+            logger.error("Decrypt botToken for router %s failed: %s", r["router_name"], exc)
+            continue
+        if not token:
+            continue
 
-    for user in users:
-        token = user["resellerBotToken"]
-        owner_tid = user["telegramId"]
-        logger.info("Starting reseller bot for owner telegramId=%s", owner_tid)
+        owner_tid = r["owner_telegram_id"]
+        logger.info(
+            "Starting reseller bot for router=%s (owner telegramId=%s)",
+            r["router_name"], owner_tid,
+        )
 
-        bot = ResellerBot(bot_token=token, owner_telegram_id=owner_tid, vdb=vdb)
+        bot = ResellerBot(
+            bot_token=token,
+            owner_telegram_id=owner_tid,
+            vdb=vdb,
+            router_id=r["router_id"],
+            router_name=r["router_name"],
+        )
         app = bot.build_application()
 
         t = threading.Thread(
             target=_run_bot_in_thread,
             args=(app, owner_tid),
             daemon=True,
-            name=f"reseller-bot-{owner_tid}",
+            name=f"reseller-bot-{r['router_name']}",
         )
         t.start()
         threads.append(t)
