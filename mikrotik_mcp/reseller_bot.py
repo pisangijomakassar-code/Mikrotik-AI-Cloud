@@ -202,6 +202,33 @@ class ResellerBot:
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         telegram_id = str(update.effective_user.id)
+
+        # OWNER: tampil menu admin (tidak harus terdaftar di Reseller table)
+        if self._is_owner(telegram_id):
+            await update.message.reply_text(
+                "👋 *Halo Admin*\n\n"
+                "Command yang tersedia:\n\n"
+                "🤖 *AI*\n"
+                "  `/ai` — chat dengan AI Assistant (auto-stop 10mnt idle)\n"
+                "  `/stopai` — akhiri sesi AI\n\n"
+                "📊 *Monitoring*\n"
+                "  `/report` — penjualan hari ini & bulan ini\n"
+                "  `/resource [router]` — resource MikroTik\n"
+                "  `/netwatch [router]` — status host monitoring\n\n"
+                "💰 *Saldo Reseller*\n"
+                "  `/topup` — wizard top up saldo reseller\n"
+                "  `/topdown` — wizard kurangi saldo reseller\n\n"
+                "📢 *Komunikasi*\n"
+                "  `/broadcast <pesan>` — kirim pengumuman ke semua reseller\n\n"
+                "🎫 *Voucher*\n"
+                "  `/cek <username>` — status hotspot user\n"
+                "  `/qrcode <user> [pwd]` — generate QR voucher\n\n"
+                "_Tip: ketik `/` untuk lihat semua command._",
+                parse_mode="Markdown",
+            )
+            return
+
+        # RESELLER flow
         try:
             reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         except Exception as exc:
@@ -210,7 +237,10 @@ class ResellerBot:
             return
 
         if not reseller:
-            await update.message.reply_text(self.t("bot_text_not_registered"))
+            await update.message.reply_text(
+                self.t("bot_text_not_registered") + "\n\nKetik `/daftar <nama> [phone]` untuk register.",
+                parse_mode="Markdown",
+            )
             return
 
         balance = reseller.get("balance", 0)
