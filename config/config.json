@@ -15,7 +15,8 @@
   },
   "channels": {
     "telegram": {
-      "enabled": true,
+      "enabled": false,
+      "_note": "Disabled — reseller bot (mikrotik_mcp/reseller_bot.py) handles Telegram polling. AI chat forward via /ai command yg call nanobot /v1/chat/completions internal.",
       "token": "${TELEGRAM_BOT_TOKEN}",
       "allowFrom": ["${TELEGRAM_USER_ID}"],
       "groupPolicy": "mention",

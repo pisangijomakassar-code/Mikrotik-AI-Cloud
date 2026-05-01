@@ -14,6 +14,7 @@ Start via:
 
 import asyncio
 import logging
+import json
 import os
 import random
 import string
@@ -284,6 +285,17 @@ class ResellerBot:
                 # wiz|topup|sel|<reseller_id>  — admin pilih reseller
                 if len(parts) >= 4 and parts[2] == "sel" and self._is_owner(telegram_id):
                     await self._wizard_select_reseller(query, context, parts[1], parts[3])
+            elif action == "stopai":
+                # Klik tombol "Stop AI" — sama dengan /stopai
+                if isinstance(context.user_data.get("awaiting"), tuple) and context.user_data["awaiting"][0] == "ai_chat":
+                    context.user_data.pop("awaiting", None)
+                    old_job = context.user_data.pop("ai_idle_job", None)
+                    if old_job:
+                        try: old_job.schedule_removal()
+                        except Exception: pass
+                    await query.edit_message_text("✅ Sesi AI dihentikan.", reply_markup=self._main_menu_keyboard())
+                else:
+                    await query.answer("Tidak dalam sesi AI.", show_alert=False)
             elif action == "adminr":
                 # adminr|<action>|<router_name> — owner pilih router untuk admin command
                 if len(parts) >= 3 and self._is_owner(telegram_id):
@@ -833,6 +845,11 @@ class ResellerBot:
             )
             return
 
+        if msg.text and kind == "ai_chat":
+            # Forward ke nanobot, jangan clear state (multi-turn)
+            await self._ai_chat_forward(msg, context, str(update.effective_user.id), msg.text)
+            return
+
         if msg.text and kind == "wiz_amount":
             # Admin wizard topup/topdown — input amount
             try:
@@ -1097,6 +1114,189 @@ class ResellerBot:
         except Exception as exc:
             logger.error("/qrcode error: %s", exc)
             await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    # ── /ai command — chat dengan AI Assistant (nanobot) ────
+
+    AI_IDLE_SECONDS = 600  # 10 menit auto-stop kalau idle
+
+    def _get_user_internal_id(self, telegram_id: str) -> str | None:
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            row = cur.fetchone()
+            return row[0] if row else None
+
+    def _get_token_usage_summary(self, user_internal_id: str) -> dict:
+        """Return today + month token totals (WITA tz)."""
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        wita = _tz(_td(hours=8))
+        now = _dt.now(wita)
+        start_today = now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(_tz.utc)
+        start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(_tz.utc)
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'SELECT COALESCE(SUM("tokensIn"),0), COALESCE(SUM("tokensOut"),0), COUNT(*) '
+                'FROM "TokenUsage" WHERE "userId"=%s AND timestamp >= %s',
+                (user_internal_id, start_today),
+            )
+            t_in, t_out, t_calls = cur.fetchone()
+            cur.execute(
+                'SELECT COALESCE(SUM("tokensIn"),0), COALESCE(SUM("tokensOut"),0), COUNT(*) '
+                'FROM "TokenUsage" WHERE "userId"=%s AND timestamp >= %s',
+                (user_internal_id, start_month),
+            )
+            m_in, m_out, m_calls = cur.fetchone()
+        return {
+            "today_in": int(t_in), "today_out": int(t_out), "today_calls": t_calls,
+            "month_in": int(m_in), "month_out": int(m_out), "month_calls": m_calls,
+        }
+
+    def _track_token_usage(self, user_internal_id: str, tokens_in: int, tokens_out: int, model: str, session_id: str) -> None:
+        try:
+            with self.vdb._conn() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    'INSERT INTO "TokenUsage" (id, "userId", "tokensIn", "tokensOut", model, "sessionId", timestamp) '
+                    'VALUES (gen_random_uuid()::text, %s, %s, %s, %s, %s, NOW())',
+                    (user_internal_id, tokens_in, tokens_out, model, session_id),
+                )
+        except Exception as exc:
+            logger.warning("Token usage insert failed: %s", exc)
+
+    async def _ai_idle_callback(self, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """JobQueue callback: notify user sesi AI berakhir karena idle 10 menit."""
+        job = context.job
+        chat_id = job.chat_id
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="💤 Sesi AI berakhir (idle 10 menit).\nKetik /ai untuk mulai chat lagi.",
+                reply_markup=self._main_menu_keyboard(),
+            )
+            user_data = context.application.user_data.get(chat_id, {})
+            if isinstance(user_data.get("awaiting"), tuple) and user_data["awaiting"][0] == "ai_chat":
+                user_data.pop("awaiting", None)
+                user_data.pop("ai_idle_job", None)
+        except Exception as exc:
+            logger.warning("AI idle callback failed: %s", exc)
+
+    def _schedule_ai_idle(self, context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+        """Cancel old idle job + schedule baru."""
+        if not getattr(context.application, "job_queue", None):
+            return
+        old_job = context.user_data.get("ai_idle_job")
+        if old_job:
+            try: old_job.schedule_removal()
+            except Exception: pass
+        job = context.application.job_queue.run_once(
+            self._ai_idle_callback, when=self.AI_IDLE_SECONDS,
+            chat_id=chat_id, name=f"ai_idle_{chat_id}",
+        )
+        context.user_data["ai_idle_job"] = job
+
+    async def cmd_ai(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Mulai sesi AI Assistant (nanobot). Show usage + auto-stop 10 menit idle.
+
+        Akses: owner only (LLM API berbiaya).
+        """
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text(
+                "⛔ AI Assistant hanya untuk owner. Hubungi admin kalau perlu akses.",
+            )
+            return
+
+        uid = self._get_user_internal_id(telegram_id)
+        usage = self._get_token_usage_summary(uid) if uid else {}
+
+        context.user_data["awaiting"] = ("ai_chat", {"started_at": datetime.now(timezone.utc).isoformat()})
+        chat_id = update.effective_chat.id
+        self._schedule_ai_idle(context, chat_id)
+
+        today_total = usage.get("today_in", 0) + usage.get("today_out", 0)
+        month_total = usage.get("month_in", 0) + usage.get("month_out", 0)
+        await update.message.reply_text(
+            "🤖 *AI Assistant aktif*\n\n"
+            f"📊 *Token Usage*\n"
+            f"  Hari ini: {today_total:,} token ({usage.get('today_calls', 0)} call)\n"
+            f"  Bulan ini: {month_total:,} token ({usage.get('month_calls', 0)} call)\n\n"
+            "💬 Ketik pesan apa saja untuk chat dengan AI.\n"
+            "⏱ Auto-stop setelah 10 menit idle.\n"
+            "🛑 Ketik /stopai untuk akhiri sesi sekarang.".replace(",", "."),
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🛑 Stop AI", callback_data="stopai")],
+            ]),
+        )
+
+    async def cmd_stopai(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Manual stop AI session."""
+        if isinstance(context.user_data.get("awaiting"), tuple) and context.user_data["awaiting"][0] == "ai_chat":
+            context.user_data.pop("awaiting", None)
+            old_job = context.user_data.pop("ai_idle_job", None)
+            if old_job:
+                try: old_job.schedule_removal()
+                except Exception: pass
+            await update.message.reply_text("✅ Sesi AI dihentikan.", reply_markup=self._main_menu_keyboard())
+        else:
+            await update.message.reply_text("Tidak sedang dalam sesi AI.")
+
+    async def _ai_chat_forward(self, msg, context: ContextTypes.DEFAULT_TYPE, telegram_id: str, text: str) -> None:
+        """Forward user text ke nanobot, kembalikan response, track tokens, reschedule idle."""
+        import urllib.request, urllib.error, asyncio, os
+        chat_id = msg.chat_id
+        try: await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        except Exception: pass
+
+        nanobot_url = os.environ.get("NANOBOT_API_URL", "http://localhost:18790")
+        session_id = f"telegram-{telegram_id}"
+
+        body = json.dumps({
+            "messages": [{"role": "user", "content": text}],
+            "session_id": session_id,
+            "user_context": {"telegram_id": telegram_id},
+        }).encode()
+        req = urllib.request.Request(
+            f"{nanobot_url}/v1/chat/completions",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            def _do_request():
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    return resp.read().decode("utf-8")
+            raw = await loop.run_in_executor(None, _do_request)
+            data = json.loads(raw)
+        except urllib.error.HTTPError as e:
+            await msg.reply_text(f"⚠️ AI error: HTTP {e.code}")
+            return
+        except Exception as e:
+            await msg.reply_text(f"⚠️ AI error: {e}")
+            return
+
+        reply = (
+            (data.get("choices") or [{}])[0].get("message", {}).get("content")
+            or data.get("response")
+            or "(tidak ada respons)"
+        )
+        usage = data.get("usage") or {}
+        if usage:
+            uid = self._get_user_internal_id(telegram_id)
+            if uid:
+                self._track_token_usage(
+                    uid,
+                    int(usage.get("prompt_tokens") or 0),
+                    int(usage.get("completion_tokens") or 0),
+                    data.get("model", ""),
+                    session_id,
+                )
+        # Truncate Telegram message limit 4096
+        await msg.reply_text(reply[:4000])
+        # Reschedule idle timer
+        self._schedule_ai_idle(context, chat_id)
 
     # ── Admin commands ───────────────────────────────────────
 
@@ -1463,6 +1663,10 @@ class ResellerBot:
         app.add_handler(CommandHandler("daftar", self.cmd_daftar))
         app.add_handler(CommandHandler("cek", self.cmd_cek))
         app.add_handler(CommandHandler("qrcode", self.cmd_qrcode))
+
+        # AI Assistant (owner only)
+        app.add_handler(CommandHandler("ai", self.cmd_ai))
+        app.add_handler(CommandHandler("stopai", self.cmd_stopai))
 
         # Admin commands
         app.add_handler(CommandHandler("topup", self.cmd_topup))
