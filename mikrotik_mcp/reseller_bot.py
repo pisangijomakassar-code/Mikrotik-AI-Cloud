@@ -1330,7 +1330,10 @@ class ResellerBot:
         try: await context.bot.send_chat_action(chat_id=chat_id, action="typing")
         except Exception: pass
 
-        nanobot_url = os.environ.get("NANOBOT_API_URL", "http://localhost:18790")
+        # Pakai health_server proxy port 8080 (BUKAN nanobot 18790 langsung).
+        # Health server inject [ctx: user_id=...] supaya agent tahu user mana untuk
+        # akses MCP tool & router yang benar.
+        nanobot_url = os.environ.get("CHAT_PROXY_URL", "http://localhost:8080")
         session_id = f"telegram-{telegram_id}"
 
         body = json.dumps({
