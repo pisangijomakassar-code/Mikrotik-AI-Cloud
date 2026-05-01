@@ -89,6 +89,8 @@ export const navGroups: NavGroup[] = [
       { label: "Tunnel", href: "/tunnel", icon: Cable },
       { label: "Users", href: "/users", icon: Users, adminOnly: true },
       { label: "Log Aktivitas", href: "/logs", icon: Terminal },
+      { label: "Hotspot Log", href: "/logs/hotspot", icon: Wifi },
+      { label: "User Log", href: "/logs/user", icon: UserCog },
       { label: "Communication", href: "/communication", icon: MessageSquare },
     ],
   },

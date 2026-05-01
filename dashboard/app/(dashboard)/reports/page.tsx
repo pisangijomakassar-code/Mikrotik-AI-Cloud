@@ -700,8 +700,8 @@ export default function ReportsPage() {
       {data && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {[
-            { icon: Ticket, label: "Total Voucher", value: data.summary.totalVouchers.toLocaleString("id-ID"), color: "var(--primary)" },
-            { icon: BarChart3, label: "Total Penjualan", value: formatRupiah(data.summary.totalRevenue), color: "var(--tertiary)" },
+            { icon: Ticket, label: "Voucher Terjual", value: data.summary.totalActivated.toLocaleString("id-ID"), color: "var(--primary)" },
+            { icon: BarChart3, label: "Pendapatan", value: formatRupiah(data.summary.activatedRevenue), color: "var(--tertiary)" },
             { icon: TrendingUp, label: "Total Top Up", value: formatRupiah(data.summary.totalTopUp), color: "var(--tertiary)" },
             { icon: TrendingDown, label: "Total Top Down", value: formatRupiah(data.summary.totalTopDown), color: "var(--destructive)" },
             { icon: Store, label: "Reseller", value: String(data.summary.totalResellers), color: "var(--primary)" },
