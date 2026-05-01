@@ -16,6 +16,7 @@ import {
   type VoucherTypeInput,
 } from "@/hooks/use-voucher-types"
 import { useHotspotProfiles, useHotspotServers, useIpPools } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 
 const TYPE_CHAR_OPTIONS = [
   "Random abcd2345",
@@ -59,9 +60,10 @@ export default function VouchersSettingsPage() {
   const createVt = useCreateVoucherType()
   const updateVt = useUpdateVoucherType()
   const deleteVt = useDeleteVoucherType()
-  const { data: hotspotProfiles } = useHotspotProfiles()
-  const { data: hotspotServers } = useHotspotServers()
-  const { data: ipPools } = useIpPools()
+  const { activeRouter } = useActiveRouter()
+  const { data: hotspotProfiles } = useHotspotProfiles(activeRouter || undefined)
+  const { data: hotspotServers } = useHotspotServers(activeRouter || undefined)
+  const { data: ipPools } = useIpPools(activeRouter || undefined)
 
   const [search, setSearch] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)

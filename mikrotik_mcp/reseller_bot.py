@@ -284,6 +284,18 @@ class ResellerBot:
                 # wiz|topup|sel|<reseller_id>  — admin pilih reseller
                 if len(parts) >= 4 and parts[2] == "sel" and self._is_owner(telegram_id):
                     await self._wizard_select_reseller(query, context, parts[1], parts[3])
+            elif action == "adminr":
+                # adminr|<action>|<router_name> — owner pilih router untuk admin command
+                if len(parts) >= 3 and self._is_owner(telegram_id):
+                    sub_action, router_name = parts[1], parts[2]
+                    msg = query.message
+                    # Hapus inline keyboard supaya tidak ke-klik 2x
+                    try: await query.edit_message_text(f"📡 Router: *{router_name}*", parse_mode="Markdown")
+                    except Exception: pass
+                    if sub_action == "resource":
+                        await self._do_resource(msg, telegram_id, router_name)
+                    elif sub_action == "netwatch":
+                        await self._do_netwatch(msg, telegram_id, router_name)
             elif action == "history":
                 await self._show_history(query, telegram_id)
             else:
@@ -511,7 +523,10 @@ class ResellerBot:
 
         try:
             reg = _get_registry()
-            conn = reg.resolve(owner_tid, None)
+            # Resolve router via Reseller.routerId (kunci 1 reseller = 1 router).
+            # Fallback ke default kalau routerName kosong (legacy data).
+            target_router = reseller.get("routerName") or None
+            conn = reg.resolve(owner_tid, target_router)
         except Exception as exc:
             logger.error("Router resolve failed: %s", exc)
             await query.edit_message_text("Tidak dapat terhubung ke router. Hubungi admin.", reply_markup=self._back_button())
@@ -1015,9 +1030,11 @@ class ResellerBot:
             return
 
         owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id) if reseller else self.owner_telegram_id
+        # Reseller dikunci ke 1 router (Reseller.routerId). Owner pakai router default.
+        target_router = (reseller.get("routerName") if reseller else None) or None
         try:
             reg = _get_registry()
-            conn = reg.resolve(owner_tid, None)
+            conn = reg.resolve(owner_tid, target_router)
             with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
                 users = list(api.path("ip", "hotspot", "user"))
                 user = next((u for u in users if u.get("name") == target), None)
@@ -1083,19 +1100,62 @@ class ResellerBot:
 
     # ── Admin commands ───────────────────────────────────────
 
+    def _list_owner_routers(self, telegram_id: str) -> list[str]:
+        """Return list of router names owned by this user (default first)."""
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            row = cur.fetchone()
+            if not row: return []
+            cur.execute(
+                'SELECT name FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC',
+                (row[0],),
+            )
+            return [r[0] for r in cur.fetchall()]
+
+    async def _resolve_owner_router(self, update, context, action_label: str) -> str | None:
+        """Resolve router buat owner command:
+        - args[0] dikasih → pakai itu langsung
+        - kalau tidak ada arg + 1 router → auto pakai
+        - kalau tidak ada arg + >1 router → tampil inline picker (callback adminr|<action>|<router>)
+          dan return None (caller bail; click button → callback handler trigger _do_xxx ulang)
+        """
+        telegram_id = str(update.effective_user.id)
+        args = context.args or []
+        if args:
+            return args[0]
+        routers = self._list_owner_routers(telegram_id)
+        if not routers:
+            await update.message.reply_text("⚠️ Tidak ada router terdaftar. Tambah dulu via dashboard.")
+            return None
+        if len(routers) == 1:
+            return routers[0]
+        buttons = [[InlineKeyboardButton(r, callback_data=f"adminr|{action_label}|{r}")] for r in routers]
+        buttons.append([InlineKeyboardButton("❌ Batal", callback_data="menu")])
+        await update.message.reply_text(
+            f"📡 Pilih router untuk `/{action_label}`:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+        return None
+
     async def cmd_resource(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Admin: cek resource router."""
+        """Admin: cek resource router. /resource [router_name]"""
         telegram_id = str(update.effective_user.id)
         if not self._is_owner(telegram_id):
-            await update.message.reply_text("⛔ Admin only.")
-            return
+            await update.message.reply_text("⛔ Admin only."); return
+        target = await self._resolve_owner_router(update, context, "resource")
+        if not target: return
+        await self._do_resource(update.message, telegram_id, target)
+
+    async def _do_resource(self, msg, telegram_id: str, router_name: str) -> None:
         try:
             reg = _get_registry()
-            conn = reg.resolve(telegram_id, None)
+            conn = reg.resolve(telegram_id, router_name)
             with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
                 res = list(api.path("system", "resource"))
                 if not res:
-                    await update.message.reply_text("⚠️ Tidak ada data resource."); return
+                    await msg.reply_text("⚠️ Tidak ada data resource."); return
                 r = res[0]
                 free_mem = int(r.get("free-memory", 0))
                 total_mem = int(r.get("total-memory", 1))
@@ -1103,8 +1163,8 @@ class ResellerBot:
                 total_hdd = int(r.get("total-hdd-space", 1))
                 mem_pct = round((1 - free_mem/total_mem) * 100, 1)
                 hdd_pct = round((1 - free_hdd/total_hdd) * 100, 1)
-                await update.message.reply_text(
-                    f"🖥 *Resource Router {conn.get('name','-')}*\n\n"
+                await msg.reply_text(
+                    f"🖥 *Resource {conn.get('name','-')}*\n\n"
                     f"Board: `{r.get('board-name','-')}`\n"
                     f"Version: `{r.get('version','-')}`\n"
                     f"Uptime: {r.get('uptime','-')}\n"
@@ -1115,36 +1175,39 @@ class ResellerBot:
                 )
         except Exception as exc:
             logger.error("/resource error: %s", exc)
-            await update.message.reply_text(f"⚠️ Error: {exc}")
+            await msg.reply_text(f"⚠️ Error: {exc}")
 
     async def cmd_netwatch(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Admin: list netwatch entries."""
+        """Admin: list netwatch entries. /netwatch [router_name]"""
         telegram_id = str(update.effective_user.id)
         if not self._is_owner(telegram_id):
-            await update.message.reply_text("⛔ Admin only.")
-            return
+            await update.message.reply_text("⛔ Admin only."); return
+        target = await self._resolve_owner_router(update, context, "netwatch")
+        if not target: return
+        await self._do_netwatch(update.message, telegram_id, target)
+
+    async def _do_netwatch(self, msg, telegram_id: str, router_name: str) -> None:
         try:
             reg = _get_registry()
-            conn = reg.resolve(telegram_id, None)
+            conn = reg.resolve(telegram_id, router_name)
             with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
                 items = list(api.path("tool", "netwatch"))
                 if not items:
-                    await update.message.reply_text("⚠️ Belum ada netwatch entry."); return
+                    await msg.reply_text("⚠️ Belum ada netwatch entry."); return
                 up = sum(1 for i in items if i.get("status") == "up")
                 down = sum(1 for i in items if i.get("status") == "down")
                 lines = [f"📡 *Netwatch {conn.get('name','-')}*\n",
                          f"🟢 UP: {up} | 🔴 DOWN: {down} | Total: {len(items)}\n"]
-                # Show DOWN first (paling penting)
                 items_sorted = sorted(items, key=lambda x: 0 if x.get("status") == "down" else 1)
                 for i in items_sorted[:25]:
                     icon = "🔴" if i.get("status") == "down" else "🟢"
                     lines.append(f"{icon} `{i.get('host','-')}` {i.get('comment','') or ''}")
                 if len(items) > 25:
                     lines.append(f"\n_+{len(items)-25} more_")
-                await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+                await msg.reply_text("\n".join(lines), parse_mode="Markdown")
         except Exception as exc:
             logger.error("/netwatch error: %s", exc)
-            await update.message.reply_text(f"⚠️ Error: {exc}")
+            await msg.reply_text(f"⚠️ Error: {exc}")
 
     async def cmd_report(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Admin: penjualan hari ini + bulan ini."""
@@ -1212,6 +1275,75 @@ class ResellerBot:
         except Exception as exc:
             logger.error("/report error: %s", exc)
             await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    async def cmd_broadcast(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin: broadcast pesan ke semua reseller (boleh dgn foto reply).
+        Format: /broadcast <pesan...>  (atau reply ke foto + caption /broadcast)"""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+
+        msg = update.message
+        text = " ".join(context.args or []).strip()
+        photo_file_id = None
+        if msg.reply_to_message and msg.reply_to_message.photo:
+            photo_file_id = msg.reply_to_message.photo[-1].file_id
+            if not text:
+                text = msg.reply_to_message.caption or ""
+
+        if not text and not photo_file_id:
+            await msg.reply_text(
+                "Format:\n"
+                "  `/broadcast <pesan>` — kirim teks ke semua reseller\n"
+                "  Reply ke foto + `/broadcast <caption>` — kirim foto + caption",
+                parse_mode="Markdown",
+            )
+            return
+
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            row = cur.fetchone()
+            if not row:
+                await msg.reply_text("⚠️ User tidak ditemukan."); return
+            uid = row[0]
+            cur.execute(
+                'SELECT name, "telegramId" FROM "Reseller" WHERE "userId" = %s AND "telegramId" != %s',
+                (uid, ""),
+            )
+            resellers = cur.fetchall()
+
+        if not resellers:
+            await msg.reply_text("⚠️ Belum ada reseller dengan Telegram ID terdaftar.")
+            return
+
+        sent = 0; failed = 0
+        bot = msg.get_bot()
+        for name, tg in resellers:
+            if not tg or not str(tg).strip(): continue
+            try:
+                if photo_file_id:
+                    await bot.send_photo(
+                        chat_id=int(tg), photo=photo_file_id,
+                        caption=f"📢 *Pengumuman*\n\n{text}", parse_mode="Markdown",
+                    )
+                else:
+                    await bot.send_message(
+                        chat_id=int(tg),
+                        text=f"📢 *Pengumuman*\n\n{text}", parse_mode="Markdown",
+                    )
+                sent += 1
+            except Exception as exc:
+                logger.warning("Broadcast to %s (%s) failed: %s", name, tg, exc)
+                failed += 1
+
+        await msg.reply_text(
+            f"📢 Broadcast selesai\n\n"
+            f"✅ Terkirim: {sent}\n"
+            f"❌ Gagal: {failed}\n"
+            f"Total: {len(resellers)}",
+        )
 
     async def cmd_topup(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Admin wizard: top up saldo reseller. Pilih reseller → input amount."""
@@ -1338,6 +1470,7 @@ class ResellerBot:
         app.add_handler(CommandHandler("resource", self.cmd_resource))
         app.add_handler(CommandHandler("netwatch", self.cmd_netwatch))
         app.add_handler(CommandHandler("report", self.cmd_report))
+        app.add_handler(CommandHandler("broadcast", self.cmd_broadcast))
 
         # Callback (inline buttons) + state-based message handler
         app.add_handler(CallbackQueryHandler(self.handle_callback))

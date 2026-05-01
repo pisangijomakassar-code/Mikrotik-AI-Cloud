@@ -197,7 +197,7 @@ class VoucherDB:
     # ── Reseller lookups ──
 
     def get_reseller_by_telegram(self, telegram_id: str) -> dict | None:
-        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup."""
+        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup, routerId, routerName."""
         if not self._pool:
             return None
 
@@ -207,9 +207,11 @@ class VoucherDB:
                 """
                 SELECT r."id", r."name", r."balance", r."phone", r."status",
                        r."discount", r."voucherGroup",
-                       r."userId", u."telegramId" as "ownerTelegramId"
+                       r."userId", u."telegramId" as "ownerTelegramId",
+                       r."routerId", ro."name" as "routerName"
                 FROM "Reseller" r
                 JOIN "User" u ON u."id" = r."userId"
+                LEFT JOIN "Router" ro ON ro."id" = r."routerId"
                 WHERE r."telegramId" = %s AND r."status" = 'ACTIVE'
                 """,
                 (telegram_id,),
