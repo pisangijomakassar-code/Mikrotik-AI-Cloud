@@ -99,10 +99,13 @@ export async function GET(request: NextRequest) {
   const delta = (curr: number, prev: number) =>
     prev === 0 ? null : Math.round(((curr - prev) / prev) * 100)
 
-  // Monthly groupBy bulan
+  // Monthly groupBy bulan — pakai timezone WITA (UTC+8) supaya batch yang
+  // createdAt-nya 23:30 UTC = 07:30 WITA next day di-bucket di bulan WITA, bukan UTC.
   const monthlyMap = new Map<string, { vouchers: number; revenue: number }>()
   for (const b of batches12mo) {
-    const key = `${b.createdAt.getFullYear()}-${String(b.createdAt.getMonth() + 1).padStart(2, "0")}`
+    const witaMs = b.createdAt.getTime() + WITA_OFFSET_MS
+    const wita = new Date(witaMs)
+    const key = `${wita.getUTCFullYear()}-${String(wita.getUTCMonth() + 1).padStart(2, "0")}`
     const cur = monthlyMap.get(key) ?? { vouchers: 0, revenue: 0 }
     cur.vouchers += b.count
     cur.revenue += b.totalCost
@@ -127,7 +130,7 @@ export async function GET(request: NextRequest) {
             GREATEST("txBytes" - prev_tx, 0) + GREATEST("rxBytes" - prev_rx, 0) AS bytes_delta
           FROM ordered WHERE prev_tx IS NOT NULL
         )
-        SELECT to_char("takenAt", 'YYYY-MM') AS month,
+        SELECT to_char(("takenAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Makassar'), 'YYYY-MM') AS month,
                ROUND(SUM(bytes_delta)::numeric / 1024 / 1024 / 1024, 2)::float AS gb
         FROM deltas GROUP BY month ORDER BY month
       `
@@ -135,6 +138,8 @@ export async function GET(request: NextRequest) {
 
   // Hourly traffic — convert UTC ke timezone WITA (Asia/Makassar) supaya
   // jam 09:00-11:00 muncul di kolom 09-11 (bukan 01-03 UTC).
+  // Prisma DateTime → TIMESTAMP(3) WITHOUT tz (stored as UTC). Convert dgn
+  // double AT TIME ZONE: pertama declare 'UTC' (jadi timestamptz), kedua shift ke WITA.
   const bandwidthHourly = routerName
     ? await prisma.$queryRaw<{ hour: number; mb: number }[]>`
         WITH ordered AS (
@@ -149,7 +154,7 @@ export async function GET(request: NextRequest) {
             GREATEST("txBytes" - prev_tx, 0) + GREATEST("rxBytes" - prev_rx, 0) AS bytes_delta
           FROM ordered WHERE prev_tx IS NOT NULL
         )
-        SELECT EXTRACT(HOUR FROM "takenAt" AT TIME ZONE 'Asia/Makassar')::int AS hour,
+        SELECT EXTRACT(HOUR FROM ("takenAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Makassar'))::int AS hour,
                ROUND(SUM(bytes_delta)::numeric / 1024 / 1024, 1)::float AS mb
         FROM deltas GROUP BY hour ORDER BY hour
       `
