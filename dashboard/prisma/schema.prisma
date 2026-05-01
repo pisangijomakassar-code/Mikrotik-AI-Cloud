@@ -107,6 +107,7 @@ model Router {
 
   activityLogs ActivityLog[]
   resellers    Reseller[]
+  netwatchTopology NetwatchTopology[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -434,4 +435,27 @@ model TrafficSnapshot {
   @@index([userId, routerName, interfaceName, takenAt])
   @@index([userId, routerName, takenAt])
   @@index([takenAt])
+}
+
+// Netwatch host topology (per-router) — visualisasi tree AP estafet di /netwatch.
+// Sync dari /tool/netwatch print, position + parent_id manual oleh owner via UI.
+model NetwatchTopology {
+  id         String  @id @default(cuid())
+  host       String                   // IP atau hostname (cocok dengan netwatch.host)
+  label      String  @default("")     // Display name (mis "AP Lt1 Depan")
+  x          Float   @default(0)      // Posisi canvas X
+  y          Float   @default(0)      // Posisi canvas Y
+  isCentral  Boolean @default(false)  // Pusat / hub
+  parentId   String?                  // FK self — parent node (untuk tree estafet)
+  parent     NetwatchTopology?  @relation("Topology", fields: [parentId], references: [id], onDelete: SetNull)
+  children   NetwatchTopology[] @relation("Topology")
+
+  routerId   String
+  router     Router  @relation(fields: [routerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([routerId, host])  // 1 host unik per router
+  @@index([routerId])
+  @@index([parentId])
 }
