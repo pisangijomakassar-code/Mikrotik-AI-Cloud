@@ -22,6 +22,7 @@ import sys
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import Optional, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -2081,10 +2082,17 @@ def _ensure_webhook_cert(cert_path: str, key_path: str, vps_host: str) -> None:
     logger.info("Generated self-signed webhook cert at %s", cert_path)
 
 
+# Registry of running bots: router_id → BotEntry
+# Diakses oleh start_reseller_bot_for_router/stop/reload (hot-reload via dashboard).
+_BOT_REGISTRY: dict[str, dict] = {}
+_BOT_REGISTRY_LOCK = threading.Lock()
+
+
 def _run_bot_in_thread(
     app: "Application",
     owner_telegram_id: str = "",
     webhook_port: int = 0,
+    on_loop_ready: Optional[Callable[[asyncio.AbstractEventLoop], None]] = None,
 ) -> None:
     """Run a single bot Application in its own asyncio event loop (blocking).
 
@@ -2100,6 +2108,13 @@ def _run_bot_in_thread(
         loop.run_until_complete(app.initialize())
         loop.run_until_complete(_register_bot_commands(app, owner_telegram_id))
         loop.run_until_complete(app.start())
+
+        # Expose loop ke caller — dipakai untuk graceful stop dari thread lain
+        if on_loop_ready is not None:
+            try:
+                on_loop_ready(loop)
+            except Exception as exc:
+                logger.warning("on_loop_ready callback failed: %s", exc)
 
         if use_webhook:
             cert_path = "/app/config/webhook_cert.pem"
@@ -2137,8 +2152,158 @@ def _run_bot_in_thread(
         loop.close()
 
 
+def _start_one_bot(router_row: dict, idx: int, vdb: "VoucherDB", crypto) -> Optional[threading.Thread]:
+    """Start single bot thread + register di _BOT_REGISTRY. Returns thread or None."""
+    try:
+        token = crypto.decrypt(router_row["bot_token_enc"]) if router_row["bot_token_enc"] else ""
+    except Exception as exc:
+        logger.error("Decrypt botToken for router %s failed: %s", router_row["router_name"], exc)
+        return None
+    if not token:
+        return None
+
+    owner_tid = router_row["owner_telegram_id"]
+    webhook_base_port = int(os.environ.get("WEBHOOK_BASE_PORT", "8443"))
+    port = webhook_base_port + idx
+    logger.info(
+        "Starting reseller bot for router=%s (owner telegramId=%s, webhook_port=%d)",
+        router_row["router_name"], owner_tid, port,
+    )
+
+    bot = ResellerBot(
+        bot_token=token,
+        owner_telegram_id=owner_tid,
+        vdb=vdb,
+        router_id=router_row["router_id"],
+        router_name=router_row["router_name"],
+    )
+    app = bot.build_application()
+
+    loop_holder: dict = {}
+    def _on_loop_ready(loop: asyncio.AbstractEventLoop) -> None:
+        loop_holder["loop"] = loop
+
+    t = threading.Thread(
+        target=_run_bot_in_thread,
+        args=(app, owner_tid, port, _on_loop_ready),
+        daemon=True,
+        name=f"reseller-bot-{router_row['router_name']}",
+    )
+    t.start()
+
+    # Tunggu sampai loop siap (max 5s)
+    for _ in range(50):
+        if "loop" in loop_holder:
+            break
+        threading.Event().wait(0.1)
+
+    with _BOT_REGISTRY_LOCK:
+        _BOT_REGISTRY[router_row["router_id"]] = {
+            "thread": t,
+            "app": app,
+            "loop": loop_holder.get("loop"),
+            "router_name": router_row["router_name"],
+            "idx": idx,
+        }
+    return t
+
+
+def stop_reseller_bot(router_id: str, timeout: float = 10.0) -> bool:
+    """Stop a single running bot gracefully + remove dari registry. Returns True if stopped."""
+    with _BOT_REGISTRY_LOCK:
+        entry = _BOT_REGISTRY.get(router_id)
+    if not entry:
+        return False
+
+    app = entry["app"]
+    loop = entry.get("loop")
+    thread = entry["thread"]
+
+    if loop and not loop.is_closed():
+        async def _shutdown():
+            try:
+                await app.updater.stop()
+            except Exception:
+                pass
+            try:
+                await app.stop()
+            except Exception:
+                pass
+            try:
+                await app.shutdown()
+            except Exception:
+                pass
+
+        try:
+            fut = asyncio.run_coroutine_threadsafe(_shutdown(), loop)
+            fut.result(timeout=timeout)
+        except Exception as exc:
+            logger.warning("Bot shutdown coroutine failed for %s: %s", router_id, exc)
+
+        try:
+            loop.call_soon_threadsafe(loop.stop)
+        except Exception:
+            pass
+
+    thread.join(timeout=timeout)
+    with _BOT_REGISTRY_LOCK:
+        _BOT_REGISTRY.pop(router_id, None)
+
+    if thread.is_alive():
+        logger.warning("Bot thread for router %s still alive after stop attempt", router_id)
+        return False
+    logger.info("Bot for router %s stopped + unregistered", router_id)
+    return True
+
+
+def restart_reseller_bot(router_id: str) -> dict:
+    """Hot-reload: stop bot existing (kalau ada), query DB ulang utk token terbaru,
+    start thread baru. Dipanggil dari HTTP endpoint setelah dashboard update token.
+    Returns: {ok, status: 'started'|'stopped'|'restarted'|'no_token', message}.
+    """
+    if not _PTB_AVAILABLE:
+        return {"ok": False, "status": "ptb_unavailable", "message": "python-telegram-bot not installed"}
+
+    # Stop existing kalau ada
+    was_running = router_id in _BOT_REGISTRY
+    if was_running:
+        stop_reseller_bot(router_id)
+
+    # Query DB utk router ini saja
+    routers = _get_routers_with_bot_token()
+    target = next((r for r in routers if r["router_id"] == router_id), None)
+    if not target:
+        return {
+            "ok": True,
+            "status": "stopped" if was_running else "no_token",
+            "message": "Router tdk punya botToken — bot dihentikan" if was_running
+                       else "Router tdk punya botToken",
+        }
+
+    # Hitung idx based on order di DB (untuk webhook port yg konsisten)
+    idx = next((i for i, r in enumerate(routers) if r["router_id"] == router_id), len(_BOT_REGISTRY))
+
+    try:
+        registry = _get_registry()
+        crypto = registry.crypto
+    except Exception as exc:
+        return {"ok": False, "status": "error", "message": f"Crypto registry error: {exc}"}
+
+    vdb = VoucherDB(DATABASE_URL)
+    t = _start_one_bot(target, idx, vdb, crypto)
+    if not t:
+        return {"ok": False, "status": "error", "message": "Failed to start bot thread"}
+
+    return {
+        "ok": True,
+        "status": "restarted" if was_running else "started",
+        "message": f"Bot for router {target['router_name']} {'restarted' if was_running else 'started'}",
+        "router_name": target["router_name"],
+    }
+
+
 def start_reseller_bots() -> list[threading.Thread]:
-    """Query DB for all Routers with botToken, start a bot for each (1 router = 1 bot).
+    """Boot-time: query DB for all Routers with botToken, start a bot for each.
     Returns list of started daemon threads.
     """
     if not _PTB_AVAILABLE:
@@ -2152,7 +2317,6 @@ def start_reseller_bots() -> list[threading.Thread]:
 
     vdb = VoucherDB(DATABASE_URL)
 
-    # Get registry for crypto.decrypt (Fernet)
     try:
         registry = _get_registry()
         crypto = registry.crypto
@@ -2160,42 +2324,11 @@ def start_reseller_bots() -> list[threading.Thread]:
         logger.error("Failed to get registry crypto: %s", exc)
         return []
 
-    webhook_base_port = int(os.environ.get("WEBHOOK_BASE_PORT", "8443"))
-
     threads: list[threading.Thread] = []
     for idx, r in enumerate(routers):
-        try:
-            token = crypto.decrypt(r["bot_token_enc"]) if r["bot_token_enc"] else ""
-        except Exception as exc:
-            logger.error("Decrypt botToken for router %s failed: %s", r["router_name"], exc)
-            continue
-        if not token:
-            continue
-
-        owner_tid = r["owner_telegram_id"]
-        port = webhook_base_port + idx
-        logger.info(
-            "Starting reseller bot for router=%s (owner telegramId=%s, webhook_port=%d)",
-            r["router_name"], owner_tid, port,
-        )
-
-        bot = ResellerBot(
-            bot_token=token,
-            owner_telegram_id=owner_tid,
-            vdb=vdb,
-            router_id=r["router_id"],
-            router_name=r["router_name"],
-        )
-        app = bot.build_application()
-
-        t = threading.Thread(
-            target=_run_bot_in_thread,
-            args=(app, owner_tid, port),
-            daemon=True,
-            name=f"reseller-bot-{r['router_name']}",
-        )
-        t.start()
-        threads.append(t)
+        t = _start_one_bot(r, idx, vdb, crypto)
+        if t:
+            threads.append(t)
 
     logger.info("Started %d reseller bot(s)", len(threads))
     return threads

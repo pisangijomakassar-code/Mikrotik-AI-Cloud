@@ -1,11 +1,26 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { agentFetch } from "@/lib/agent-fetch"
 import {
   encryptBotToken,
   decryptBotToken,
   tgGetMe,
 } from "@/lib/services/router-bot.service"
+
+async function triggerBotRestart(routerId: string): Promise<{ ok: boolean; status?: string; message?: string }> {
+  try {
+    const res = await agentFetch(`/reseller-bot/restart`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ router_id: routerId }),
+      signal: AbortSignal.timeout(15000),
+    })
+    return (await res.json()) as { ok: boolean; status?: string; message?: string }
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "agent unreachable" }
+  }
+}
 
 async function resolveRouter(userId: string, routerId: string | null) {
   if (!routerId) return null
@@ -67,6 +82,7 @@ export async function POST(request: NextRequest) {
     },
   })
 
+  const restart = await triggerBotRestart(router.id)
   return Response.json({
     success: true,
     bot: {
@@ -74,6 +90,7 @@ export async function POST(request: NextRequest) {
       username: botInfo.username,
       firstName: botInfo.first_name,
     },
+    restart,
   })
 }
 
@@ -91,5 +108,6 @@ export async function DELETE(request: NextRequest) {
     data: { botToken: "", botUsername: "" },
   })
 
-  return Response.json({ success: true })
+  const restart = await triggerBotRestart(router.id)
+  return Response.json({ success: true, restart })
 }

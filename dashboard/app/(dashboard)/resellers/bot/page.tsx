@@ -147,6 +147,23 @@ export default function ResellerBotPage() {
     }
   }
 
+  async function handleRestart() {
+    if (!routerId) return
+    setSaving(true)
+    try {
+      const res = await apiClient.post<{ ok: boolean; status?: string; message?: string }>(
+        `/api/resellers/bot/restart?routerId=${routerId}`
+      )
+      if (res.ok) toast.success(res.message || `Bot ${res.status}`)
+      else toast.error(res.message || "Gagal restart bot")
+      refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal restart")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleDeactivate() {
     if (!routerId) return
     if (!confirm("Hapus bot token dari router ini? (Webhook juga di-unset, bot stop bekerja)")) return
@@ -299,13 +316,24 @@ export default function ResellerBotPage() {
                 </button>
               )}
               {hasToken && (
-                <button
-                  onClick={handleDeactivate}
-                  disabled={saving}
-                  className="bg-destructive/15 text-destructive border border-destructive/30 text-xs font-bold px-4 py-2 rounded-lg ml-auto hover:bg-destructive/25 disabled:opacity-60"
-                >
-                  Deactivate Bot
-                </button>
+                <>
+                  <button
+                    onClick={handleRestart}
+                    disabled={saving}
+                    title="Hot-reload bot tanpa restart container (apply perubahan token/webhook)"
+                    className="bg-primary/15 text-primary border border-primary/30 text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 hover:bg-primary/25 disabled:opacity-60 ml-auto"
+                  >
+                    <RefreshCw className={cn("h-3.5 w-3.5", saving && "animate-spin")} />
+                    Restart Bot
+                  </button>
+                  <button
+                    onClick={handleDeactivate}
+                    disabled={saving}
+                    className="bg-destructive/15 text-destructive border border-destructive/30 text-xs font-bold px-4 py-2 rounded-lg hover:bg-destructive/25 disabled:opacity-60"
+                  >
+                    Deactivate Bot
+                  </button>
+                </>
               )}
             </div>
           </div>

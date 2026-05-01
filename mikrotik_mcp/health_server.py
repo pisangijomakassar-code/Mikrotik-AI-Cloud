@@ -732,6 +732,24 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_llm_reload()
             return
 
+        # Hot-reload reseller bot untuk router tertentu (dipanggil dashboard
+        # setelah update botToken supaya gak perlu restart container).
+        if path == "/reseller-bot/restart":
+            if not self._require_agent_token(): return
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length)) if length > 0 else {}
+                router_id = body.get("router_id", "").strip()
+                if not router_id:
+                    _send_json(self, {"error": "router_id required"}, 400)
+                    return
+                from reseller_bot import restart_reseller_bot
+                result = restart_reseller_bot(router_id)
+                _send_json(self, result, 200 if result.get("ok") else 500)
+            except Exception as e:
+                _send_json(self, {"error": str(e)}, 500)
+            return
+
         # AI insight
         if path.startswith("/ai-insight/"):
             user_id = path.split("/ai-insight/")[1].strip("/")
