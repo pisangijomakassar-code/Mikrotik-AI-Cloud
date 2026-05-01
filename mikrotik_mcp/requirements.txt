@@ -2,3 +2,4 @@ librouteros>=4.0.0
 mcp[cli]>=1.0.0
 cryptography>=42.0
 psycopg2-binary>=2.9.0
+qrcode[pil]>=7.4

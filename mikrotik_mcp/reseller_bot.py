@@ -280,6 +280,10 @@ class ResellerBot:
             elif action == "reject":
                 # Owner click reject|<deposit_id>
                 await self._owner_reject(query, telegram_id, parts[1])
+            elif action == "wiz":
+                # wiz|topup|sel|<reseller_id>  — admin pilih reseller
+                if len(parts) >= 4 and parts[2] == "sel" and self._is_owner(telegram_id):
+                    await self._wizard_select_reseller(query, context, parts[1], parts[3])
             elif action == "history":
                 await self._show_history(query, telegram_id)
             else:
@@ -814,6 +818,19 @@ class ResellerBot:
             )
             return
 
+        if msg.text and kind == "wiz_amount":
+            # Admin wizard topup/topdown — input amount
+            try:
+                amount = int(msg.text.replace(".", "").replace(",", "").replace("Rp", "").strip())
+                if amount < 1:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                await msg.reply_text("⚠️ Nominal tidak valid. Ketik angka:")
+                return
+            context.user_data.pop("awaiting", None)
+            await self._wizard_execute(msg, context, payload, amount)
+            return
+
         if msg.text and kind == "buy_qty":
             try:
                 qty = int(msg.text.strip())
@@ -894,14 +911,436 @@ class ResellerBot:
             reply_markup=self._back_button(),
         )
 
+    # ── Owner check ───────────────────────────────────────────
+
+    def _is_owner(self, telegram_id: str) -> bool:
+        """Cek apakah telegram_id ini owner dari bot ini."""
+        return str(telegram_id) == str(self.owner_telegram_id)
+
+    # ── Reseller commands ────────────────────────────────────
+
+    async def cmd_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Alias untuk /start — show menu utama."""
+        await self.start_command(update, context)
+
+    async def cmd_ceksaldo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        telegram_id = str(update.effective_user.id)
+        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        if not reseller:
+            await update.message.reply_text("Anda belum terdaftar. Ketik /daftar untuk register.")
+            return
+        await update.message.reply_text(
+            f"💰 Saldo {reseller.get('name','-')}: *{format_rp(reseller.get('balance', 0))}*",
+            parse_mode="Markdown",
+        )
+
+    async def cmd_deposit(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Trigger inline deposit menu."""
+        telegram_id = str(update.effective_user.id)
+        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        if not reseller:
+            await update.message.reply_text("Anda belum terdaftar. Ketik /daftar untuk register.")
+            return
+        await update.message.reply_text(
+            "💳 Pilih jumlah deposit:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Rp 10.000", callback_data="deposit|10000"),
+                 InlineKeyboardButton("Rp 25.000", callback_data="deposit|25000")],
+                [InlineKeyboardButton("Rp 50.000", callback_data="deposit|50000"),
+                 InlineKeyboardButton("Rp 100.000", callback_data="deposit|100000")],
+                [InlineKeyboardButton("✏️ Nominal Lain", callback_data="deposit|custom")],
+                [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")],
+            ]),
+        )
+
+    async def cmd_daftar(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Self-registration: kirim request daftar ke owner.
+        Format: /daftar <nama> [phone]"""
+        telegram_id = str(update.effective_user.id)
+        # Cek sudah terdaftar?
+        existing = self.vdb.get_reseller_by_telegram(telegram_id)
+        if existing:
+            await update.message.reply_text(
+                f"✅ Anda sudah terdaftar sebagai *{existing['name']}*.\nGunakan /menu untuk akses fitur.",
+                parse_mode="Markdown",
+            )
+            return
+
+        args = context.args or []
+        if not args:
+            await update.message.reply_text(
+                "📝 *Daftar reseller baru*\n\n"
+                "Format: `/daftar <nama> [nomor_hp]`\n"
+                "Contoh: `/daftar Pudding 081234567890`",
+                parse_mode="Markdown",
+            )
+            return
+
+        name = args[0]
+        phone = args[1] if len(args) > 1 else ""
+        # Notif owner — owner manual approve via dashboard (tambah reseller dengan telegramId ini)
+        try:
+            await update.message.get_bot().send_message(
+                chat_id=int(self.owner_telegram_id),
+                text=(
+                    f"📝 *Pendaftaran Reseller Baru*\n\n"
+                    f"Telegram ID: `{telegram_id}`\n"
+                    f"Nama: {name}\n"
+                    f"Telepon: {phone or '-'}\n"
+                    f"Username: @{update.effective_user.username or '-'}\n\n"
+                    f"Approve via dashboard /resellers atau abaikan untuk tolak."
+                ),
+                parse_mode="Markdown",
+            )
+            await update.message.reply_text(
+                f"✅ Pendaftaran *{name}* dikirim ke admin.\n"
+                f"Tunggu admin approve, lalu /menu untuk akses fitur.",
+                parse_mode="Markdown",
+            )
+        except Exception as exc:
+            logger.error("Daftar notif failed: %s", exc)
+            await update.message.reply_text("⚠️ Gagal kirim ke admin. Hubungi admin manual.")
+
+    async def cmd_cek(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Cek status hotspot user. Format: /cek <username>"""
+        args = context.args or []
+        if not args:
+            await update.message.reply_text("Format: /cek <username>\nContoh: /cek vc1234")
+            return
+        target = args[0]
+        telegram_id = str(update.effective_user.id)
+        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        if not reseller and not self._is_owner(telegram_id):
+            await update.message.reply_text("Anda belum terdaftar.")
+            return
+
+        owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id) if reseller else self.owner_telegram_id
+        try:
+            reg = _get_registry()
+            conn = reg.resolve(owner_tid, None)
+            with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                users = list(api.path("ip", "hotspot", "user"))
+                user = next((u for u in users if u.get("name") == target), None)
+                if not user:
+                    await update.message.reply_text(f"❌ User `{target}` tidak ditemukan.", parse_mode="Markdown")
+                    return
+                # Cek apakah aktif sekarang
+                actives = list(api.path("ip", "hotspot", "active"))
+                active = next((a for a in actives if a.get("user") == target), None)
+
+            disabled = str(user.get("disabled", "false")).lower() == "true"
+            status = "🟢 ONLINE" if active else ("⚪ OFFLINE" if not disabled else "🔴 DISABLED")
+            lines = [
+                f"🎫 *{target}*",
+                f"Status: {status}",
+                f"Profile: `{user.get('profile', '-')}`",
+                f"Comment: {user.get('comment', '-') or '-'}",
+            ]
+            if active:
+                lines.extend([
+                    f"IP: `{active.get('address', '-')}`",
+                    f"MAC: `{active.get('mac-address', '-')}`",
+                    f"Uptime: {active.get('uptime', '-')}",
+                    f"↓ {int(active.get('bytes-in', 0))/1024/1024:.1f} MB · ↑ {int(active.get('bytes-out', 0))/1024/1024:.1f} MB",
+                ])
+            await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        except Exception as exc:
+            logger.error("/cek error: %s", exc)
+            await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    async def cmd_qrcode(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Generate QR code untuk login voucher. Format: /qrcode <username> [password]"""
+        args = context.args or []
+        if not args:
+            await update.message.reply_text(
+                "Format: /qrcode <username> [password]\n"
+                "Contoh: /qrcode vc1234 abc123\n"
+                "Kalau password tidak diberikan, dipakai username (default 'username = password').",
+            )
+            return
+        username = args[0]
+        password = args[1] if len(args) > 1 else username
+
+        try:
+            import qrcode
+            from io import BytesIO
+            # QR berisi text "username:password" — bisa di-scan dengan app yg pintar
+            qr_data = f"User: {username}\nPassword: {password}"
+            img = qrcode.make(qr_data)
+            buf = BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            await update.message.reply_photo(
+                photo=buf,
+                caption=f"🎫 *Voucher QR*\n\n👤 `{username}`\n🔑 `{password}`",
+                parse_mode="Markdown",
+            )
+        except ImportError:
+            await update.message.reply_text("⚠️ Library qrcode belum ter-install di agent.")
+        except Exception as exc:
+            logger.error("/qrcode error: %s", exc)
+            await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    # ── Admin commands ───────────────────────────────────────
+
+    async def cmd_resource(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin: cek resource router."""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+        try:
+            reg = _get_registry()
+            conn = reg.resolve(telegram_id, None)
+            with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                res = list(api.path("system", "resource"))
+                if not res:
+                    await update.message.reply_text("⚠️ Tidak ada data resource."); return
+                r = res[0]
+                free_mem = int(r.get("free-memory", 0))
+                total_mem = int(r.get("total-memory", 1))
+                free_hdd = int(r.get("free-hdd-space", 0))
+                total_hdd = int(r.get("total-hdd-space", 1))
+                mem_pct = round((1 - free_mem/total_mem) * 100, 1)
+                hdd_pct = round((1 - free_hdd/total_hdd) * 100, 1)
+                await update.message.reply_text(
+                    f"🖥 *Resource Router {conn.get('name','-')}*\n\n"
+                    f"Board: `{r.get('board-name','-')}`\n"
+                    f"Version: `{r.get('version','-')}`\n"
+                    f"Uptime: {r.get('uptime','-')}\n"
+                    f"CPU: *{r.get('cpu-load',0)}%*\n"
+                    f"RAM: *{mem_pct}%* ({free_mem//1024//1024} MB free / {total_mem//1024//1024} MB)\n"
+                    f"HDD: *{hdd_pct}%* ({free_hdd//1024//1024} MB free)",
+                    parse_mode="Markdown",
+                )
+        except Exception as exc:
+            logger.error("/resource error: %s", exc)
+            await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    async def cmd_netwatch(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin: list netwatch entries."""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+        try:
+            reg = _get_registry()
+            conn = reg.resolve(telegram_id, None)
+            with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
+                items = list(api.path("tool", "netwatch"))
+                if not items:
+                    await update.message.reply_text("⚠️ Belum ada netwatch entry."); return
+                up = sum(1 for i in items if i.get("status") == "up")
+                down = sum(1 for i in items if i.get("status") == "down")
+                lines = [f"📡 *Netwatch {conn.get('name','-')}*\n",
+                         f"🟢 UP: {up} | 🔴 DOWN: {down} | Total: {len(items)}\n"]
+                # Show DOWN first (paling penting)
+                items_sorted = sorted(items, key=lambda x: 0 if x.get("status") == "down" else 1)
+                for i in items_sorted[:25]:
+                    icon = "🔴" if i.get("status") == "down" else "🟢"
+                    lines.append(f"{icon} `{i.get('host','-')}` {i.get('comment','') or ''}")
+                if len(items) > 25:
+                    lines.append(f"\n_+{len(items)-25} more_")
+                await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        except Exception as exc:
+            logger.error("/netwatch error: %s", exc)
+            await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    async def cmd_report(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin: penjualan hari ini + bulan ini."""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+        try:
+            from datetime import datetime as _dt
+            from datetime import timezone as _tz, timedelta as _td
+            wita = _tz(_td(hours=8))
+            now = _dt.now(wita)
+            start_today = now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(_tz.utc)
+            start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(_tz.utc)
+
+            with self.vdb._conn() as conn:
+                cur = conn.cursor()
+                # Resolve user internal id from telegram_id
+                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+                row = cur.fetchone()
+                if not row:
+                    await update.message.reply_text("⚠️ User tidak ditemukan."); return
+                uid = row[0]
+                # Today
+                cur.execute(
+                    """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
+                       FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
+                         AND "createdAt" >= %s""",
+                    (uid, start_today),
+                )
+                t_b, t_v, t_r = cur.fetchone()
+                # Month
+                cur.execute(
+                    """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
+                       FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
+                         AND "createdAt" >= %s""",
+                    (uid, start_month),
+                )
+                m_b, m_v, m_r = cur.fetchone()
+                # Top reseller bulan ini
+                cur.execute(
+                    """SELECT r.name, SUM(vb."totalCost") as rev, SUM(vb.count) as vc
+                       FROM "VoucherBatch" vb JOIN "Reseller" r ON r.id = vb."resellerId"
+                       WHERE vb."userId"=%s AND vb."createdAt" >= %s
+                       GROUP BY r.name ORDER BY rev DESC LIMIT 5""",
+                    (uid, start_month),
+                )
+                top_resellers = cur.fetchall()
+
+            lines = [
+                f"📊 *Laporan Penjualan*",
+                f"_{now.strftime('%d %b %Y · WITA')}_\n",
+                f"📅 *Hari Ini*",
+                f"   Voucher: {int(t_v):,}".replace(",", "."),
+                f"   Pendapatan: *{format_rp(int(t_r))}*\n",
+                f"📆 *Bulan Ini*",
+                f"   Voucher: {int(m_v):,}".replace(",", "."),
+                f"   Pendapatan: *{format_rp(int(m_r))}*\n",
+            ]
+            if top_resellers:
+                lines.append(f"🏆 *Top Reseller Bulan Ini*")
+                for i, (name, rev, vc) in enumerate(top_resellers, 1):
+                    lines.append(f"   {i}. {name} — {format_rp(int(rev))} ({int(vc)} voucher)")
+            await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        except Exception as exc:
+            logger.error("/report error: %s", exc)
+            await update.message.reply_text(f"⚠️ Error: {exc}")
+
+    async def cmd_topup(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin wizard: top up saldo reseller. Pilih reseller → input amount."""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+        await self._wizard_topup_topdown(update, context, "topup")
+
+    async def cmd_topdown(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Admin wizard: kurangi saldo reseller."""
+        telegram_id = str(update.effective_user.id)
+        if not self._is_owner(telegram_id):
+            await update.message.reply_text("⛔ Admin only.")
+            return
+        await self._wizard_topup_topdown(update, context, "topdown")
+
+    async def _wizard_topup_topdown(self, update, context, action: str) -> None:
+        """Show daftar reseller dengan inline button. Owner pilih → kirim ke wizard step 2."""
+        telegram_id = str(update.effective_user.id)
+        # Ambil semua reseller milik owner
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            row = cur.fetchone()
+            if not row:
+                await update.message.reply_text("⚠️ User tidak ditemukan."); return
+            uid = row[0]
+            cur.execute(
+                'SELECT id, name, balance FROM "Reseller" WHERE "userId" = %s ORDER BY name',
+                (uid,),
+            )
+            resellers = cur.fetchall()
+        if not resellers:
+            await update.message.reply_text("⚠️ Belum ada reseller. Tambah dulu via dashboard.")
+            return
+        buttons = [
+            [InlineKeyboardButton(f"{n} · {format_rp(b)}", callback_data=f"wiz|{action}|sel|{rid}")]
+            for rid, n, b in resellers[:30]  # cap 30 buttons
+        ]
+        buttons.append([InlineKeyboardButton("❌ Batal", callback_data="menu")])
+        verb = "Top Up" if action == "topup" else "Top Down"
+        await update.message.reply_text(
+            f"💰 *{verb} Saldo Reseller*\n\nPilih reseller:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    async def _wizard_select_reseller(self, query, context, action: str, reseller_id: str) -> None:
+        """Step 2: tampilkan saldo current + prompt input amount."""
+        with self.vdb._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT name, balance FROM "Reseller" WHERE id = %s', (reseller_id,))
+            row = cur.fetchone()
+        if not row:
+            await query.edit_message_text("Reseller tidak ditemukan."); return
+        name, balance = row
+        context.user_data["awaiting"] = ("wiz_amount", {"action": action, "reseller_id": reseller_id, "name": name, "balance": balance})
+        verb = "Top Up" if action == "topup" else "Top Down"
+        await query.edit_message_text(
+            f"💰 *{verb} {name}*\n\n"
+            f"Saldo sekarang: *{format_rp(balance)}*\n\n"
+            f"Ketik nominal {verb.lower()} (Rp):",
+            parse_mode="Markdown",
+        )
+
+    async def _wizard_execute(self, msg, context, payload: dict, amount: int) -> None:
+        """Step 3: execute top up / down dengan amount yang diketik admin."""
+        action = payload["action"]
+        reseller_id = payload["reseller_id"]
+        name = payload["name"]
+        balance_before = payload["balance"]
+        try:
+            if action == "topup":
+                tx = self.vdb.add_saldo(reseller_id, amount, description="Manual top up via bot (admin)")
+                emoji = "✅"
+                verb = "Top Up"
+            else:
+                tx = self.vdb.deduct_saldo(reseller_id, amount, description="Manual top down via bot (admin)")
+                emoji = "⚠️"
+                verb = "Top Down"
+            balance_after = tx["balanceAfter"]
+            await msg.reply_text(
+                f"{emoji} *{verb} {format_rp(amount)} sukses*\n\n"
+                f"Reseller: {name}\n"
+                f"Saldo: {format_rp(balance_before)} → *{format_rp(balance_after)}*",
+                parse_mode="Markdown",
+            )
+            # Notif reseller (kalau ada telegramId)
+            with self.vdb._conn() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT "telegramId" FROM "Reseller" WHERE id = %s', (reseller_id,))
+                r = cur.fetchone()
+                if r and r[0]:
+                    try:
+                        await msg.get_bot().send_message(
+                            chat_id=int(r[0]),
+                            text=f"{emoji} Saldo Anda di-{verb.lower()} *{format_rp(amount)}*.\n"
+                                 f"Saldo baru: *{format_rp(balance_after)}*",
+                            parse_mode="Markdown",
+                        )
+                    except Exception: pass
+        except Exception as exc:
+            await msg.reply_text(f"⚠️ Error: {exc}")
+
     # ── Build & run ───────────────────────────────────────────
 
     def build_application(self) -> "Application":
         """Build a python-telegram-bot Application with handlers."""
         app = Application.builder().token(self.bot_token).build()
+
+        # Reseller commands
         app.add_handler(CommandHandler("start", self.start_command))
+        app.add_handler(CommandHandler("menu", self.cmd_menu))
+        app.add_handler(CommandHandler("ceksaldo", self.cmd_ceksaldo))
+        app.add_handler(CommandHandler("deposit", self.cmd_deposit))
+        app.add_handler(CommandHandler("daftar", self.cmd_daftar))
+        app.add_handler(CommandHandler("cek", self.cmd_cek))
+        app.add_handler(CommandHandler("qrcode", self.cmd_qrcode))
+
+        # Admin commands
+        app.add_handler(CommandHandler("topup", self.cmd_topup))
+        app.add_handler(CommandHandler("topdown", self.cmd_topdown))
+        app.add_handler(CommandHandler("resource", self.cmd_resource))
+        app.add_handler(CommandHandler("netwatch", self.cmd_netwatch))
+        app.add_handler(CommandHandler("report", self.cmd_report))
+
+        # Callback (inline buttons) + state-based message handler
         app.add_handler(CallbackQueryHandler(self.handle_callback))
-        # Text + Photo handler untuk state-based input (qty buy, custom deposit, photo bukti)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         app.add_handler(MessageHandler(filters.COMMAND & filters.Regex(r"^/skip"), self.handle_message))
         app.add_handler(MessageHandler(filters.PHOTO, self.handle_message))
