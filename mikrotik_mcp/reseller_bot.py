@@ -1084,8 +1084,13 @@ class ResellerBot:
         )
 
     async def cmd_deposit(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Trigger inline deposit menu."""
+        """Trigger inline deposit menu (reseller flow). Owner tidak butuh deposit."""
         telegram_id = str(update.effective_user.id)
+        if self._is_owner(telegram_id):
+            await update.message.reply_text(
+                "ℹ️ Anda admin. Untuk top up saldo reseller, pakai /topup.",
+            )
+            return
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
             await update.message.reply_text("Anda belum terdaftar. Ketik /daftar untuk register.")
@@ -1106,7 +1111,11 @@ class ResellerBot:
         """Self-registration: kirim request daftar ke owner.
         Format: /daftar <nama> [phone]"""
         telegram_id = str(update.effective_user.id)
-        # Cek sudah terdaftar?
+        if self._is_owner(telegram_id):
+            await update.message.reply_text(
+                "ℹ️ Anda admin, tidak perlu daftar. Reseller register via bot ini sendiri.",
+            )
+            return
         existing = self.vdb.get_reseller_by_telegram(telegram_id)
         if existing:
             await update.message.reply_text(
@@ -1809,39 +1818,64 @@ class ResellerBot:
 # Startup
 # ---------------------------------------------------------------------------
 
-async def _register_bot_commands(app: "Application") -> None:
-    """Set tombol command list di Telegram (yg muncul saat user tap '/' di kolom chat)."""
-    from telegram import BotCommand
-    commands = [
-        BotCommand("menu", "Menu utama"),
-        BotCommand("ai", "Chat dengan AI Assistant"),
-        BotCommand("stopai", "Akhiri sesi AI"),
-        BotCommand("ceksaldo", "Cek saldo (reseller)"),
-        BotCommand("deposit", "Request deposit (reseller)"),
-        BotCommand("daftar", "Daftar sebagai reseller"),
+async def _register_bot_commands(app: "Application", owner_telegram_id: str) -> None:
+    """Register 2 set command:
+    - DEFAULT scope (semua user/reseller): cmd reseller flow
+    - CHAT scope owner: cmd admin (AI, report, monitoring, topup, broadcast)
+
+    User reseller cuma akan lihat tombol command reseller saat tap '/'.
+    User owner lihat tombol command admin (yang lebih powerful).
+    """
+    from telegram import BotCommand, BotCommandScopeChat
+
+    reseller_commands = [
+        BotCommand("menu", "Menu utama reseller"),
+        BotCommand("ceksaldo", "Cek saldo Anda"),
+        BotCommand("deposit", "Request top up saldo"),
+        BotCommand("daftar", "Daftar sebagai reseller — /daftar <nama> [phone]"),
         BotCommand("cek", "Cek status hotspot user — /cek <username>"),
         BotCommand("qrcode", "Generate QR voucher — /qrcode <user> [pwd]"),
-        BotCommand("report", "Penjualan hari ini & bulan (admin)"),
-        BotCommand("resource", "Resource MikroTik (admin)"),
-        BotCommand("netwatch", "Netwatch host monitoring (admin)"),
-        BotCommand("topup", "Top up saldo reseller (admin)"),
-        BotCommand("topdown", "Kurangi saldo reseller (admin)"),
-        BotCommand("broadcast", "Broadcast pesan (admin)"),
     ]
+
+    admin_commands = [
+        BotCommand("menu", "Menu utama admin"),
+        BotCommand("ai", "🤖 Chat dengan AI Assistant"),
+        BotCommand("stopai", "Akhiri sesi AI"),
+        BotCommand("report", "📊 Penjualan hari ini & bulan ini"),
+        BotCommand("resource", "🖥 Resource MikroTik"),
+        BotCommand("netwatch", "📡 Netwatch host monitoring"),
+        BotCommand("ceksaldo", "💰 List saldo semua reseller"),
+        BotCommand("topup", "➕ Top up saldo reseller"),
+        BotCommand("topdown", "➖ Kurangi saldo reseller"),
+        BotCommand("broadcast", "📢 Broadcast pesan ke semua reseller"),
+        BotCommand("cek", "Cek status hotspot user — /cek <username>"),
+        BotCommand("qrcode", "Generate QR voucher — /qrcode <user> [pwd]"),
+    ]
+
     try:
-        await app.bot.set_my_commands(commands)
-        logger.info("Bot commands registered (%d)", len(commands))
+        # Set DEFAULT (semua user) = reseller commands
+        await app.bot.set_my_commands(reseller_commands)
+        # Set CHAT scope untuk owner = admin commands
+        if owner_telegram_id:
+            await app.bot.set_my_commands(
+                admin_commands,
+                scope=BotCommandScopeChat(chat_id=int(owner_telegram_id)),
+            )
+        logger.info(
+            "Bot commands registered: %d default (reseller), %d admin scope owner=%s",
+            len(reseller_commands), len(admin_commands), owner_telegram_id,
+        )
     except Exception as exc:
         logger.warning("Failed to register bot commands: %s", exc)
 
 
-def _run_bot_in_thread(app: "Application") -> None:
+def _run_bot_in_thread(app: "Application", owner_telegram_id: str = "") -> None:
     """Run a single bot Application in its own asyncio event loop (blocking)."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(app.initialize())
-        loop.run_until_complete(_register_bot_commands(app))
+        loop.run_until_complete(_register_bot_commands(app, owner_telegram_id))
         loop.run_until_complete(app.start())
         loop.run_until_complete(app.updater.start_polling(drop_pending_updates=True))
         logger.info("Reseller bot started polling (token ...%s)", app.bot.token[-6:])
@@ -1885,7 +1919,7 @@ def start_reseller_bots() -> list[threading.Thread]:
 
         t = threading.Thread(
             target=_run_bot_in_thread,
-            args=(app,),
+            args=(app, owner_tid),
             daemon=True,
             name=f"reseller-bot-{owner_tid}",
         )
