@@ -2718,13 +2718,13 @@ class HealthHandler(BaseHTTPRequestHandler):
                 _send_json(self, {"error": "model and apiKey required"}, 400)
                 return
 
-            base_urls = {
-                "openrouter": "https://openrouter.ai/api/v1",
-                "openai":     "https://api.openai.com/v1",
-                "anthropic":  "https://api.anthropic.com/v1",
-                "google":     "https://generativelanguage.googleapis.com/v1beta/openai",
+            # Nanobot punya built-in handling untuk provider name 'openrouter'/'openai'/
+            # 'anthropic' — termasuk auth header format yang benar. Set baseURL hanya untuk
+            # provider non-native (e.g. google AI yg pakai OpenAI-compat endpoint).
+            base_urls_optional = {
+                "google": "https://generativelanguage.googleapis.com/v1beta/openai",
             }
-            base_url = base_urls.get(provider, base_urls["openrouter"])
+            base_url_opt = base_urls_optional.get(provider)
 
             # Read template config (preserves channels, mcpServers, etc.)
             import os as _os
@@ -2737,16 +2737,16 @@ class HealthHandler(BaseHTTPRequestHandler):
             with open(template_path) as f:
                 cfg = json.load(f)
 
-            # Override providers section — pakai key sebagai sub-provider name
+            # Override providers section — pakai key sebagai sub-provider name.
+            # Nanobot pick provider berdasarkan name di agents.defaults.provider.
             cfg.setdefault("providers", {})
-            # Reset all providers, set only active one (nanobot ambil yg aktif)
-            cfg["providers"] = {
-                provider: {
-                    "apiKey": api_key,
-                    "baseURL": base_url,
-                    "extraHeaders": {"X-Title": "MikroTik AI Agent"},
-                }
+            provider_cfg = {
+                "apiKey": api_key,
+                "extraHeaders": {"X-Title": "MikroTik AI Agent"},
             }
+            if base_url_opt:
+                provider_cfg["baseURL"] = base_url_opt
+            cfg["providers"] = {provider: provider_cfg}
             # Override agent default model + provider
             cfg.setdefault("agents", {}).setdefault("defaults", {})
             cfg["agents"]["defaults"]["model"] = model
