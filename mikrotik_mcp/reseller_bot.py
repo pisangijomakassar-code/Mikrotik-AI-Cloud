@@ -2041,16 +2041,89 @@ async def _register_bot_commands(app: "Application", owner_telegram_id: str) -> 
         logger.warning("Failed to register bot commands: %s", exc)
 
 
-def _run_bot_in_thread(app: "Application", owner_telegram_id: str = "") -> None:
-    """Run a single bot Application in its own asyncio event loop (blocking)."""
+def _ensure_webhook_cert(cert_path: str, key_path: str, vps_host: str) -> None:
+    """Generate self-signed SSL cert for Telegram webhook (skipped if files exist)."""
+    import datetime
+    import ipaddress
+    from pathlib import Path
+    from cryptography import x509
+    from cryptography.x509.oid import NameOID
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    if Path(cert_path).exists() and Path(key_path).exists():
+        return
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, vps_host)])
+    san: list[x509.GeneralName] = []
+    try:
+        san.append(x509.IPAddress(ipaddress.IPv4Address(vps_host)))
+    except ValueError:
+        san.append(x509.DNSName(vps_host))
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.datetime.now(datetime.timezone.utc))
+        .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650))
+        .add_extension(x509.SubjectAlternativeName(san), critical=False)
+        .sign(key, hashes.SHA256())
+    )
+    Path(cert_path).write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    Path(key_path).write_bytes(key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.TraditionalOpenSSL,
+        serialization.NoEncryption(),
+    ))
+    logger.info("Generated self-signed webhook cert at %s", cert_path)
+
+
+def _run_bot_in_thread(
+    app: "Application",
+    owner_telegram_id: str = "",
+    webhook_port: int = 0,
+) -> None:
+    """Run a single bot Application in its own asyncio event loop (blocking).
+
+    When VPS_HOST env var is set (non-localhost) and webhook_port > 0,
+    uses Telegram webhook mode for instant response. Falls back to polling.
+    """
+    vps_host = os.environ.get("VPS_HOST", "").strip()
+    use_webhook = bool(vps_host and vps_host not in ("localhost", "127.0.0.1") and webhook_port > 0)
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(app.initialize())
         loop.run_until_complete(_register_bot_commands(app, owner_telegram_id))
         loop.run_until_complete(app.start())
-        loop.run_until_complete(app.updater.start_polling(drop_pending_updates=True))
-        logger.info("Reseller bot started polling (token ...%s)", app.bot.token[-6:])
+
+        if use_webhook:
+            cert_path = "/app/config/webhook_cert.pem"
+            key_path = "/app/config/webhook_key.pem"
+            _ensure_webhook_cert(cert_path, key_path, vps_host)
+            url_path = app.bot.token.split(":")[-1]
+            webhook_url = f"https://{vps_host}:{webhook_port}/{url_path}"
+            loop.run_until_complete(app.updater.start_webhook(
+                listen="0.0.0.0",
+                port=webhook_port,
+                url_path=url_path,
+                webhook_url=webhook_url,
+                cert=cert_path,
+                key=key_path,
+                drop_pending_updates=True,
+            ))
+            logger.info(
+                "Reseller bot started webhook port=%d url=%s (token ...%s)",
+                webhook_port, webhook_url, app.bot.token[-6:],
+            )
+        else:
+            loop.run_until_complete(app.updater.start_polling(drop_pending_updates=True))
+            logger.info("Reseller bot started polling (token ...%s)", app.bot.token[-6:])
+
         loop.run_forever()
     except Exception as exc:
         logger.error("Reseller bot crashed: %s", exc, exc_info=True)
@@ -2087,8 +2160,10 @@ def start_reseller_bots() -> list[threading.Thread]:
         logger.error("Failed to get registry crypto: %s", exc)
         return []
 
+    webhook_base_port = int(os.environ.get("WEBHOOK_BASE_PORT", "8443"))
+
     threads: list[threading.Thread] = []
-    for r in routers:
+    for idx, r in enumerate(routers):
         try:
             token = crypto.decrypt(r["bot_token_enc"]) if r["bot_token_enc"] else ""
         except Exception as exc:
@@ -2098,9 +2173,10 @@ def start_reseller_bots() -> list[threading.Thread]:
             continue
 
         owner_tid = r["owner_telegram_id"]
+        port = webhook_base_port + idx
         logger.info(
-            "Starting reseller bot for router=%s (owner telegramId=%s)",
-            r["router_name"], owner_tid,
+            "Starting reseller bot for router=%s (owner telegramId=%s, webhook_port=%d)",
+            r["router_name"], owner_tid, port,
         )
 
         bot = ResellerBot(
@@ -2114,7 +2190,7 @@ def start_reseller_bots() -> list[threading.Thread]:
 
         t = threading.Thread(
             target=_run_bot_in_thread,
-            args=(app, owner_tid),
+            args=(app, owner_tid, port),
             daemon=True,
             name=f"reseller-bot-{r['router_name']}",
         )
