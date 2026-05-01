@@ -117,7 +117,18 @@ export default function LlmSettingsPage() {
     }
   }
 
-  const availableModels = settings.data?.models?.[provider] ?? []
+  // Fetch live model list dari OpenRouter (kalau provider = openrouter).
+  const liveModels = useQuery<{ models: ModelInfo[]; counts?: { total: number; free: number; cheap: number; premium: number } }>({
+    queryKey: ["llm-models-live", provider],
+    queryFn: () => apiClient.get(`/api/settings/llm/models?provider=${provider}`),
+    enabled: provider === "openrouter",
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const [showFreeOnly, setShowFreeOnly] = useState(false)
+  const popularModels = settings.data?.models?.[provider] ?? []
+  const allModels = liveModels.data?.models?.length ? liveModels.data.models : popularModels
+  const availableModels = showFreeOnly ? allModels.filter((m) => m.tier === "free") : allModels
   const maxDaily = Math.max(...(usage.data?.daily.map((d) => d.total) ?? [1]), 1)
 
   return (
@@ -186,10 +197,40 @@ export default function LlmSettingsPage() {
               </div>
 
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Model</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-muted-foreground">
+                    Model
+                    {liveModels.data?.counts && (
+                      <span className="ml-2 text-[10px] text-muted-foreground/70">
+                        ({liveModels.data.counts.total} total · {liveModels.data.counts.free} free)
+                      </span>
+                    )}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] text-muted-foreground flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showFreeOnly}
+                        onChange={(e) => setShowFreeOnly(e.target.checked)}
+                        className="h-3 w-3"
+                      />
+                      Free only
+                    </label>
+                    {provider === "openrouter" && (
+                      <button
+                        type="button"
+                        onClick={() => liveModels.refetch()}
+                        className="text-[10px] text-tertiary hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw className={cn("h-3 w-3", liveModels.isFetching && "animate-spin")} />
+                        Refresh
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <Select value={model} onValueChange={setModel}>
                   <SelectTrigger><SelectValue placeholder="Pilih model..." /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-80">
                     {availableModels.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         <span className="flex items-center gap-2">
