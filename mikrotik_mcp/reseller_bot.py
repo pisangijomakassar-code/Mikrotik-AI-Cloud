@@ -1038,9 +1038,45 @@ class ResellerBot:
 
     async def cmd_ceksaldo(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         telegram_id = str(update.effective_user.id)
+
+        # OWNER: tampilkan list saldo SEMUA reseller (bukan saldo personal — owner ga punya)
+        if self._is_owner(telegram_id):
+            with self.vdb._conn() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+                row = cur.fetchone()
+                if not row:
+                    await update.message.reply_text("⚠️ User tidak ditemukan."); return
+                uid = row[0]
+                cur.execute(
+                    'SELECT name, balance, status FROM "Reseller" WHERE "userId" = %s ORDER BY balance DESC',
+                    (uid,),
+                )
+                resellers = cur.fetchall()
+            if not resellers:
+                await update.message.reply_text(
+                    "⚠️ Belum ada reseller. Tambah dulu via dashboard /resellers."
+                )
+                return
+            total = sum(int(b) for _, b, _ in resellers)
+            lines = [
+                f"💰 *Saldo Semua Reseller*\n",
+                f"Total saldo aktif: *{format_rp(total)}*",
+                f"Jumlah reseller: {len(resellers)}\n",
+            ]
+            for name, bal, status in resellers[:20]:
+                icon = "🟢" if status == "ACTIVE" else "⚪"
+                lines.append(f"{icon} {name} — {format_rp(int(bal))}")
+            if len(resellers) > 20:
+                lines.append(f"\n_+{len(resellers)-20} reseller lain_")
+            lines.append("\n💡 Pakai /topup atau /topdown untuk ubah saldo.")
+            await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+            return
+
+        # RESELLER flow — saldo personal
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
-            await update.message.reply_text("Anda belum terdaftar. Ketik /daftar untuk register.")
+            await update.message.reply_text("Anda belum terdaftar. Ketik /daftar <nama> untuk register.")
             return
         await update.message.reply_text(
             f"💰 Saldo {reseller.get('name','-')}: *{format_rp(reseller.get('balance', 0))}*",
