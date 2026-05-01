@@ -136,7 +136,6 @@ export default function DashboardPage() {
             sub: h.mb > 0 ? `${h.mb.toFixed(0)} MB` : "",
           }))}
           color="#f97316"
-          horizontal={false}
           loading={summaryQuery.isLoading}
           empty="Belum ada traffic snapshot hari ini"
         />
@@ -277,7 +276,6 @@ function BarChartCard({ title, subtitle, data, color, loading, empty }: {
   data: { label: string; value: number; sub?: string }[]
   color: string
   loading?: boolean
-  horizontal?: boolean
   empty: string
 }) {
   const max = Math.max(...data.map((d) => d.value), 1)
@@ -290,28 +288,39 @@ function BarChartCard({ title, subtitle, data, color, loading, empty }: {
         </div>
       </div>
       {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-5 bg-muted rounded animate-pulse" />)}
+        <div className="flex items-end gap-1 h-40">
+          {Array.from({ length: 12 }).map((_, i) => <div key={i} className="flex-1 bg-muted rounded-t animate-pulse" style={{ height: `${20 + Math.random() * 60}%` }} />)}
         </div>
       ) : data.length === 0 ? (
         <p className="text-xs text-muted-foreground py-8 text-center">{empty}</p>
       ) : (
-        <div className="space-y-1.5">
-          {data.map((d, i) => {
-            const w = Math.max(2, Math.round((d.value / max) * 100))
-            return (
-              <div key={`${d.label}-${i}`} className="flex items-center gap-2 text-[11px]">
-                <span className="w-12 text-muted-foreground font-mono shrink-0">{d.label}</span>
-                <div className="flex-1 h-4 bg-white/5 rounded relative overflow-hidden">
+        // Vertical column chart: bars naik dari bawah, label di bawah.
+        <div>
+          <div className="flex items-end gap-1 h-40 mb-1">
+            {data.map((d, i) => {
+              const h = Math.max(2, Math.round((d.value / max) * 100))
+              return (
+                <div key={`${d.label}-${i}`} className="flex-1 flex flex-col items-center justify-end group relative">
                   <div
-                    className="h-full rounded transition-all"
-                    style={{ width: `${w}%`, background: `linear-gradient(90deg, ${color}cc, ${color})` }}
+                    className="w-full rounded-t transition-all hover:opacity-80"
+                    style={{ height: `${h}%`, background: `linear-gradient(180deg, ${color}, ${color}aa)` }}
                   />
+                  {d.sub && (
+                    <div className="absolute -top-6 px-1.5 py-0.5 bg-card border border-border rounded text-[10px] opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                      {d.sub}
+                    </div>
+                  )}
                 </div>
-                <span className="text-muted-foreground/70 text-right min-w-[80px]">{d.sub}</span>
+              )
+            })}
+          </div>
+          <div className="flex gap-1">
+            {data.map((d, i) => (
+              <div key={`lbl-${i}`} className="flex-1 text-center text-[10px] text-muted-foreground font-mono truncate">
+                {d.label}
               </div>
-            )
-          })}
+            ))}
+          </div>
         </div>
       )}
     </div>

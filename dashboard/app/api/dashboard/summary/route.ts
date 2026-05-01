@@ -25,11 +25,16 @@ export async function GET(request: NextRequest) {
     : null
   const routerId = routerRow?.id ?? null
 
-  const now = new Date()
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const startYesterday = new Date(startToday.getTime() - 24 * 60 * 60 * 1000)
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const start12mo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+  // Boundaries pakai timezone WITA (UTC+8) supaya "hari ini" / "bulan ini"
+  // sesuai persepsi user, bukan UTC.
+  const WITA_OFFSET_MS = 8 * 60 * 60 * 1000
+  const nowMs = Date.now()
+  const startToday = new Date(Math.floor((nowMs + WITA_OFFSET_MS) / 86400000) * 86400000 - WITA_OFFSET_MS)
+  const startYesterday = new Date(startToday.getTime() - 86400000)
+  // Awal bulan WITA: pakai date wita lalu balik ke UTC
+  const witaNow = new Date(nowMs + WITA_OFFSET_MS)
+  const startMonth = new Date(Date.UTC(witaNow.getUTCFullYear(), witaNow.getUTCMonth(), 1) - WITA_OFFSET_MS)
+  const start12mo = new Date(Date.UTC(witaNow.getUTCFullYear(), witaNow.getUTCMonth() - 11, 1) - WITA_OFFSET_MS)
 
   const batchWhere = (gte: Date, lte?: Date) => ({
     userId,
@@ -128,6 +133,8 @@ export async function GET(request: NextRequest) {
       `
     : []
 
+  // Hourly traffic — convert UTC ke timezone WITA (Asia/Makassar) supaya
+  // jam 09:00-11:00 muncul di kolom 09-11 (bukan 01-03 UTC).
   const bandwidthHourly = routerName
     ? await prisma.$queryRaw<{ hour: number; mb: number }[]>`
         WITH ordered AS (
@@ -142,7 +149,7 @@ export async function GET(request: NextRequest) {
             GREATEST("txBytes" - prev_tx, 0) + GREATEST("rxBytes" - prev_rx, 0) AS bytes_delta
           FROM ordered WHERE prev_tx IS NOT NULL
         )
-        SELECT EXTRACT(HOUR FROM "takenAt")::int AS hour,
+        SELECT EXTRACT(HOUR FROM "takenAt" AT TIME ZONE 'Asia/Makassar')::int AS hour,
                ROUND(SUM(bytes_delta)::numeric / 1024 / 1024, 1)::float AS mb
         FROM deltas GROUP BY hour ORDER BY hour
       `
