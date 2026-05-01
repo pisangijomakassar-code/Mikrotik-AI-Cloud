@@ -168,6 +168,8 @@ class ResellerBot:
         # Note: lost on bot restart — for production-grade, simpan ke DB sebagai SaldoTransaction
         # dengan flag PENDING. Untuk v1 in-memory cukup karena owner approve/reject biasanya cepat.
         self._pending_deposits: dict[str, dict] = {}
+        # In-memory pending registrations (reg_id → {telegram_id, name, phone, username})
+        self._pending_regs: dict[str, dict] = {}
 
     def t(self, key: str, **kwargs) -> str:
         """Get bot text for key, formatted with kwargs."""
@@ -319,6 +321,12 @@ class ResellerBot:
             elif action == "reject":
                 # Owner click reject|<deposit_id>
                 await self._owner_reject(query, telegram_id, parts[1])
+            elif action == "regapp":
+                # Owner approve registration |<reg_id>
+                await self._owner_approve_registration(query, telegram_id, parts[1])
+            elif action == "regrej":
+                # Owner reject registration |<reg_id>
+                await self._owner_reject_registration(query, telegram_id, parts[1])
             elif action == "wiz":
                 # wiz|topup|sel|<reseller_id>  — admin pilih reseller
                 if len(parts) >= 4 and parts[2] == "sel" and self._is_owner(telegram_id):
@@ -875,6 +883,99 @@ class ResellerBot:
             pass
         self._pending_deposits.pop(dep_id, None)
 
+    # ── Owner approve / reject registration ────────────────────
+
+    async def _owner_approve_registration(self, query, owner_telegram_id: str, reg_id: str) -> None:
+        """Approve pending reseller registration: insert ke Reseller table + notif user."""
+        reg = self._pending_regs.get(reg_id)
+        if not reg:
+            await query.answer("Registrasi sudah diproses atau expired.", show_alert=True)
+            return
+
+        # Resolve owner internal user_id + default router
+        try:
+            with self.vdb._conn() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (owner_telegram_id,))
+                row = cur.fetchone()
+                if not row:
+                    await query.answer("Owner user not found.", show_alert=True); return
+                user_internal_id = row[0]
+
+                # Pilih router default
+                cur.execute(
+                    'SELECT id FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC LIMIT 1',
+                    (user_internal_id,),
+                )
+                rrow = cur.fetchone()
+                if not rrow:
+                    await query.answer("Owner belum punya router. Tambah router dulu.", show_alert=True)
+                    return
+                router_id = rrow[0]
+
+                # Insert reseller (default values)
+                import secrets, string
+                cuid = "c" + "".join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(24))
+                cur.execute(
+                    """INSERT INTO "Reseller"
+                       (id, name, phone, "telegramId", balance, discount, "voucherGroup",
+                        uplink, status, "createdAt", "updatedAt", "userId", "routerId")
+                       VALUES (%s, %s, %s, %s, 0, 0, 'default', '', 'ACTIVE',
+                               NOW(), NOW(), %s, %s)""",
+                    (cuid, reg["name"], reg["phone"], reg["telegram_id"],
+                     user_internal_id, router_id),
+                )
+        except Exception as exc:
+            logger.error("Approve registration failed: %s", exc)
+            await query.answer(f"Gagal: {exc}", show_alert=True)
+            return
+
+        # Notif user yang daftar
+        try:
+            await query.get_bot().send_message(
+                chat_id=int(reg["telegram_id"]),
+                text=(
+                    f"✅ Pendaftaran Anda *DISETUJUI*!\n\n"
+                    f"Nama: {reg['name']}\n"
+                    f"Saldo awal: Rp 0\n"
+                    f"Diskon: 0%\n\n"
+                    f"Ketik /menu untuk mulai. Lakukan /deposit untuk top up saldo."
+                ),
+                parse_mode="Markdown",
+            )
+        except Exception as exc:
+            logger.warning("Notif reseller approval failed: %s", exc)
+
+        # Update owner message
+        try:
+            await query.edit_message_text(
+                f"✅ DISETUJUI — *{reg['name']}* (`{reg['telegram_id']}`)\n"
+                f"Atur diskon/voucherGroup via dashboard /resellers kalau perlu.",
+                parse_mode="Markdown",
+            )
+        except Exception:
+            pass
+        self._pending_regs.pop(reg_id, None)
+
+    async def _owner_reject_registration(self, query, owner_telegram_id: str, reg_id: str) -> None:
+        reg = self._pending_regs.get(reg_id)
+        if not reg:
+            await query.answer("Sudah diproses.", show_alert=True)
+            return
+        try:
+            await query.get_bot().send_message(
+                chat_id=int(reg["telegram_id"]),
+                text=f"❌ Pendaftaran *{reg['name']}* DITOLAK admin. Hubungi admin untuk klarifikasi.",
+                parse_mode="Markdown",
+            )
+        except Exception:
+            pass
+        try:
+            await query.edit_message_text(f"❌ DITOLAK — {reg['name']} (`{reg['telegram_id']}`)", parse_mode="Markdown")
+        except Exception:
+            pass
+        self._pending_regs.pop(reg_id, None)
+
     # ── Text & Photo input handler (state-based) ─────────────────
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1136,7 +1237,18 @@ class ResellerBot:
 
         name = args[0]
         phone = args[1] if len(args) > 1 else ""
-        # Notif owner — owner manual approve via dashboard (tambah reseller dengan telegramId ini)
+        username = update.effective_user.username or ""
+
+        import uuid
+        reg_id = uuid.uuid4().hex[:12]
+        self._pending_regs[reg_id] = {
+            "telegram_id": telegram_id,
+            "name": name,
+            "phone": phone,
+            "username": username,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
         try:
             await update.message.get_bot().send_message(
                 chat_id=int(self.owner_telegram_id),
@@ -1145,10 +1257,14 @@ class ResellerBot:
                     f"Telegram ID: `{telegram_id}`\n"
                     f"Nama: {name}\n"
                     f"Telepon: {phone or '-'}\n"
-                    f"Username: @{update.effective_user.username or '-'}\n\n"
-                    f"Approve via dashboard /resellers atau abaikan untuk tolak."
+                    f"Username: @{username or '-'}\n\n"
+                    f"_Default: voucherGroup=default, discount=0%, router=default_"
                 ),
                 parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("✅ Approve", callback_data=f"regapp|{reg_id}"),
+                    InlineKeyboardButton("❌ Tolak", callback_data=f"regrej|{reg_id}"),
+                ]]),
             )
             await update.message.reply_text(
                 f"✅ Pendaftaran *{name}* dikirim ke admin.\n"
@@ -1157,6 +1273,7 @@ class ResellerBot:
             )
         except Exception as exc:
             logger.error("Daftar notif failed: %s", exc)
+            self._pending_regs.pop(reg_id, None)
             await update.message.reply_text("⚠️ Gagal kirim ke admin. Hubungi admin manual.")
 
     async def cmd_cek(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
