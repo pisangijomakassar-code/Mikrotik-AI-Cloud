@@ -354,6 +354,56 @@ class VoucherDB:
                 "amount": amount,
             }
 
+    def add_saldo(
+        self,
+        reseller_id: str,
+        amount: int,
+        description: str = "",
+    ) -> dict:
+        """Atomic: ADD balance + create SaldoTransaction (TOP_UP).
+        Returns the transaction record. Used by reseller_bot owner-approve flow.
+        """
+        if not self._pool:
+            raise RuntimeError("VoucherDB not connected")
+        if amount <= 0:
+            raise ValueError("amount must be > 0")
+
+        with self._conn() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT "balance" FROM "Reseller" WHERE "id" = %s FOR UPDATE', (reseller_id,))
+            row = cur.fetchone()
+            if not row:
+                raise ValueError(f"Reseller {reseller_id} not found")
+            balance_before = row[0]
+            balance_after = balance_before + amount
+
+            cur.execute(
+                'UPDATE "Reseller" SET "balance" = %s, "updatedAt" = %s WHERE "id" = %s',
+                (balance_after, _now(), reseller_id),
+            )
+
+            tx_id = _cuid_like()
+            cur.execute(
+                """
+                INSERT INTO "SaldoTransaction"
+                    ("id", "type", "amount", "balanceBefore", "balanceAfter",
+                     "description", "createdAt", "resellerId")
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    tx_id, "TOP_UP", amount,
+                    balance_before, balance_after,
+                    description, _now(), reseller_id,
+                ),
+            )
+
+            return {
+                "id": tx_id,
+                "balanceBefore": balance_before,
+                "balanceAfter": balance_after,
+                "amount": amount,
+            }
+
     def get_transactions(self, reseller_id: str, limit: int = 10) -> list[dict]:
         """Get recent transactions for a reseller."""
         if not self._pool:

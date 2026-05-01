@@ -29,7 +29,10 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 try:
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-    from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+    from telegram.ext import (
+        Application, CommandHandler, CallbackQueryHandler, ContextTypes,
+        MessageHandler, filters,
+    )
     _PTB_AVAILABLE = True
 except ImportError:
     _PTB_AVAILABLE = False
@@ -160,6 +163,10 @@ class ResellerBot:
         self.owner_telegram_id = owner_telegram_id
         self.vdb = vdb
         self.texts = _get_bot_texts()
+        # In-memory pending deposit requests (dep_id → {reseller_id, amount, photo_file_id, ...})
+        # Note: lost on bot restart — for production-grade, simpan ke DB sebagai SaldoTransaction
+        # dengan flag PENDING. Untuk v1 in-memory cukup karena owner approve/reject biasanya cepat.
+        self._pending_deposits: dict[str, dict] = {}
 
     def t(self, key: str, **kwargs) -> str:
         """Get bot text for key, formatted with kwargs."""
@@ -226,6 +233,8 @@ class ResellerBot:
 
         try:
             if action == "menu":
+                # Clear pending state saat balik ke menu
+                context.user_data.pop("awaiting", None)
                 await self._show_menu(query, telegram_id)
             elif action == "saldo":
                 await self._show_saldo(query, telegram_id)
@@ -233,14 +242,44 @@ class ResellerBot:
                 if len(parts) == 1:
                     await self._show_profiles(query, telegram_id)
                 elif len(parts) == 2:
-                    await self._confirm_buy(query, telegram_id, parts[1])
-                elif len(parts) == 3 and parts[2] == "ok":
-                    await self._execute_buy(query, telegram_id, parts[1])
+                    await self._show_buy_qty(query, telegram_id, parts[1])
+                elif len(parts) == 3 and parts[2] == "custom":
+                    # User pilih input qty manual
+                    context.user_data["awaiting"] = ("buy_qty", parts[1])
+                    await query.edit_message_text(
+                        "✏️ Ketik jumlah voucher yang ingin dibeli (1-100):",
+                        reply_markup=self._back_button(),
+                    )
+                elif len(parts) == 3:
+                    qty = int(parts[2])
+                    await self._confirm_buy(query, telegram_id, parts[1], qty)
+                elif len(parts) == 4 and parts[2] == "ok":
+                    await self._execute_buy(query, telegram_id, parts[1], int(parts[3]))
             elif action == "deposit":
                 if len(parts) == 1:
                     await self._show_deposit_amounts(query, telegram_id)
+                elif len(parts) == 2 and parts[1] == "custom":
+                    context.user_data["awaiting"] = ("deposit_amount", None)
+                    await query.edit_message_text(
+                        "✏️ Ketik nominal deposit (Rp), minimal 1000:",
+                        reply_markup=self._back_button(),
+                    )
                 elif len(parts) == 2:
-                    await self._request_deposit(query, telegram_id, int(parts[1]))
+                    amount = int(parts[1])
+                    # Prompt user upload foto bukti
+                    context.user_data["awaiting"] = ("deposit_proof", amount)
+                    await query.edit_message_text(
+                        f"📸 Upload foto bukti transfer untuk deposit *{format_rp(amount)}*\n\n"
+                        f"Atau ketik /skip kalau tidak ada bukti foto.",
+                        parse_mode="Markdown",
+                        reply_markup=self._back_button(),
+                    )
+            elif action == "approve":
+                # Owner click approve|<deposit_id>
+                await self._owner_approve(query, telegram_id, parts[1])
+            elif action == "reject":
+                # Owner click reject|<deposit_id>
+                await self._owner_reject(query, telegram_id, parts[1])
             elif action == "history":
                 await self._show_history(query, telegram_id)
             else:
@@ -357,7 +396,44 @@ class ResellerBot:
 
     # ── Buy: confirm ──────────────────────────────────────────
 
-    async def _confirm_buy(self, query, telegram_id: str, voucher_type_id: str) -> None:
+    async def _show_buy_qty(self, query, telegram_id: str, voucher_type_id: str) -> None:
+        """Tampilkan pilihan quantity (1, 5, 10, 25, 50, custom)."""
+        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        if not reseller:
+            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            return
+        vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
+        if not vt or vt.get("userId") != reseller["userId"]:
+            await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
+            return
+
+        disc = int(reseller.get("discount") or 0)
+        harga_jual = self._calc_reseller_price(vt, disc)
+        balance = int(reseller.get("balance") or 0)
+        max_qty = balance // harga_jual if harga_jual > 0 else 100
+        max_qty = min(max_qty, 100)
+
+        buttons = []
+        row = []
+        for q in [1, 5, 10, 25, 50]:
+            if q <= max_qty:
+                row.append(InlineKeyboardButton(f"× {q}", callback_data=f"buy|{voucher_type_id}|{q}"))
+            if len(row) == 3:
+                buttons.append(row); row = []
+        if row: buttons.append(row)
+        buttons.append([InlineKeyboardButton("✏️ Custom", callback_data=f"buy|{voucher_type_id}|custom")])
+        buttons.append([InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")])
+
+        await query.edit_message_text(
+            f"🎫 *{vt['namaVoucher']}*\n"
+            f"💵 Harga/voucher: {format_rp(harga_jual)}\n"
+            f"💼 Saldo: {format_rp(balance)} (cukup max {max_qty} voucher)\n\n"
+            f"Pilih jumlah:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    async def _confirm_buy(self, query, telegram_id: str, voucher_type_id: str, qty: int = 1) -> None:
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
             await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
@@ -365,31 +441,34 @@ class ResellerBot:
 
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
         if not vt or vt.get("userId") != reseller["userId"]:
-            await query.edit_message_text(
-                "Jenis voucher tidak ditemukan.",
-                reply_markup=self._back_button(),
-            )
+            await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
+            return
+
+        if qty < 1 or qty > 100:
+            await query.edit_message_text("Jumlah tidak valid (1-100).", reply_markup=self._back_button())
             return
 
         balance = int(reseller.get("balance") or 0)
         disc = int(reseller.get("discount") or 0)
         harga = int(vt.get("harga") or 0)
         harga_jual = self._calc_reseller_price(vt, disc)
-        saldo_setelah = balance - harga_jual
+        total_bayar = harga_jual * qty
+        saldo_setelah = balance - total_bayar
 
-        disc_line = f"\n💸 Diskon ({disc}%): -{format_rp(harga - harga_jual)}" if disc > 0 else ""
+        disc_line = f"\n💸 Diskon ({disc}%): -{format_rp((harga - harga_jual) * qty)}" if disc > 0 else ""
         warn = "" if saldo_setelah >= 0 else "\n\n⚠️ Saldo tidak mencukupi!"
 
         await query.edit_message_text(
-            f"Beli voucher *{vt['namaVoucher']}*?\n\n"
+            f"Beli *{qty}* voucher *{vt['namaVoucher']}*?\n\n"
             f"📶 Profile: `{vt['profile']}`\n"
-            f"💰 Harga: {format_rp(harga)}{disc_line}\n"
-            f"💵 Bayar: *{format_rp(harga_jual)}*\n"
+            f"💰 Harga satuan: {format_rp(harga)}\n"
+            f"📦 Quantity: × {qty}{disc_line}\n"
+            f"💵 Total bayar: *{format_rp(total_bayar)}*\n"
             f"💼 Saldo: {format_rp(balance)} → {format_rp(saldo_setelah)}{warn}",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton("✅ Ya, Beli", callback_data=f"buy|{voucher_type_id}|ok"),
+                    InlineKeyboardButton(f"✅ Ya, beli {qty}", callback_data=f"buy|{voucher_type_id}|ok|{qty}"),
                     InlineKeyboardButton("❌ Batal", callback_data="menu"),
                 ],
             ]),
@@ -397,7 +476,7 @@ class ResellerBot:
 
     # ── Buy: execute ──────────────────────────────────────────
 
-    async def _execute_buy(self, query, telegram_id: str, voucher_type_id: str) -> None:
+    async def _execute_buy(self, query, telegram_id: str, voucher_type_id: str, qty: int = 1) -> None:
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
             await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
@@ -405,129 +484,125 @@ class ResellerBot:
 
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
         if not vt or vt.get("userId") != reseller["userId"]:
-            await query.edit_message_text(
-                "Jenis voucher tidak ditemukan.",
-                reply_markup=self._back_button(),
-            )
+            await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
+            return
+
+        if qty < 1 or qty > 100:
+            await query.edit_message_text("Jumlah tidak valid.", reply_markup=self._back_button())
             return
 
         owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id)
         reseller_id = reseller["id"]
         disc = int(reseller.get("discount") or 0)
         price_per_unit = self._calc_reseller_price(vt, disc)
+        total_price = price_per_unit * qty
         balance = int(reseller.get("balance") or 0)
 
-        # Pre-flight: saldo check BEFORE touching router
-        if price_per_unit > 0 and balance < price_per_unit:
+        if total_price > 0 and balance < total_price:
             await query.edit_message_text(
-                f"⚠️ Saldo tidak cukup.\n"
-                f"Saldo: {format_rp(balance)}\n"
-                f"Butuh: {format_rp(price_per_unit)}",
+                f"⚠️ Saldo tidak cukup.\nSaldo: {format_rp(balance)}\nButuh: {format_rp(total_price)} ({qty} voucher)",
                 reply_markup=self._back_button(),
             )
             return
 
-        # Resolve router
         try:
             reg = _get_registry()
             conn = reg.resolve(owner_tid, None)
         except Exception as exc:
             logger.error("Router resolve failed: %s", exc)
-            await query.edit_message_text(
-                "Tidak dapat terhubung ke router. Hubungi admin.",
-                reply_markup=self._back_button(),
-            )
+            await query.edit_message_text("Tidak dapat terhubung ke router. Hubungi admin.", reply_markup=self._back_button())
             return
 
-        # Generate voucher per VoucherType template
         prefix = vt.get("prefix") or ""
         char_len = max(3, int(vt.get("panjangKarakter") or 6))
         type_login = vt.get("typeLogin") or "Username = Password"
         charset = self._charset_for(vt.get("typeChar") or "Random abcd2345")
-
-        username = prefix + "".join(random.choices(charset, k=char_len))
-        password = username if type_login == "Username = Password" else "".join(random.choices(charset, k=char_len))
         profile_name = vt["profile"]
+        server = vt.get("server") or ""
+        limit_uptime = vt.get("limitUptime") or ""
+        limit_total_bytes = int(vt.get("limitQuotaTotal") or 0)
 
+        # Notify "processing" untuk qty besar
+        if qty >= 5:
+            await query.edit_message_text(f"⏳ Generating {qty} voucher, mohon tunggu...")
+
+        created_vouchers = []
         try:
             with connect_router(conn["host"], conn["port"], conn["username"], conn["password"]) as api:
                 existing = {u.get("name", "") for u in api.path("ip", "hotspot", "user")}
-                for _ in range(10):
-                    if username not in existing:
-                        break
-                    username = prefix + "".join(random.choices(charset, k=char_len))
-                    if type_login == "Username = Password":
-                        password = username
-                else:
-                    await query.edit_message_text(
-                        "Gagal membuat username unik. Coba lagi.",
-                        reply_markup=self._back_button(),
-                    )
-                    return
+                for i in range(qty):
+                    # Generate unique username
+                    for _ in range(10):
+                        username = prefix + "".join(random.choices(charset, k=char_len))
+                        if username not in existing: break
+                    else:
+                        # Skip kalau gagal unik setelah 10 retry
+                        continue
+                    existing.add(username)
+                    password = username if type_login == "Username = Password" else "".join(random.choices(charset, k=char_len))
 
-                add_params = {"name": username, "password": password, "profile": profile_name}
-                server = vt.get("server") or ""
-                if server and server != "all":
-                    add_params["server"] = server
-                limit_uptime = vt.get("limitUptime") or ""
-                if limit_uptime and limit_uptime != "0":
-                    add_params["limit-uptime"] = limit_uptime
-                limit_total_bytes = int(vt.get("limitQuotaTotal") or 0)
-                if limit_total_bytes > 0:
-                    add_params["limit-bytes-total"] = str(limit_total_bytes)
-                api.path("ip", "hotspot", "user").add(**add_params)
+                    add_params = {"name": username, "password": password, "profile": profile_name}
+                    if server and server != "all":
+                        add_params["server"] = server
+                    if limit_uptime and limit_uptime != "0":
+                        add_params["limit-uptime"] = limit_uptime
+                    if limit_total_bytes > 0:
+                        add_params["limit-bytes-total"] = str(limit_total_bytes)
+                    api.path("ip", "hotspot", "user").add(**add_params)
+                    created_vouchers.append({"username": username, "password": password})
         except Exception as exc:
             logger.error("Voucher creation on router failed: %s", exc)
-            await query.edit_message_text(
-                "Gagal membuat voucher di router. Coba lagi nanti.",
-                reply_markup=self._back_button(),
-            )
-            return
+            if not created_vouchers:
+                await query.edit_message_text("Gagal membuat voucher di router. Coba lagi nanti.", reply_markup=self._back_button())
+                return
+            # Sebagian sukses — lanjut deduct sesuai jumlah yg sukses
 
-        # Deduct saldo (atomic). If it fails, log — voucher already on router.
+        actual_qty = len(created_vouchers)
+        actual_total = price_per_unit * actual_qty
         balance_after = balance
-        if price_per_unit > 0:
+        if actual_total > 0:
             try:
                 tx = self.vdb.deduct_saldo(
-                    reseller_id, price_per_unit,
-                    description=f"Voucher {vt['namaVoucher']}",
+                    reseller_id, actual_total,
+                    description=f"{actual_qty}× Voucher {vt['namaVoucher']}",
                 )
                 balance_after = tx["balanceAfter"]
             except ValueError as exc:
-                logger.warning("Saldo deduction failed after voucher created: %s", exc)
+                logger.warning("Saldo deduction failed: %s", exc)
                 await query.edit_message_text(
-                    f"⚠️ Voucher dibuat tapi saldo tidak cukup saat finalisasi.\n\n"
-                    f"👤 *Username:* `{username}`\n"
-                    f"🔑 *Password:* `{password}`\n"
-                    f"📶 *Profil:* {profile_name}\n\n"
-                    f"Hubungi admin: {exc}",
-                    parse_mode="Markdown",
+                    f"⚠️ {actual_qty} voucher dibuat tapi saldo gagal dipotong. Hubungi admin.\n{exc}",
                     reply_markup=self._back_button(),
                 )
                 return
 
-        # Persist batch
         try:
             self.vdb.save_batch(
                 user_id=owner_tid,
                 router_name=conn.get("name", ""),
                 profile=profile_name,
-                vouchers=[{"username": username, "password": password}],
+                vouchers=created_vouchers,
                 source="reseller_bot",
                 reseller_id=reseller_id,
                 price_per_unit=price_per_unit,
             )
         except Exception as exc:
-            logger.warning("Failed to persist reseller voucher batch: %s", exc)
+            logger.warning("Failed to persist batch: %s", exc)
+
+        # Format response — kalau >5 voucher, kirim sebagai code-block compact
+        if actual_qty <= 5:
+            voucher_lines = "\n".join(
+                f"• `{v['username']}` / `{v['password']}`" for v in created_vouchers
+            )
+        else:
+            voucher_lines = "```\n" + "\n".join(
+                f"{v['username']:<10} {v['password']}" for v in created_vouchers
+            ) + "\n```"
 
         await query.edit_message_text(
-            f"✅ Voucher berhasil dibuat!\n\n"
-            f"🎫 *{vt['namaVoucher']}*\n"
-            f"👤 *Username:* `{username}`\n"
-            f"🔑 *Password:* `{password}`\n"
-            f"📶 *Profil:* {profile_name}\n"
-            f"💵 Bayar: {format_rp(price_per_unit)}\n"
-            f"💰 Sisa saldo: {format_rp(balance_after)}",
+            f"✅ {actual_qty} voucher berhasil dibuat!\n\n"
+            f"🎫 *{vt['namaVoucher']}* ({profile_name})\n\n"
+            f"{voucher_lines}\n\n"
+            f"💵 Total: {format_rp(actual_total)} | 💰 Sisa: {format_rp(balance_after)}",
             parse_mode="Markdown",
             reply_markup=self._back_button(),
         )
@@ -550,6 +625,7 @@ class ResellerBot:
                 InlineKeyboardButton(format_rp(amounts[2]), callback_data=f"deposit|{amounts[2]}"),
                 InlineKeyboardButton(format_rp(amounts[3]), callback_data=f"deposit|{amounts[3]}"),
             ],
+            [InlineKeyboardButton("✏️ Nominal Lain", callback_data="deposit|custom")],
             [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")],
         ]
         await query.edit_message_text(
@@ -557,48 +633,222 @@ class ResellerBot:
             reply_markup=InlineKeyboardMarkup(buttons),
         )
 
-    # ── Deposit: send request ─────────────────────────────────
+    # ── Deposit: send request (after photo or skip) ──────────────
 
-    async def _request_deposit(self, query, telegram_id: str, amount: int) -> None:
+    async def _send_deposit_request(self, bot, telegram_id: str, amount: int, photo_file_id: str | None) -> bool:
+        """Notify owner dengan inline approve/reject button. Return True kalau sukses."""
         reseller = self.vdb.get_reseller_by_telegram(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
-            return
+            return False
 
         reseller_name = reseller.get("name", "Reseller")
         reseller_phone = reseller.get("phone", "-")
         owner_tid = reseller.get("ownerTelegramId", self.owner_telegram_id)
 
-        # Notify owner via the bot
+        # Generate deposit request ID + simpan ke in-memory pending dict
+        import uuid
+        dep_id = uuid.uuid4().hex[:12]
+        self._pending_deposits[dep_id] = {
+            "reseller_id": reseller["id"],
+            "telegram_id": telegram_id,
+            "amount": amount,
+            "photo_file_id": photo_file_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        caption = (
+            f"📥 *Request Deposit*\n\n"
+            f"Reseller: {reseller_name}\n"
+            f"Telepon: {reseller_phone}\n"
+            f"Jumlah: *{format_rp(amount)}*\n"
+            f"Waktu: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+        )
+        keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("✅ Setujui", callback_data=f"approve|{dep_id}"),
+            InlineKeyboardButton("❌ Tolak", callback_data=f"reject|{dep_id}"),
+        ]])
+
         try:
-            bot = query.get_bot()
-            await bot.send_message(
-                chat_id=int(owner_tid),
+            if photo_file_id:
+                await bot.send_photo(
+                    chat_id=int(owner_tid),
+                    photo=photo_file_id,
+                    caption=caption,
+                    parse_mode="Markdown",
+                    reply_markup=keyboard,
+                )
+            else:
+                await bot.send_message(
+                    chat_id=int(owner_tid),
+                    text=caption + "\n\n_(tidak ada foto bukti)_",
+                    parse_mode="Markdown",
+                    reply_markup=keyboard,
+                )
+            return True
+        except Exception as exc:
+            logger.error("Failed to send deposit notification to owner %s: %s", owner_tid, exc)
+            self._pending_deposits.pop(dep_id, None)
+            return False
+
+    # ── Owner approve / reject deposit ─────────────────────────
+
+    async def _owner_approve(self, query, owner_telegram_id: str, dep_id: str) -> None:
+        """Owner approve pending deposit — top up reseller saldo + notif ke reseller."""
+        dep = self._pending_deposits.get(dep_id)
+        if not dep:
+            await query.edit_message_caption(
+                caption="⚠️ Request deposit ini sudah diproses sebelumnya atau expired.",
+            ) if query.message.photo else await query.edit_message_text("⚠️ Sudah diproses.")
+            return
+
+        # Verify owner is allowed (must match reseller's owner)
+        reseller = self.vdb.get_reseller_by_id(dep["reseller_id"]) if hasattr(self.vdb, "get_reseller_by_id") else None
+        # Top up via existing service
+        try:
+            tx = self.vdb.add_saldo(
+                dep["reseller_id"],
+                dep["amount"],
+                description=f"Top up via bot (approved by admin)",
+            )
+            balance_after = tx.get("balanceAfter", 0)
+        except Exception as exc:
+            logger.error("Top up failed for deposit %s: %s", dep_id, exc)
+            await query.answer("Gagal top up: " + str(exc), show_alert=True)
+            return
+
+        # Notif reseller
+        try:
+            await query.get_bot().send_message(
+                chat_id=int(dep["telegram_id"]),
                 text=(
-                    f"📥 *Request Deposit Baru*\n\n"
-                    f"Reseller: {reseller_name}\n"
-                    f"Telepon: {reseller_phone}\n"
-                    f"Jumlah: {format_rp(amount)}\n"
-                    f"Waktu: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
+                    f"✅ Deposit *{format_rp(dep['amount'])}* DISETUJUI!\n\n"
+                    f"💰 Saldo baru: *{format_rp(balance_after)}*"
                 ),
                 parse_mode="Markdown",
             )
         except Exception as exc:
-            logger.error("Failed to send deposit notification to owner %s: %s", owner_tid, exc)
-            # Still confirm to reseller -- owner can check DB
-            await query.edit_message_text(
-                f"⚠️ Request deposit {format_rp(amount)} dicatat, "
-                f"tapi notifikasi ke admin gagal terkirim.\n"
-                f"Silakan hubungi admin langsung.",
-                reply_markup=self._back_button(),
+            logger.warning("Failed to notify reseller %s: %s", dep["telegram_id"], exc)
+
+        # Update owner's message
+        new_caption = f"✅ DISETUJUI — {format_rp(dep['amount'])} ditambahkan ke saldo reseller"
+        try:
+            if query.message.photo:
+                await query.edit_message_caption(caption=new_caption)
+            else:
+                await query.edit_message_text(new_caption)
+        except Exception:
+            pass
+        self._pending_deposits.pop(dep_id, None)
+
+    async def _owner_reject(self, query, owner_telegram_id: str, dep_id: str) -> None:
+        dep = self._pending_deposits.get(dep_id)
+        if not dep:
+            await query.answer("Sudah diproses.", show_alert=True)
+            return
+        try:
+            await query.get_bot().send_message(
+                chat_id=int(dep["telegram_id"]),
+                text=f"❌ Deposit *{format_rp(dep['amount'])}* DITOLAK admin. Silakan hubungi admin untuk klarifikasi.",
+                parse_mode="Markdown",
+            )
+        except Exception:
+            pass
+        new_caption = f"❌ DITOLAK — {format_rp(dep['amount'])}"
+        try:
+            if query.message.photo:
+                await query.edit_message_caption(caption=new_caption)
+            else:
+                await query.edit_message_text(new_caption)
+        except Exception:
+            pass
+        self._pending_deposits.pop(dep_id, None)
+
+    # ── Text & Photo input handler (state-based) ─────────────────
+
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle text/photo messages based on awaiting state set by callback."""
+        awaiting = context.user_data.get("awaiting")
+        if not awaiting:
+            return  # bukan dalam state input — ignore
+        kind, payload = awaiting if isinstance(awaiting, tuple) else (awaiting, None)
+        msg = update.message
+
+        if msg.text == "/skip" and kind == "deposit_proof":
+            # User skip foto bukti — kirim deposit request tanpa foto
+            context.user_data.pop("awaiting", None)
+            ok = await self._send_deposit_request(msg.get_bot(), str(update.effective_user.id), payload, None)
+            await msg.reply_text(
+                f"✅ Request deposit {format_rp(payload)} dikirim ke admin (tanpa foto).\n"
+                f"Tunggu konfirmasi dari admin." if ok else "⚠️ Gagal kirim ke admin.",
+                reply_markup=self._main_menu_keyboard(),
             )
             return
 
-        await query.edit_message_text(
-            f"✅ Request deposit {format_rp(amount)} telah dikirim ke admin.\n"
-            f"Silakan lakukan transfer dan tunggu konfirmasi.",
-            reply_markup=self._back_button(),
-        )
+        if msg.photo and kind == "deposit_proof":
+            # Ambil resolusi tertinggi
+            file_id = msg.photo[-1].file_id
+            context.user_data.pop("awaiting", None)
+            ok = await self._send_deposit_request(msg.get_bot(), str(update.effective_user.id), payload, file_id)
+            await msg.reply_text(
+                f"✅ Request deposit *{format_rp(payload)}* + bukti foto dikirim ke admin.\n"
+                f"Tunggu konfirmasi." if ok else "⚠️ Gagal kirim ke admin.",
+                parse_mode="Markdown",
+                reply_markup=self._main_menu_keyboard(),
+            )
+            return
+
+        if msg.text and kind == "deposit_amount":
+            try:
+                amount = int(msg.text.replace(".", "").replace(",", "").replace("Rp", "").strip())
+                if amount < 1000:
+                    raise ValueError("min 1000")
+            except (ValueError, TypeError):
+                await msg.reply_text("⚠️ Nominal tidak valid. Ketik angka, minimal 1000:")
+                return
+            # Set state berikutnya: tunggu foto
+            context.user_data["awaiting"] = ("deposit_proof", amount)
+            await msg.reply_text(
+                f"📸 Upload foto bukti transfer untuk deposit *{format_rp(amount)}*\n\n"
+                f"Atau ketik /skip kalau tidak ada foto.",
+                parse_mode="Markdown",
+            )
+            return
+
+        if msg.text and kind == "buy_qty":
+            try:
+                qty = int(msg.text.strip())
+                if not (1 <= qty <= 100):
+                    raise ValueError()
+            except (ValueError, TypeError):
+                await msg.reply_text("⚠️ Jumlah tidak valid (1-100). Ketik angka:")
+                return
+            context.user_data.pop("awaiting", None)
+            voucher_type_id = payload
+            # Simulate inline button click — kirim sebagai message dengan inline keyboard
+            reseller = self.vdb.get_reseller_by_telegram(str(update.effective_user.id))
+            if not reseller:
+                await msg.reply_text("Anda belum terdaftar.")
+                return
+            vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
+            if not vt:
+                await msg.reply_text("Voucher type tidak ditemukan.")
+                return
+            disc = int(reseller.get("discount") or 0)
+            harga_jual = self._calc_reseller_price(vt, disc)
+            total_bayar = harga_jual * qty
+            balance = int(reseller.get("balance") or 0)
+
+            await msg.reply_text(
+                f"Beli *{qty}* voucher *{vt['namaVoucher']}*?\n\n"
+                f"💵 Total: *{format_rp(total_bayar)}*\n"
+                f"💼 Saldo: {format_rp(balance)} → {format_rp(balance - total_bayar)}",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton(f"✅ Ya, beli {qty}", callback_data=f"buy|{voucher_type_id}|ok|{qty}"),
+                    InlineKeyboardButton("❌ Batal", callback_data="menu"),
+                ]]),
+            )
+            return
 
     # ── History ───────────────────────────────────────────────
 
@@ -651,6 +901,10 @@ class ResellerBot:
         app = Application.builder().token(self.bot_token).build()
         app.add_handler(CommandHandler("start", self.start_command))
         app.add_handler(CallbackQueryHandler(self.handle_callback))
+        # Text + Photo handler untuk state-based input (qty buy, custom deposit, photo bukti)
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        app.add_handler(MessageHandler(filters.COMMAND & filters.Regex(r"^/skip"), self.handle_message))
+        app.add_handler(MessageHandler(filters.PHOTO, self.handle_message))
         return app
 
 
