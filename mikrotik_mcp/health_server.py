@@ -725,6 +725,13 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_tunnel_probe()
             return
 
+        # LLM provider/model reload — write config.generated.json (entrypoint
+        # inotifywait will auto-restart nanobot)
+        if path == "/llm-reload":
+            if not self._require_agent_token(): return
+            self._handle_llm_reload()
+            return
+
         # AI insight
         if path.startswith("/ai-insight/"):
             user_id = path.split("/ai-insight/")[1].strip("/")
@@ -2686,6 +2693,76 @@ class HealthHandler(BaseHTTPRequestHandler):
                 _send_json(self, {"ok": True, "action": "deleted", "username": username})
             else:
                 _send_json(self, {"error": "action must be create or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_llm_reload(self):
+        """Regen /app/config/config.generated.json dengan provider+model+key baru.
+        entrypoint.sh inotifywait akan auto-detect file change → restart nanobot.
+
+        Body: {provider, model, apiKey} — apiKey plaintext (sekali ini saja).
+        Provider mapping ke baseURL OpenAI-compatible:
+          openrouter → https://openrouter.ai/api/v1
+          openai     → https://api.openai.com/v1
+          anthropic  → https://api.anthropic.com/v1
+          google     → https://generativelanguage.googleapis.com/v1beta/openai
+        """
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length else {}
+            provider = body.get("provider", "openrouter")
+            model = body.get("model", "")
+            api_key = body.get("apiKey", "")
+
+            if not model or not api_key:
+                _send_json(self, {"error": "model and apiKey required"}, 400)
+                return
+
+            base_urls = {
+                "openrouter": "https://openrouter.ai/api/v1",
+                "openai":     "https://api.openai.com/v1",
+                "anthropic":  "https://api.anthropic.com/v1",
+                "google":     "https://generativelanguage.googleapis.com/v1beta/openai",
+            }
+            base_url = base_urls.get(provider, base_urls["openrouter"])
+
+            # Read template config (preserves channels, mcpServers, etc.)
+            import os as _os
+            template_path = "/app/config/config.json"
+            generated_path = "/app/config/config.generated.json"
+            if not _os.path.exists(template_path):
+                _send_json(self, {"error": f"template not found: {template_path}"}, 500)
+                return
+
+            with open(template_path) as f:
+                cfg = json.load(f)
+
+            # Override providers section — pakai key sebagai sub-provider name
+            cfg.setdefault("providers", {})
+            # Reset all providers, set only active one (nanobot ambil yg aktif)
+            cfg["providers"] = {
+                provider: {
+                    "apiKey": api_key,
+                    "baseURL": base_url,
+                    "extraHeaders": {"X-Title": "MikroTik AI Agent"},
+                }
+            }
+            # Override agent default model + provider
+            cfg.setdefault("agents", {}).setdefault("defaults", {})
+            cfg["agents"]["defaults"]["model"] = model
+            cfg["agents"]["defaults"]["provider"] = provider
+
+            # Write to generated path — inotifywait di entrypoint akan trigger reload
+            with open(generated_path, "w") as f:
+                json.dump(cfg, f, indent=2)
+
+            _send_json(self, {
+                "ok": True,
+                "provider": provider,
+                "model": model,
+                "wrote": generated_path,
+                "note": "nanobot auto-reload via inotifywait dalam ~3 detik",
+            })
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 

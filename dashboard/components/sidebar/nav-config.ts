@@ -101,6 +101,7 @@ export const navGroups: NavGroup[] = [
       { label: "Profile", href: "/profile", icon: UserCircle },
       { label: "Plan", href: "/plan", icon: CreditCard },
       { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
+      { label: "LLM Provider", href: "/settings/llm", icon: Bot, adminOnly: true },
       { label: "Dokumentasi", href: "/docs", icon: BookOpen },
     ],
   },

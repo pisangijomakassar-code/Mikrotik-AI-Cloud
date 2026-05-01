@@ -229,6 +229,17 @@ model Subscription {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// LLM provider config — DB-backed override untuk env var. Singleton row (id="singleton").
+// Kalau row ada → pakai ini; kalau tidak ada → fallback ke env OPENROUTER_API_KEY + model default.
+model AppSettings {
+  id          String   @id @default("singleton")
+  llmProvider String   @default("openrouter")  // openrouter | openai | anthropic | google
+  llmApiKey   String   @default("")            // Fernet-encrypted
+  llmModel    String   @default("google/gemini-2.5-flash")
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?                          // userId yang terakhir update (audit)
+}
+
 model TokenUsage {
   id          String   @id @default(cuid())
   timestamp   DateTime @default(now())
