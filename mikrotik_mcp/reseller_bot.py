@@ -203,28 +203,36 @@ class ResellerBot:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         telegram_id = str(update.effective_user.id)
 
-        # OWNER: tampil menu admin (tidak harus terdaftar di Reseller table)
+        # OWNER: tampil menu admin + inline button utk command yg sering dipakai
         if self._is_owner(telegram_id):
             await update.message.reply_text(
                 "👋 *Halo Admin*\n\n"
-                "Command yang tersedia:\n\n"
-                "🤖 *AI*\n"
-                "  `/ai` — chat dengan AI Assistant (auto-stop 10mnt idle)\n"
-                "  `/stopai` — akhiri sesi AI\n\n"
-                "📊 *Monitoring*\n"
-                "  `/report` — penjualan hari ini & bulan ini\n"
-                "  `/resource [router]` — resource MikroTik\n"
-                "  `/netwatch [router]` — status host monitoring\n\n"
-                "💰 *Saldo Reseller*\n"
-                "  `/topup` — wizard top up saldo reseller\n"
-                "  `/topdown` — wizard kurangi saldo reseller\n\n"
-                "📢 *Komunikasi*\n"
-                "  `/broadcast <pesan>` — kirim pengumuman ke semua reseller\n\n"
-                "🎫 *Voucher*\n"
-                "  `/cek <username>` — status hotspot user\n"
-                "  `/qrcode <user> [pwd]` — generate QR voucher\n\n"
-                "_Tip: ketik `/` untuk lihat semua command._",
+                "Tap salah satu tombol di bawah, atau ketik tombol /  di kolom chat\n"
+                "untuk lihat semua command.\n\n"
+                "🤖 AI\n"
+                "/ai — chat dengan AI Assistant (auto-stop 10mnt idle)\n"
+                "/stopai — akhiri sesi AI\n\n"
+                "📊 Monitoring\n"
+                "/report — penjualan hari ini & bulan ini\n"
+                "/resource — resource MikroTik\n"
+                "/netwatch — status host monitoring\n\n"
+                "💰 Saldo Reseller\n"
+                "/topup — wizard top up saldo reseller\n"
+                "/topdown — wizard kurangi saldo reseller\n\n"
+                "📢 Komunikasi\n"
+                "/broadcast <pesan> — kirim pengumuman ke semua reseller\n\n"
+                "🎫 Voucher\n"
+                "/cek <username> — status hotspot user\n"
+                "/qrcode <user> [pwd] — generate QR voucher",
                 parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🤖 AI Chat", callback_data="adm_ai"),
+                     InlineKeyboardButton("📊 Report", callback_data="adm_report")],
+                    [InlineKeyboardButton("🖥 Resource", callback_data="adm_resource"),
+                     InlineKeyboardButton("📡 Netwatch", callback_data="adm_netwatch")],
+                    [InlineKeyboardButton("💰 Top Up", callback_data="adm_topup"),
+                     InlineKeyboardButton("➖ Top Down", callback_data="adm_topdown")],
+                ]),
             )
             return
 
@@ -315,6 +323,49 @@ class ResellerBot:
                 # wiz|topup|sel|<reseller_id>  — admin pilih reseller
                 if len(parts) >= 4 and parts[2] == "sel" and self._is_owner(telegram_id):
                     await self._wizard_select_reseller(query, context, parts[1], parts[3])
+            elif action.startswith("adm_") and self._is_owner(telegram_id):
+                # Admin shortcut buttons dari menu /start
+                sub = action[4:]
+                msg = query.message  # message that contains the button (use as reply target)
+                if sub == "ai":
+                    # Set state ai_chat manually + show usage
+                    uid = self._get_user_internal_id(telegram_id)
+                    usage = self._get_token_usage_summary(uid) if uid else {}
+                    context.user_data["awaiting"] = ("ai_chat", {"started_at": datetime.now(timezone.utc).isoformat()})
+                    self._schedule_ai_idle(context, msg.chat_id)
+                    today_total = usage.get("today_in", 0) + usage.get("today_out", 0)
+                    month_total = usage.get("month_in", 0) + usage.get("month_out", 0)
+                    await msg.reply_text(
+                        f"🤖 *AI Assistant aktif*\n\n"
+                        f"📊 Token: hari ini {today_total} ({usage.get('today_calls',0)} call) · "
+                        f"bulan {month_total} ({usage.get('month_calls',0)} call)\n\n"
+                        "💬 Ketik pesan untuk chat dengan AI.\n⏱ Auto-stop 10mnt idle.",
+                        parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🛑 Stop AI", callback_data="stopai")]]),
+                    )
+                elif sub == "report":
+                    # Inline report execution (mirip cmd_report tapi reply ke msg, bukan update.message)
+                    await self._do_report(msg, telegram_id)
+                elif sub in ("resource", "netwatch"):
+                    routers = self._list_owner_routers(telegram_id)
+                    if not routers:
+                        await msg.reply_text("⚠️ Tidak ada router."); return
+                    if len(routers) == 1:
+                        if sub == "resource":
+                            await self._do_resource(msg, telegram_id, routers[0])
+                        else:
+                            await self._do_netwatch(msg, telegram_id, routers[0])
+                    else:
+                        buttons = [[InlineKeyboardButton(r, callback_data=f"adminr|{sub}|{r}")] for r in routers]
+                        buttons.append([InlineKeyboardButton("❌ Batal", callback_data="menu")])
+                        await msg.reply_text(
+                            f"📡 Pilih router untuk *{sub}*:",
+                            parse_mode="Markdown",
+                            reply_markup=InlineKeyboardMarkup(buttons),
+                        )
+                elif sub in ("topup", "topdown"):
+                    # Wizard pilih reseller (msg used by _wizard_topup_topdown via update.message — bypass)
+                    await self._wizard_admin_select_reseller(msg, telegram_id, sub)
             elif action == "stopai":
                 # Klik tombol "Stop AI" — sama dengan /stopai
                 if isinstance(context.user_data.get("awaiting"), tuple) and context.user_data["awaiting"][0] == "ai_chat":
@@ -1445,6 +1496,10 @@ class ResellerBot:
         if not self._is_owner(telegram_id):
             await update.message.reply_text("⛔ Admin only.")
             return
+        await self._do_report(update.message, telegram_id)
+
+    async def _do_report(self, msg, telegram_id: str) -> None:
+        """Reusable report sender — bisa dipanggil dari /report atau callback button."""
         try:
             from datetime import datetime as _dt
             from datetime import timezone as _tz, timedelta as _td
@@ -1455,13 +1510,11 @@ class ResellerBot:
 
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
-                # Resolve user internal id from telegram_id
                 cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
                 row = cur.fetchone()
                 if not row:
-                    await update.message.reply_text("⚠️ User tidak ditemukan."); return
+                    await msg.reply_text("⚠️ User tidak ditemukan."); return
                 uid = row[0]
-                # Today
                 cur.execute(
                     """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
                        FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
@@ -1469,7 +1522,6 @@ class ResellerBot:
                     (uid, start_today),
                 )
                 t_b, t_v, t_r = cur.fetchone()
-                # Month
                 cur.execute(
                     """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
                        FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
@@ -1477,7 +1529,6 @@ class ResellerBot:
                     (uid, start_month),
                 )
                 m_b, m_v, m_r = cur.fetchone()
-                # Top reseller bulan ini
                 cur.execute(
                     """SELECT r.name, SUM(vb."totalCost") as rev, SUM(vb.count) as vc
                        FROM "VoucherBatch" vb JOIN "Reseller" r ON r.id = vb."resellerId"
@@ -1501,10 +1552,10 @@ class ResellerBot:
                 lines.append(f"🏆 *Top Reseller Bulan Ini*")
                 for i, (name, rev, vc) in enumerate(top_resellers, 1):
                     lines.append(f"   {i}. {name} — {format_rp(int(rev))} ({int(vc)} voucher)")
-            await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+            await msg.reply_text("\n".join(lines), parse_mode="Markdown")
         except Exception as exc:
             logger.error("/report error: %s", exc)
-            await update.message.reply_text(f"⚠️ Error: {exc}")
+            await msg.reply_text(f"⚠️ Error: {exc}")
 
     async def cmd_broadcast(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Admin: broadcast pesan ke semua reseller (boleh dgn foto reply).
@@ -1592,15 +1643,17 @@ class ResellerBot:
         await self._wizard_topup_topdown(update, context, "topdown")
 
     async def _wizard_topup_topdown(self, update, context, action: str) -> None:
-        """Show daftar reseller dengan inline button. Owner pilih → kirim ke wizard step 2."""
         telegram_id = str(update.effective_user.id)
-        # Ambil semua reseller milik owner
+        await self._wizard_admin_select_reseller(update.message, telegram_id, action)
+
+    async def _wizard_admin_select_reseller(self, msg, telegram_id: str, action: str) -> None:
+        """Show daftar reseller dengan inline button. Reusable dari /topup atau button shortcut."""
         with self.vdb._conn() as conn:
             cur = conn.cursor()
             cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
             row = cur.fetchone()
             if not row:
-                await update.message.reply_text("⚠️ User tidak ditemukan."); return
+                await msg.reply_text("⚠️ User tidak ditemukan."); return
             uid = row[0]
             cur.execute(
                 'SELECT id, name, balance FROM "Reseller" WHERE "userId" = %s ORDER BY name',
@@ -1608,15 +1661,14 @@ class ResellerBot:
             )
             resellers = cur.fetchall()
         if not resellers:
-            await update.message.reply_text("⚠️ Belum ada reseller. Tambah dulu via dashboard.")
-            return
+            await msg.reply_text("⚠️ Belum ada reseller. Tambah dulu via dashboard."); return
         buttons = [
             [InlineKeyboardButton(f"{n} · {format_rp(b)}", callback_data=f"wiz|{action}|sel|{rid}")]
-            for rid, n, b in resellers[:30]  # cap 30 buttons
+            for rid, n, b in resellers[:30]
         ]
         buttons.append([InlineKeyboardButton("❌ Batal", callback_data="menu")])
         verb = "Top Up" if action == "topup" else "Top Down"
-        await update.message.reply_text(
+        await msg.reply_text(
             f"💰 *{verb} Saldo Reseller*\n\nPilih reseller:",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(buttons),
@@ -1718,12 +1770,39 @@ class ResellerBot:
 # Startup
 # ---------------------------------------------------------------------------
 
+async def _register_bot_commands(app: "Application") -> None:
+    """Set tombol command list di Telegram (yg muncul saat user tap '/' di kolom chat)."""
+    from telegram import BotCommand
+    commands = [
+        BotCommand("menu", "Menu utama"),
+        BotCommand("ai", "Chat dengan AI Assistant"),
+        BotCommand("stopai", "Akhiri sesi AI"),
+        BotCommand("ceksaldo", "Cek saldo (reseller)"),
+        BotCommand("deposit", "Request deposit (reseller)"),
+        BotCommand("daftar", "Daftar sebagai reseller"),
+        BotCommand("cek", "Cek status hotspot user — /cek <username>"),
+        BotCommand("qrcode", "Generate QR voucher — /qrcode <user> [pwd]"),
+        BotCommand("report", "Penjualan hari ini & bulan (admin)"),
+        BotCommand("resource", "Resource MikroTik (admin)"),
+        BotCommand("netwatch", "Netwatch host monitoring (admin)"),
+        BotCommand("topup", "Top up saldo reseller (admin)"),
+        BotCommand("topdown", "Kurangi saldo reseller (admin)"),
+        BotCommand("broadcast", "Broadcast pesan (admin)"),
+    ]
+    try:
+        await app.bot.set_my_commands(commands)
+        logger.info("Bot commands registered (%d)", len(commands))
+    except Exception as exc:
+        logger.warning("Failed to register bot commands: %s", exc)
+
+
 def _run_bot_in_thread(app: "Application") -> None:
     """Run a single bot Application in its own asyncio event loop (blocking)."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         loop.run_until_complete(app.initialize())
+        loop.run_until_complete(_register_bot_commands(app))
         loop.run_until_complete(app.start())
         loop.run_until_complete(app.updater.start_polling(drop_pending_updates=True))
         logger.info("Reseller bot started polling (token ...%s)", app.bot.token[-6:])
