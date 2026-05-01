@@ -92,7 +92,7 @@ services:
       - ./skills:/app/skills:ro
       - ./mikrotik_mcp:/app/mikrotik_mcp:ro
       - ./data:/app/data
-      - ./config:/app/config:ro
+      - ./config:/app/config  # writable: /llm-reload endpoint writes config.generated.json
       - /var/run/docker.sock:/var/run/docker.sock  # For SoftEther VPN user management via docker exec
     networks:
       - internal
