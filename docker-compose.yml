@@ -48,6 +48,7 @@ services:
       WG_SERVER_PUBKEY: ${WG_SERVER_PUBKEY:-}
       OVPN_SERVER_HOST: ${VPS_HOST:-localhost}
       AGENT_HEALTH_URL: http://mikrotik-agent:8080
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
     volumes:
       - ./config:/app/config
       - ./docs:/app/docs:ro
@@ -85,6 +86,7 @@ services:
       SSTP_ADMIN_PASSWORD: ${SSTP_ADMIN_PASSWORD}
       WG_SERVER_PUBKEY: ${WG_SERVER_PUBKEY:-}
       OVPN_SERVER_HOST: ${VPS_HOST:-localhost}
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
     volumes:
       - nanobot-data:/root/.nanobot
       - ./skills:/app/skills:ro

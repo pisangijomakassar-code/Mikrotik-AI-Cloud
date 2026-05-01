@@ -9,6 +9,7 @@ import logging
 import os
 import random
 import re
+import shlex
 import shutil
 import string
 import subprocess
@@ -413,8 +414,22 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Agent-Token")
         self.end_headers()
+
+    # ── Shared-secret auth ───────────────────────────────────────────
+    # Sensitive endpoints (decrypt-password, ovpn-user, wg-peer, vpn-user,
+    # tunnel-probe, ovpn-ca) WAJIB header X-Agent-Token cocok dengan env var
+    # AGENT_TOKEN. Kalau env var kosong, auth dilewati (dev/backward-compat).
+    def _require_agent_token(self) -> bool:
+        expected = os.environ.get("AGENT_TOKEN", "").strip()
+        if not expected:
+            return True  # not configured — skip (dev mode)
+        provided = self.headers.get("X-Agent-Token", "")
+        if provided != expected:
+            _send_json(self, {"error": "unauthorized — invalid X-Agent-Token"}, 401)
+            return False
+        return True
 
     # ── GET ───────────────────────────────────────────────────────────
     def do_GET(self):
@@ -443,6 +458,13 @@ class HealthHandler(BaseHTTPRequestHandler):
             user_id = path.split("/router-quickstats/")[1].strip("/")
             router_name = params.get("router", [None])[0]
             self._handle_router_quickstats(user_id, router_name)
+            return
+
+        # Netwatch — list host yang dimonitor (status up/down + script up/down)
+        if path.startswith("/netwatch/"):
+            user_id = path.split("/netwatch/")[1].strip("/")
+            router_name = params.get("router", [None])[0]
+            self._handle_netwatch(user_id, router_name)
             return
 
         # Router system logs (real-time, no LLM)
@@ -596,6 +618,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # Decrypt a router password (called by Next.js dashboard to display to user)
         if path == "/decrypt-password":
+            if not self._require_agent_token(): return
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 body = json.loads(self.rfile.read(length))
@@ -612,6 +635,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # Encrypt a router password (called by Next.js dashboard before saving to DB)
         if path == "/encrypt-password":
+            if not self._require_agent_token(): return
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 body = json.loads(self.rfile.read(length))
@@ -677,22 +701,27 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # VPN user management (SSTP tunnel — create or delete SoftEther user)
         if path == "/vpn-user":
+            if not self._require_agent_token(): return
             self._handle_vpn_user()
             return
 
         if path == "/wg-peer":
+            if not self._require_agent_token(): return
             self._handle_wg_peer(None)
             return
 
         if path == "/ovpn-user":
+            if not self._require_agent_token(): return
             self._handle_ovpn_user(None)
             return
 
         if path == "/ovpn-ca":
+            if not self._require_agent_token(): return
             self._handle_ovpn_ca()
             return
 
         if path == "/tunnel-probe":
+            if not self._require_agent_token(): return
             self._handle_tunnel_probe()
             return
 
@@ -2492,12 +2521,14 @@ class HealthHandler(BaseHTTPRequestHandler):
     def _handle_ovpn_user(self, user_id):
         """Manage OpenVPN users: create or delete.
 
-        On create: also sets up iptables DNAT inside mikrotik-openvpn so
-        VPS:winboxPort -> vpnIp:8291 (Winbox), persisted to /config/forwards.txt
-        so it survives container restart (entrypoint.sh re-applies on boot).
+        On create: sets up iptables DNAT inside mikrotik-openvpn so
+        VPS:winboxPort -> vpnIp:8291 (Winbox) + apiPort -> vpnIp:8728 (API),
+        persisted to /config/forwards.txt so it survives container restart.
+
+        SECURITY: All inputs are strictly validated to prevent command injection.
         """
         try:
-            import subprocess, json, hashlib
+            import subprocess, json, hashlib, re
             docker = shutil.which("docker")
             if not docker:
                 _send_json(self, {"error": "docker CLI not found — ensure /var/run/docker.sock is mounted and docker binary is in PATH"}, 500)
@@ -2513,54 +2544,124 @@ class HealthHandler(BaseHTTPRequestHandler):
             WINBOX_DEST = 8291
             API_DEST = 8728
 
-            def _add_forward(pub_port, dest_port):
-                pub_port_str = str(int(pub_port))
-                fwd_line = f"{pub_port_str}:{vpn_ip}:{dest_port}"
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"iptables -t nat -C PREROUTING -p tcp --dport {pub_port_str} -j DNAT --to-destination {vpn_ip}:{dest_port} 2>/dev/null || "
-                     f"iptables -t nat -A PREROUTING -p tcp --dport {pub_port_str} -j DNAT --to-destination {vpn_ip}:{dest_port}"],
-                    capture_output=True
-                )
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"iptables -C FORWARD -p tcp -d {vpn_ip} --dport {dest_port} -j ACCEPT 2>/dev/null || "
-                     f"iptables -A FORWARD -p tcp -d {vpn_ip} --dport {dest_port} -j ACCEPT"],
-                    capture_output=True
-                )
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"grep -qF '{fwd_line}' /config/forwards.txt 2>/dev/null || echo '{fwd_line}' >> /config/forwards.txt"],
-                    capture_output=True
+            # ── Strict input validation (prevents command injection) ─────────
+            USERNAME_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+            IPV4_RE = re.compile(
+                r"^(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+                r"(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$"
+            )
+            if username and not USERNAME_RE.match(username):
+                _send_json(self, {"error": "invalid username format"}, 400)
+                return
+            if vpn_ip and not IPV4_RE.match(vpn_ip):
+                _send_json(self, {"error": "invalid vpnIp format"}, 400)
+                return
+            if winbox_port is not None:
+                try:
+                    winbox_port = int(winbox_port)
+                    if not (1 <= winbox_port <= 65535): raise ValueError()
+                except (TypeError, ValueError):
+                    _send_json(self, {"error": "invalid winboxPort"}, 400); return
+            if api_port is not None:
+                try:
+                    api_port = int(api_port)
+                    if not (1 <= api_port <= 65535): raise ValueError()
+                except (TypeError, ValueError):
+                    _send_json(self, {"error": "invalid apiPort"}, 400); return
+
+            def _exec_in_ovpn(*args, check=False):
+                """Run command in mikrotik-openvpn container without shell."""
+                return subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn", *args],
+                    check=check, capture_output=True,
                 )
 
+            def _add_forward(pub_port, dest_port):
+                """Apply iptables DNAT + persist to /config/forwards.txt.
+                pub_port & dest_port already int-validated. vpn_ip already regex-validated."""
+                pub = str(pub_port)
+                dest = str(dest_port)
+                # PREROUTING DNAT — skip kalau sudah ada (iptables -C return 0 = exist)
+                check = _exec_in_ovpn("iptables", "-t", "nat", "-C", "PREROUTING",
+                                      "-p", "tcp", "--dport", pub,
+                                      "-j", "DNAT", "--to-destination", f"{vpn_ip}:{dest}")
+                if check.returncode != 0:
+                    _exec_in_ovpn("iptables", "-t", "nat", "-A", "PREROUTING",
+                                  "-p", "tcp", "--dport", pub,
+                                  "-j", "DNAT", "--to-destination", f"{vpn_ip}:{dest}")
+                # FORWARD ACCEPT
+                check2 = _exec_in_ovpn("iptables", "-C", "FORWARD",
+                                       "-p", "tcp", "-d", vpn_ip, "--dport", dest,
+                                       "-j", "ACCEPT")
+                if check2.returncode != 0:
+                    _exec_in_ovpn("iptables", "-A", "FORWARD",
+                                  "-p", "tcp", "-d", vpn_ip, "--dport", dest,
+                                  "-j", "ACCEPT")
+                # Persist to forwards.txt — append-only kalau belum ada (in-Python check, atomic enough)
+                fwd_line = f"{pub}:{vpn_ip}:{dest}"
+                existing = _exec_in_ovpn("cat", "/config/forwards.txt")
+                lines = existing.stdout.decode("utf-8", "replace").splitlines() if existing.returncode == 0 else []
+                if fwd_line not in lines:
+                    subprocess.run(
+                        [docker, "exec", "-i", "mikrotik-openvpn",
+                         "tee", "-a", "/config/forwards.txt"],
+                        input=(fwd_line + "\n").encode(),
+                        capture_output=True,
+                    )
+
             def _del_forward(pub_port):
-                pub_port_str = str(int(pub_port))
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"iptables-save -t nat | grep -- '--dport {pub_port_str}' | sed 's/^-A /-D /' | while read r; do iptables -t nat $r; done; "
-                     f"sed -i '/^{pub_port_str}:/d' /config/forwards.txt"],
-                    capture_output=True
-                )
+                """Hapus rule iptables DNAT yang exact match (port + destination).
+                Pakai parsing iptables-save by line + exact field match — bukan substring."""
+                pub = str(pub_port)
+                # List rules → parse → match exact dport — hapus yang cocok
+                save = _exec_in_ovpn("iptables-save", "-t", "nat")
+                if save.returncode == 0:
+                    for line in save.stdout.decode("utf-8", "replace").splitlines():
+                        # Match line yg punya `--dport PUB` exact (word boundary)
+                        if re.search(rf"\s--dport\s{pub}\b", line) and line.startswith("-A "):
+                            del_line = "-D " + line[3:]
+                            args = shlex.split(del_line)
+                            _exec_in_ovpn("iptables", "-t", "nat", *args)
+                # Remove FORWARD rule juga (cari by destination + dport)
+                save2 = _exec_in_ovpn("iptables-save")
+                if save2.returncode == 0:
+                    for line in save2.stdout.decode("utf-8", "replace").splitlines():
+                        if line.startswith("-A FORWARD") and re.search(rf"-d\s{re.escape(vpn_ip)}/", line):
+                            del_line = "-D " + line[3:]
+                            args = shlex.split(del_line)
+                            _exec_in_ovpn("iptables", *args)
+                # Remove dari forwards.txt
+                _exec_in_ovpn("sed", "-i", f"/^{pub}:/d", "/config/forwards.txt")
 
             if action == "create":
                 if not username or not password:
                     _send_json(self, {"error": "username and password required"}, 400)
                     return
                 pw_hash = hashlib.sha256(password.encode()).hexdigest()
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"echo '{username}:{pw_hash}' >> /config/users.txt"],
-                    check=True, capture_output=True
+                # Dedupe: hapus entry lama dulu (kalau ada) lalu append fresh
+                _exec_in_ovpn("sed", "-i", f"/^{username}:/d", "/config/users.txt")
+                # Append via tee — input via stdin agar ':' & hash safe
+                proc = subprocess.run(
+                    [docker, "exec", "-i", "mikrotik-openvpn",
+                     "tee", "-a", "/config/users.txt"],
+                    input=f"{username}:{pw_hash}\n".encode(),
+                    capture_output=True,
                 )
+                if proc.returncode != 0:
+                    _send_json(self, {"error": f"failed to write users.txt: {proc.stderr.decode('utf-8','replace')[:200]}"}, 500); return
                 if vpn_ip:
                     # topology subnet: ifconfig-push <ip> <netmask>
                     # Server runs `server 10.9.0.0 255.255.0.0`, so all clients share /16
-                    subprocess.run(
-                        [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                         f"mkdir -p /config/ccd && echo 'ifconfig-push {vpn_ip} 255.255.0.0' > /config/ccd/{username}"],
-                        check=True, capture_output=True
+                    _exec_in_ovpn("mkdir", "-p", "/config/ccd")
+                    ccd_path = f"/config/ccd/{username}"  # username regex-validated
+                    proc = subprocess.run(
+                        [docker, "exec", "-i", "mikrotik-openvpn",
+                         "tee", ccd_path],
+                        input=f"ifconfig-push {vpn_ip} 255.255.0.0\n".encode(),
+                        capture_output=True,
                     )
+                    if proc.returncode != 0:
+                        _send_json(self, {"error": "failed to write CCD"}, 500); return
 
                 # Add iptables DNAT for Winbox + API port forwarding
                 if vpn_ip:
@@ -2575,16 +2676,8 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if not username:
                     _send_json(self, {"error": "username required"}, 400)
                     return
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"sed -i '/^{username}:/d' /config/users.txt"],
-                    check=True, capture_output=True
-                )
-                subprocess.run(
-                    [docker, "exec", "mikrotik-openvpn", "sh", "-c",
-                     f"rm -f /config/ccd/{username}"],
-                    capture_output=True
-                )
+                _exec_in_ovpn("sed", "-i", f"/^{username}:/d", "/config/users.txt", check=True)
+                _exec_in_ovpn("rm", "-f", f"/config/ccd/{username}")
                 # Remove iptables DNAT for any forwarded ports
                 if winbox_port:
                     _del_forward(winbox_port)
@@ -2593,6 +2686,22 @@ class HealthHandler(BaseHTTPRequestHandler):
                 _send_json(self, {"ok": True, "action": "deleted", "username": username})
             else:
                 _send_json(self, {"error": "action must be create or delete"}, 400)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_netwatch(self, user_id, router_name=None):
+        """List netwatch entries dari RouterOS.
+        Returns: {router, items: [{id, host, status, comment, interval, since, ...}]}
+        """
+        try:
+            from server import list_netwatch
+            registry = _get_registry()
+            conn = registry.resolve(user_id, router_name)
+            items = list_netwatch(user_id, router_name or "")
+            _send_json(self, {
+                "router": conn.get("name", router_name or ""),
+                "items": items,
+            })
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
 

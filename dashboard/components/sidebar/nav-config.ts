@@ -87,6 +87,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Routers", href: "/routers", icon: Router },
       { label: "Tunnel", href: "/tunnel", icon: Cable },
+      { label: "Netwatch", href: "/netwatch", icon: Activity },
       { label: "Users", href: "/users", icon: Users, adminOnly: true },
       { label: "Log Aktivitas", href: "/logs", icon: Terminal },
       { label: "Hotspot Log", href: "/logs/hotspot", icon: Wifi },

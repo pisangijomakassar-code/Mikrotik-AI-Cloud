@@ -3,26 +3,40 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { getCloudflareTunnelStatus } from "@/lib/services/cloudflare-tunnel.service"
 import { getSstpTunnelStatus } from "@/lib/services/sstp-tunnel.service"
-
-const AGENT_URL = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
+import { agentFetch } from "@/lib/agent-fetch"
 
 // VPN IPs (10.8.x.y for WG, 10.9.x.y for OVPN) hanya reachable dari container
 // VPN-nya sendiri. Dashboard delegasi probe ke agent yang execute `nc` di
 // dalam container `mikrotik-openvpn` / `mikrotik-wireguard`.
+//
+// Cache 30 detik per (vpnIp, port) supaya banyak dashboard tab yang polling
+// 5-30 detik tidak menggandakan beban `docker exec nc` ke openvpn container.
+const PROBE_CACHE_TTL_MS = 30_000
+const probeCache = new Map<string, { ok: boolean; at: number }>()
+
 async function vpnProbe(vpnIp: string, port: number): Promise<boolean> {
+  const key = `${vpnIp}:${port}`
+  const cached = probeCache.get(key)
+  const now = Date.now()
+  if (cached && now - cached.at < PROBE_CACHE_TTL_MS) return cached.ok
+
+  let ok = false
   try {
-    const res = await fetch(`${AGENT_URL}/tunnel-probe`, {
+    const res = await agentFetch(`/tunnel-probe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vpnIp, port }),
       signal: AbortSignal.timeout(6000),
     })
-    if (!res.ok) return false
-    const data = (await res.json()) as { reachable?: boolean }
-    return data.reachable === true
+    if (res.ok) {
+      const data = (await res.json()) as { reachable?: boolean }
+      ok = data.reachable === true
+    }
   } catch {
-    return false
+    ok = false
   }
+  probeCache.set(key, { ok, at: now })
+  return ok
 }
 
 // GET /api/tunnels/[routerId]/status

@@ -1,12 +1,12 @@
 import { prisma } from "../db"
 import type { CreateRouterInput } from "../types"
+import { agentFetch } from "@/lib/agent-fetch"
 
 /** Ask the Python agent to Fernet-encrypt a password.
  *  Falls back to storing plaintext if the agent is unreachable (dev/offline). */
 async function encryptPassword(plaintext: string): Promise<string> {
-  const agentUrl = process.env.AGENT_HEALTH_URL ?? "http://mikrotik-agent:8080"
   try {
-    const res = await fetch(`${agentUrl}/encrypt-password`, {
+    const res = await agentFetch(`/encrypt-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: plaintext }),

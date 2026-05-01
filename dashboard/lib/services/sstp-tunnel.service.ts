@@ -1,4 +1,5 @@
 import * as crypto from "crypto"
+import { agentFetch } from "@/lib/agent-fetch"
 
 // ── Architecture Note ─────────────────────────────────────────────────────────
 //
@@ -107,7 +108,7 @@ export async function createSstpTunnel(
   const { username, password } = generateVpnCredentials(routerId)
   const vpnIp = await allocateVpnIp(prisma)
 
-  const res = await fetch(`${AGENT_HEALTH_URL}/vpn-user`, {
+  const res = await agentFetch(`/vpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "create", username, password, vpnIp }),
@@ -128,7 +129,7 @@ export async function createSstpTunnel(
  * remove the user from the SoftEther hub.
  */
 export async function deleteSstpTunnel(vpnUsername: string): Promise<void> {
-  const res = await fetch(`${AGENT_HEALTH_URL}/vpn-user`, {
+  const res = await agentFetch(`/vpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "delete", username: vpnUsername }),

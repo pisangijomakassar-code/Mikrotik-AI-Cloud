@@ -1,5 +1,6 @@
 import * as crypto from "crypto"
 import type { PrismaClient } from "@/app/generated/prisma/client"
+import { agentFetch } from "@/lib/agent-fetch"
 
 // ── Architecture Note ─────────────────────────────────────────────────────────
 //
@@ -89,7 +90,7 @@ export function generateOvpnCredentials(routerId: string): { username: string; p
  */
 async function encryptSecret(plaintext: string): Promise<string> {
   try {
-    const res = await fetch(`${AGENT_URL}/encrypt-password`, {
+    const res = await agentFetch(`/encrypt-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: plaintext }),
@@ -238,7 +239,7 @@ export async function createOvpnTunnel(
   const vpnIp = `10.9.${subnetOctet}.${routerOctet}`
 
   // Register the user with the OpenVPN server via the agent
-  const res = await fetch(`${AGENT_URL}/ovpn-user`, {
+  const res = await agentFetch(`/ovpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "create", username, password, vpnIp, winboxPort, apiPort }),
@@ -317,7 +318,7 @@ export async function deleteOvpnTunnel(
   tunnel: TunnelWithPorts,
   username: string,
 ): Promise<void> {
-  const res = await fetch(`${AGENT_URL}/ovpn-user`, {
+  const res = await agentFetch(`/ovpn-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

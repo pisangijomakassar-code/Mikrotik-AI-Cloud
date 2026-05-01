@@ -4,13 +4,12 @@ import { prisma } from "@/lib/db"
 import { generateSstpRouterConfig } from "@/lib/services/sstp-tunnel.service"
 import { generateOvpnScript } from "@/lib/services/ovpn-tunnel.service"
 import { generateWireguardScript } from "@/lib/services/wg-tunnel.service"
-
-const AGENT_URL = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
+import { agentFetch } from "@/lib/agent-fetch"
 
 async function decryptSecret(ciphertext: string): Promise<string> {
   if (!ciphertext.startsWith("gAAAAA")) return ciphertext
   try {
-    const res = await fetch(`${AGENT_URL}/decrypt-password`, {
+    const res = await agentFetch(`/decrypt-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: ciphertext }),

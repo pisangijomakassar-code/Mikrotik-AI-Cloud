@@ -1,5 +1,6 @@
 import * as crypto from "crypto"
 import type { PrismaClient } from "@/app/generated/prisma/client"
+import { agentFetch } from "@/lib/agent-fetch"
 
 // ── Architecture Note ─────────────────────────────────────────────────────────
 //
@@ -89,7 +90,7 @@ export function generateX25519Keypair(): { privateKey: string; publicKey: string
  */
 async function encryptSecret(plaintext: string): Promise<string> {
   try {
-    const res = await fetch(`${AGENT_URL}/encrypt-password`, {
+    const res = await agentFetch(`/encrypt-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password: plaintext }),
@@ -304,7 +305,7 @@ export function generateWireguardScript(params: {
 export async function deleteWireguardTunnel(tunnel: TunnelWithPorts): Promise<void> {
   if (!tunnel.wgClientPubKey) return  // Nothing to clean up
 
-  const res = await fetch(`${AGENT_URL}/wg-peer`, {
+  const res = await agentFetch(`/wg-peer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

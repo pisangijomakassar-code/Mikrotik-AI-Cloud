@@ -420,5 +420,6 @@ model TrafficSnapshot {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, routerName, interfaceName, takenAt])
+  @@index([userId, routerName, takenAt])
   @@index([takenAt])
 }
