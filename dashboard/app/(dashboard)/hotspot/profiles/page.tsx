@@ -14,6 +14,7 @@ import {
   type HotspotProfile,
   type HotspotProfileInput,
 } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 
 const EMPTY: HotspotProfileInput = {
   name: "",
@@ -44,11 +45,12 @@ const DEFAULT_ON_LOGIN_SCRIPT = `/ip hotspot user
 }`
 
 export default function HotspotProfilesPage() {
-  const { data: profiles, isLoading, isError, error } = useHotspotProfiles()
+  const { activeRouter } = useActiveRouter()
+  const { data: profiles, isLoading, isError, error } = useHotspotProfiles(activeRouter || undefined)
   const addProfile = useAddHotspotProfile()
   const updateProfile = useUpdateHotspotProfile()
   const deleteProfile = useDeleteHotspotProfile()
-  const { data: queues } = useQueues()
+  const { data: queues } = useQueues(activeRouter || undefined)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<HotspotProfile | null>(null)

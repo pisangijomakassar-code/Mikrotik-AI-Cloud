@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react"
 import { Wifi, PlusCircle, Trash2, Search, UserX, UserMinus, Clock, Printer, Download, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 import { useHotspotUsers, useRemoveHotspotUser, useEnableHotspotUser, useDisableHotspotUser } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 import { AddHotspotUserDialog } from "@/components/dialogs/add-hotspot-user-dialog"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { PrintVoucherSheet } from "@/components/print-voucher-sheet"
@@ -27,7 +28,8 @@ export default function HotspotUsersPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [page, setPage] = useState(1)
 
-  const { data: users, isLoading, refetch } = useHotspotUsers()
+  const { activeRouter } = useActiveRouter()
+  const { data: users, isLoading, refetch } = useHotspotUsers(activeRouter || undefined)
   const removeUser = useRemoveHotspotUser()
   const enableUser = useEnableHotspotUser()
   const disableUser = useDisableHotspotUser()

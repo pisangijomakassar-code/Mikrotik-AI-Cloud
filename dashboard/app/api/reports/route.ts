@@ -12,10 +12,20 @@ export async function GET(request: NextRequest) {
   const from = searchParams.get("from")
   const to = searchParams.get("to")
   const resellerIdFilter = searchParams.get("resellerId")
+  const routerFilter = searchParams.get("router")
 
   const dateFilter = from && to
     ? { gte: new Date(from), lte: new Date(to + "T23:59:59.999Z") }
     : undefined
+
+  // Resolve routerName -> routerId untuk filter Reseller (yang scope-nya routerId)
+  const routerRow = routerFilter
+    ? await prisma.router.findFirst({
+        where: { userId: session.user.id, name: routerFilter },
+        select: { id: true },
+      })
+    : null
+  const routerId = routerRow?.id ?? null
 
   const [batches, transactions, resellers] = await Promise.all([
     prisma.voucherBatch.findMany({
@@ -23,6 +33,7 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         ...(dateFilter ? { createdAt: dateFilter } : {}),
         ...(resellerIdFilter ? { resellerId: resellerIdFilter } : {}),
+        ...(routerFilter ? { routerName: routerFilter } : {}),
       },
       select: {
         id: true,
@@ -40,7 +51,10 @@ export async function GET(request: NextRequest) {
     }),
     prisma.saldoTransaction.findMany({
       where: {
-        reseller: { userId: session.user.id },
+        reseller: {
+          userId: session.user.id,
+          ...(routerId ? { routerId } : {}),
+        },
         ...(dateFilter ? { createdAt: dateFilter } : {}),
         ...(resellerIdFilter ? { resellerId: resellerIdFilter } : {}),
       },
@@ -58,7 +72,10 @@ export async function GET(request: NextRequest) {
       take: 200,
     }),
     prisma.reseller.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        ...(routerId ? { routerId } : {}),
+      },
       select: { id: true, name: true, balance: true, status: true },
     }),
   ])

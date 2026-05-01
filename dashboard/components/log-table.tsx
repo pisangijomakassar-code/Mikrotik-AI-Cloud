@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { RefreshCw, Download, Info } from "lucide-react"
 import { useRouterLogs } from "@/hooks/use-router-data"
-import { useRouters } from "@/hooks/use-routers"
+import { useActiveRouter } from "@/components/active-router-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import {
@@ -13,14 +13,13 @@ import {
 } from "@/lib/parse-hotspot-log"
 
 export function LogTable() {
-  const [selectedRouter, setSelectedRouter] = useState("")
+  const { activeRouter } = useActiveRouter()
   // Default to "voucher" filter — only login/logout/failed events.
   // Pakai "voucher" sebagai pseudo-topic; semua filter lain tetap matches via topics.includes.
   const [topicFilter, setTopicFilter] = useState("voucher")
   const [count, setCount] = useState(100)
-  const { data: routers } = useRouters()
   const { data, isLoading, refetch, isFetching } = useRouterLogs(
-    selectedRouter || undefined,
+    activeRouter || undefined,
     count
   )
 
@@ -60,18 +59,6 @@ export function LogTable() {
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={selectedRouter || "default"} onValueChange={(val) => setSelectedRouter(val === "default" ? "" : val)}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-card border-border text-xs rounded-lg">
-              <SelectValue placeholder="Router default" />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value="default">Router default</SelectItem>
-              {routers?.map((r) => (
-                <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={topicFilter || "all"} onValueChange={(val) => setTopicFilter(val === "all" ? "" : val)}>
             <SelectTrigger className="w-[calc(50%-6px)] sm:w-[180px] bg-card border-border text-xs rounded-lg">
               <SelectValue placeholder="Semua topik" />

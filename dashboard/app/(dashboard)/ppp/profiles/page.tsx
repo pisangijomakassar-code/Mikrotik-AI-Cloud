@@ -2,9 +2,11 @@
 
 import { Settings2, FileSliders } from "lucide-react"
 import { usePPPProfiles } from "@/hooks/use-ppp"
+import { useActiveRouter } from "@/components/active-router-context"
 
 export default function PPPProfilesPage() {
-  const { data: profiles, isLoading } = usePPPProfiles()
+  const { activeRouter } = useActiveRouter()
+  const { data: profiles, isLoading } = usePPPProfiles(activeRouter || undefined)
 
   return (
     <div>

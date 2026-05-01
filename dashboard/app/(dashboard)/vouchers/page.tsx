@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Zap, Copy, Check, Loader2, Printer, Info } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { useVoucherTypes } from "@/hooks/use-voucher-types"
 import { useResellers } from "@/hooks/use-resellers"
 import { useRouters } from "@/hooks/use-routers"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 
 const TYPE_CHAR_OPTIONS = [
   "Random abcd2345",
@@ -29,15 +30,16 @@ const TYPE_LOGIN_OPTIONS = [
 interface GeneratedVoucher { username: string; password: string }
 
 export default function GenerateVoucherPage() {
+  const { activeRouter } = useActiveRouter()
   const { data: voucherTypes, isLoading: loadingTypes } = useVoucherTypes()
-  const { data: resellers, isLoading: loadingResellers } = useResellers()
+  const { data: resellers, isLoading: loadingResellers } = useResellers(activeRouter || undefined)
   const { data: routers } = useRouters()
-  const { data: hotspotProfiles, isLoading: loadingProfiles } = useHotspotProfiles()
+  const { data: hotspotProfiles, isLoading: loadingProfiles } = useHotspotProfiles(activeRouter || undefined)
 
   const [selectedTypeId, setSelectedTypeId] = useState("")
   const [directProfile, setDirectProfile] = useState("")
   const [resellerId, setResellerId] = useState("")
-  const [routerName, setRouterName] = useState("")
+  const [routerName, setRouterName] = useState(activeRouter || "")
   const [count, setCount] = useState(10)
   const [typeChar, setTypeChar] = useState("Random abcd2345")
   const [typeLogin, setTypeLogin] = useState("Username = Password")
@@ -53,6 +55,11 @@ export default function GenerateVoucherPage() {
   const [vouchers, setVouchers] = useState<GeneratedVoucher[]>([])
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const [showPrint, setShowPrint] = useState(false)
+
+  // Sync routerName with active router from top bar
+  useEffect(() => {
+    if (activeRouter) setRouterName(activeRouter)
+  }, [activeRouter])
 
   const selectedReseller = resellers?.find((r) => r.id === resellerId)
 

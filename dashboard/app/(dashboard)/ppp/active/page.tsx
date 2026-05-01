@@ -2,11 +2,13 @@
 
 import { Activity, Radio, LogOut, WifiOff } from "lucide-react"
 import { usePPPActive, useKickPPP } from "@/hooks/use-ppp"
+import { useActiveRouter } from "@/components/active-router-context"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { toast } from "sonner"
 
 export default function PPPActivePage() {
-  const { data: sessions, isLoading } = usePPPActive()
+  const { activeRouter } = useActiveRouter()
+  const { data: sessions, isLoading } = usePPPActive(activeRouter || undefined)
   const kickPPP = useKickPPP()
 
   function handleKick(id: string, name: string) {

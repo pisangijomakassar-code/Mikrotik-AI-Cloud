@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Network, PlusCircle, Trash2, Search, UserX } from "lucide-react"
 import { usePPPSecrets, useRemovePPPSecret } from "@/hooks/use-ppp"
+import { useActiveRouter } from "@/components/active-router-context"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { AddPPPSecretDialog } from "@/components/dialogs/add-ppp-secret-dialog"
 import { TableSkeleton } from "@/components/table-skeleton"
@@ -10,10 +11,11 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
 export default function PPPSecretsPage() {
+  const { activeRouter } = useActiveRouter()
   const [search, setSearch] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
 
-  const { data: secrets, isLoading } = usePPPSecrets()
+  const { data: secrets, isLoading } = usePPPSecrets(activeRouter || undefined)
   const removeSecret = useRemovePPPSecret()
 
   const filteredSecrets = secrets?.filter((s: Record<string, unknown>) => {

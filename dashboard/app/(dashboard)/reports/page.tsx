@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatRupiah } from "@/lib/formatters"
 import { toast } from "sonner"
+import { useActiveRouter } from "@/components/active-router-context"
 
 interface SyncRouterEntry {
   router: string
@@ -128,6 +129,7 @@ function getMonthDates(yearMonth: string) {
 }
 
 export default function ReportsPage() {
+  const { activeRouter } = useActiveRouter()
   const defaults = getDefaultDates()
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
@@ -272,6 +274,7 @@ export default function ReportsPage() {
     try {
       const qs = new URLSearchParams({ from, to })
       if (resellerFilter) qs.set("resellerId", resellerFilter)
+      if (activeRouter) qs.set("router", activeRouter)
       const res = await fetch(`/api/reports?${qs}`)
       if (!res.ok) throw new Error("Gagal memuat laporan")
       setData(await res.json())
@@ -280,7 +283,7 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [from, to, resellerFilter])
+  }, [from, to, resellerFilter, activeRouter])
 
   useEffect(() => { fetchReport() }, [fetchReport])
 

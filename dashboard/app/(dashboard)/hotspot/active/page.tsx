@@ -2,6 +2,7 @@
 
 import { Signal, Radio, WifiOff } from "lucide-react"
 import { useHotspotActive } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 
 function formatBytes(bytes?: number): string {
   if (bytes == null || bytes === 0) return "0 B"
@@ -12,7 +13,8 @@ function formatBytes(bytes?: number): string {
 }
 
 export default function HotspotActivePage() {
-  const { data: sessions, isLoading } = useHotspotActive()
+  const { activeRouter } = useActiveRouter()
+  const { data: sessions, isLoading } = useHotspotActive(activeRouter || undefined)
 
   return (
     <div>
