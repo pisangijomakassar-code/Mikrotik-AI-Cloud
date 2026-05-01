@@ -18,13 +18,12 @@ cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
 cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null || true
 
 # Start health API server in background (port 8080, for dashboard to query router data)
+# NOTE: health_server juga otomatis start reseller bots di same process
+# supaya hot-reload via /reseller-bot/restart endpoint berbagi _BOT_REGISTRY.
 python3 /app/mikrotik_mcp/health_server.py &
 
 # Start tunnel manager in background (manages cloudflared access tcp processes)
 python3 /app/mikrotik_mcp/tunnel_manager.py &
-
-# Start reseller bot (if configured)
-python3 /app/mikrotik_mcp/reseller_bot.py &
 
 # --- Hot reload: watch config changes and restart nanobot process only ---
 NANOBOT_PID=0

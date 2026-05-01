@@ -3272,5 +3272,14 @@ def start_health_server(port=8080):
 
 if __name__ == "__main__":
     start_health_server()
+
+    # Start reseller bots in same Python process — supaya hot-reload via
+    # /reseller-bot/restart endpoint share _BOT_REGISTRY dengan handler.
+    try:
+        from reseller_bot import start_reseller_bots
+        start_reseller_bots()
+    except Exception as exc:
+        print(f"[health_server] Failed to start reseller bots: {exc}")
+
     while True:
         time.sleep(3600)
