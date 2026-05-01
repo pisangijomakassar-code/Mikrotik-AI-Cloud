@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   // Resolve router id (must belong to user)
   const router = await prisma.router.findFirst({
     where: { userId: session.user.id, name: routerName },
-    select: { id: true },
+    select: { id: true, name: true, host: true },
   })
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
 
@@ -47,8 +47,26 @@ export async function GET(request: NextRequest) {
     where: { routerId: router.id },
   })
   const existingHosts = new Set(existing.map((n) => n.host))
-  const newHosts = liveItems.filter((i) => i.host && !existingHosts.has(i.host))
 
+  // Auto-create central node untuk router itself kalau belum ada
+  // (router sendiri tdk muncul di /tool/netwatch — jd harus di-bootstrap manual)
+  const hasCentral = existing.some((n) => n.isCentral)
+  const centralHost = router.host
+  if (!hasCentral && !existingHosts.has(centralHost)) {
+    await prisma.netwatchTopology.create({
+      data: {
+        routerId: router.id,
+        host: centralHost,
+        label: `${router.name} (HUB)`,
+        x: 600,
+        y: 80,
+        isCentral: true,
+      },
+    })
+    existingHosts.add(centralHost)
+  }
+
+  const newHosts = liveItems.filter((i) => i.host && !existingHosts.has(i.host))
   if (newHosts.length > 0) {
     // Auto-place node baru di grid sederhana — owner bisa rearrange manual
     let i = 0
@@ -60,7 +78,7 @@ export async function GET(request: NextRequest) {
             host: h.host!,
             label: h.comment || h.host!,
             x: 100 + (i % 6) * 180,
-            y: 200 + Math.floor(i++ / 6) * 120,
+            y: 220 + Math.floor(i++ / 6) * 120,
           },
         })
       )
