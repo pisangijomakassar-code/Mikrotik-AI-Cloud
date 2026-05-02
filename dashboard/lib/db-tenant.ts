@@ -78,8 +78,7 @@ export async function getTenantDb() {
   }
   if (!tenantId) {
     throw new Error(
-      `getTenantDb: user ${session.user.id} (role=${session.user.role}) tidak punya tenant. ` +
-        "SUPER_ADMIN endpoints harus pakai raw \`prisma\` dari @/lib/db, bukan getTenantDb().",
+      `getTenantDb: user ${session.user.id} (role=${session.user.role}) tidak punya tenant. SUPER_ADMIN endpoints harus pakai raw 'prisma' dari @/lib/db, bukan getTenantDb().`,
     )
   }
 
