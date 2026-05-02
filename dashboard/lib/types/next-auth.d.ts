@@ -6,6 +6,7 @@ declare module "next-auth" {
   interface User {
     role: UserRole;
     telegramId: string;
+    tenantId: string | null; // NULL untuk SUPER_ADMIN
   }
 
   interface Session {
@@ -15,6 +16,7 @@ declare module "next-auth" {
       email: string;
       role: UserRole;
       telegramId: string;
+      tenantId: string | null;
     };
   }
 }
@@ -24,5 +26,6 @@ declare module "@auth/core/jwt" {
     id: string;
     role: UserRole;
     telegramId: string;
+    tenantId: string | null;
   }
 }
