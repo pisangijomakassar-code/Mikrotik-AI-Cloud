@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (session.user.role === "SUPER_ADMIN") return Response.json([])
 
   try {
     const searchParams = request.nextUrl.searchParams

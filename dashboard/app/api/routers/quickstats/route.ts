@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth"
 export async function GET(request: NextRequest) {
   const session = await auth()
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (session.user.role === "SUPER_ADMIN") return Response.json(null)
 
   // telegramId is already in the JWT token via session callback in auth.ts
   const telegramId = session.user.telegramId

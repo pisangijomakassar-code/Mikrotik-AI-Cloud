@@ -18,6 +18,7 @@ export async function GET() {
   if (!session?.user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
+  if (session.user.role === "SUPER_ADMIN") return Response.json([])
 
   try {
     // Get user's telegram ID to query agent health API (User adalah cross-tenant model
