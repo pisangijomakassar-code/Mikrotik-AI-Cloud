@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 
 interface MikrotikUser {
   name: string
@@ -23,8 +24,9 @@ export async function GET(
 
   const { batchId } = await context.params
 
-  const batch = await prisma.voucherBatch.findFirst({
-    where: { id: batchId, userId: session.user.id },
+  const db = await getTenantDb()
+  const batch = await db.voucherBatch.findFirst({
+    where: { id: batchId },
     include: { reseller: { select: { id: true, name: true } } },
   })
   if (!batch) return Response.json({ error: "Batch not found" }, { status: 404 })

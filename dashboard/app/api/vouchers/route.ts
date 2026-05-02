@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (page) filter.page = parseInt(page, 10)
     if (pageSize) filter.pageSize = parseInt(pageSize, 10)
 
-    const data = await listVoucherBatches(session.user.id, filter)
+    const data = await listVoucherBatches(filter)
     return Response.json(data)
   } catch (error) {
     console.error("Failed to fetch voucher batches:", error)

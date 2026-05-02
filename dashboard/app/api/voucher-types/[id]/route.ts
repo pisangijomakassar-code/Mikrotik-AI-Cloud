@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -9,8 +9,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params
   try {
     const body = await request.json()
-    const vt = await prisma.voucherType.update({
-      where: { id, userId: session.user.id },
+    const db = await getTenantDb()
+    const vt = await db.voucherType.update({
+      where: { id },
       data: {
         namaVoucher: body.namaVoucher,
         deskripsi: body.deskripsi ?? "",
@@ -44,7 +45,8 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 
   const { id } = await params
   try {
-    await prisma.voucherType.delete({ where: { id, userId: session.user.id } })
+    const db = await getTenantDb()
+    await db.voucherType.delete({ where: { id } })
     return Response.json({ ok: true })
   } catch (e) {
     console.error(e)

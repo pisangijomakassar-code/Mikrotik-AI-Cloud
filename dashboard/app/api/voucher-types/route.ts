@@ -1,13 +1,13 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
-  const types = await prisma.voucherType.findMany({
-    where: { userId: session.user.id },
+  const db = await getTenantDb()
+  const types = await db.voucherType.findMany({
     orderBy: { createdAt: "asc" },
   })
   return Response.json(types)
@@ -15,14 +15,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await auth()
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const body = await request.json()
-    const vt = await prisma.voucherType.create({
+    const db = await getTenantDb()
+    const vt = await db.voucherType.create({
       data: {
         id: crypto.randomUUID(),
-        userId: session.user.id,
+        tenantId: session.user.tenantId,
         namaVoucher: body.namaVoucher,
         deskripsi: body.deskripsi ?? "",
         harga: Number(body.harga) || 0,
