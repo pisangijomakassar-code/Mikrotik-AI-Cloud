@@ -14,3 +14,7 @@ dashboard/.env*
 CREDENTIALS.md
 credentials.md
 *.credentials
+
+# Local tooling configs
+.claude/
+docker-compose.override.yml
