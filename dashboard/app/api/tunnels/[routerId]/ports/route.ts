@@ -30,13 +30,13 @@ export async function PATCH(
 
     const { portId, enabled } = body
 
-    // Verify the port belongs to a tunnel owned by this user
+    // Verify the port belongs to a tunnel owned by this tenant
     const port = await prisma.tunnelPort.findFirst({
       where: {
         id: portId,
         tunnel: {
           routerId,
-          router: { userId: session.user.id },
+          router: { tenantId: session.user.tenantId ?? "__none__" },
         },
       },
       include: {
@@ -61,7 +61,7 @@ export async function PATCH(
     // Free tier can only enable the API port — other ports require Pro or Premium
     if (enabled && port.serviceName !== "api") {
       const subscription = await prisma.subscription.findUnique({
-        where: { userId: session.user.id },
+        where: { tenantId: session.user.tenantId ?? "__none__" },
         select: { plan: true },
       })
       const plan = (subscription?.plan ?? "FREE") as PlanKey

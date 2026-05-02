@@ -127,34 +127,34 @@ async function allocateWgAddress(
   // Get the router to find its owner
   const router = await prisma.router.findUnique({
     where: { id: routerId },
-    select: { userId: true },
+    select: { tenantId: true },
   })
   if (!router) throw new Error(`Router ${routerId} not found`)
 
-  // All WireGuard tunnels (across all users) — needed for global subnet tracking
+  // All WireGuard tunnels (across all tenants) — needed for global subnet tracking
   const allWgTunnels = await prisma.tunnel.findMany({
     where: { method: "WIREGUARD" },
     select: {
       subnetOctet: true,
       routerOctet: true,
-      router: { select: { userId: true } },
+      router: { select: { tenantId: true } },
     },
   })
 
-  // Map userId → set of subnetOctets they already own
-  const userSubnets = new Map<string, Set<number>>()
+  // Map tenantId → set of subnetOctets they already own
+  const tenantSubnets = new Map<string, Set<number>>()
   for (const t of allWgTunnels) {
     if (t.subnetOctet === null) continue
-    const uid = t.router.userId
-    if (!userSubnets.has(uid)) userSubnets.set(uid, new Set())
-    userSubnets.get(uid)!.add(t.subnetOctet)
+    const tid = t.router.tenantId
+    if (!tenantSubnets.has(tid)) tenantSubnets.set(tid, new Set())
+    tenantSubnets.get(tid)!.add(t.subnetOctet)
   }
 
   // All globally used subnet octets
   const usedSubnets = new Set(allWgTunnels.map((t) => t.subnetOctet).filter((x): x is number => x !== null))
 
-  // Determine the target user's subnet octets (they may own multiple)
-  const mySubnets = userSubnets.get(router.userId) ?? new Set<number>()
+  // Determine the target tenant's subnet octets (they may own multiple)
+  const mySubnets = tenantSubnets.get(router.tenantId) ?? new Set<number>()
 
   // Build a map: subnetOctet → set of used routerOctets within that subnet
   const subnetRouterOctets = new Map<number, Set<number>>()

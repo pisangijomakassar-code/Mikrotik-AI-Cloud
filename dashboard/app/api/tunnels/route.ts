@@ -16,11 +16,15 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  if (!session.user.tenantId) {
+    return Response.json({ error: "No tenant context" }, { status: 403 })
+  }
+
   try {
     const tunnels = await prisma.tunnel.findMany({
       where: {
         router: {
-          userId: session.user.id,
+          tenantId: session.user.tenantId,
         },
       },
       include: {
@@ -56,12 +60,12 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "routerId and method are required" }, { status: 400 })
     }
 
-    // Verify the router belongs to the current user
+    // Verify the router belongs to the current tenant
     const router = await prisma.router.findUnique({ where: { id: routerId } })
     if (!router) {
       return Response.json({ error: "Router not found" }, { status: 404 })
     }
-    if (router.userId !== session.user.id) {
+    if (router.tenantId !== session.user.tenantId) {
       return Response.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -71,9 +75,9 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Tunnel already exists for this router" }, { status: 409 })
     }
 
-    // Determine allowed ports based on the router owner's subscription plan
+    // Determine allowed ports based on tenant's subscription plan
     const ownerSubscription = await prisma.subscription.findUnique({
-      where: { userId: router.userId },
+      where: { tenantId: router.tenantId },
       select: { plan: true },
     })
     const ownerPlan = (ownerSubscription?.plan ?? "FREE") as PlanKey
