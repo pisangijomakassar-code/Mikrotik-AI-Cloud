@@ -119,7 +119,7 @@ export function AddRouterDialog() {
         password,
         label: label.trim() || undefined,
         isDefault,
-        userId: session?.user?.id ?? "",
+        // tenantId di-inject di server (dari session)
         dnsHotspot: dnsHotspot.trim() || undefined,
         telegramOwnerUsername: telegramOwnerUsername.trim() || undefined,
         telegramOwnerId: telegramOwnerId.trim() || undefined,

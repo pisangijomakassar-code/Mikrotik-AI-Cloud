@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   // Resolve router id (must belong to user)
   const router = await prisma.router.findFirst({
-    where: { userId: session.user.id, name: routerName },
+    where: { tenantId: session.user.tenantId ?? "__none__", name: routerName },
     select: { id: true, name: true, host: true },
   })
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const router = await prisma.router.findFirst({
-    where: { userId: session.user.id, name: body.router },
+    where: { tenantId: session.user.tenantId ?? "__none__", name: body.router },
     select: { id: true },
   })
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
@@ -165,7 +165,7 @@ export async function DELETE(request: NextRequest) {
   if (!routerName || !nodeId) return Response.json({ error: "router+id required" }, { status: 400 })
 
   const router = await prisma.router.findFirst({
-    where: { userId: session.user.id, name: routerName },
+    where: { tenantId: session.user.tenantId ?? "__none__", name: routerName },
     select: { id: true },
   })
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
