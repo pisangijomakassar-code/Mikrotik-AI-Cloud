@@ -1,6 +1,14 @@
-import { prisma } from "../db"
+import { auth } from "../auth"
+import { getTenantDb } from "../db-tenant"
 import type { CreateRouterInput } from "../types"
 import { agentFetch } from "@/lib/agent-fetch"
+
+async function requireTenantId(): Promise<string> {
+  const session = await auth()
+  const tenantId = session?.user?.tenantId
+  if (!tenantId) throw new Error("No tenant context (super admin?)")
+  return tenantId
+}
 
 /** Ask the Python agent to Fernet-encrypt a password.
  *  Falls back to storing plaintext if the agent is unreachable (dev/offline). */
@@ -23,12 +31,14 @@ async function encryptPassword(plaintext: string): Promise<string> {
   return plaintext
 }
 
-export async function getRouters(userId?: string, search?: string) {
-  const where: Record<string, unknown> = {}
+/**
+ * Router service — semua operasi tenant-scoped via getTenantDb().
+ * Router sekarang owned by Tenant (tidak ada relation ke User lagi).
+ */
 
-  if (userId) {
-    where.userId = userId
-  }
+export async function getRouters(search?: string) {
+  const db = await getTenantDb()
+  const where: Record<string, unknown> = {}
 
   if (search) {
     where.OR = [
@@ -38,30 +48,26 @@ export async function getRouters(userId?: string, search?: string) {
     ]
   }
 
-  return prisma.router.findMany({
+  return db.router.findMany({
     where,
-    include: {
-      user: { select: { name: true } },
-    },
     orderBy: { addedAt: "desc" },
   })
 }
 
 export async function getRouter(id: string) {
-  return prisma.router.findUnique({
-    where: { id },
-    include: {
-      user: { select: { name: true } },
-    },
-  })
+  const db = await getTenantDb()
+  return db.router.findFirst({ where: { id } })
 }
 
 export async function createRouter(data: CreateRouterInput) {
+  const db = await getTenantDb()
+  const tenantId = await requireTenantId()
   const encryptedPassword = await encryptPassword(data.password)
   const encryptedBotToken = data.botToken ? await encryptPassword(data.botToken) : ""
 
-  return prisma.router.create({
+  return db.router.create({
     data: {
+      tenantId,
       name: data.name,
       host: data.host,
       port: data.port ?? 8728,
@@ -69,7 +75,6 @@ export async function createRouter(data: CreateRouterInput) {
       passwordEnc: encryptedPassword,
       label: data.label ?? "",
       isDefault: data.isDefault ?? false,
-      userId: data.userId,
       dnsHotspot: data.dnsHotspot ?? "",
       hotspotName: data.hotspotName ?? "",
       hotspotLogoUrl: data.hotspotLogoUrl ?? "",
@@ -78,13 +83,11 @@ export async function createRouter(data: CreateRouterInput) {
       botToken: encryptedBotToken,
       botUsername: data.botUsername ?? "",
     },
-    include: {
-      user: { select: { name: true } },
-    },
   })
 }
 
 export async function updateRouter(id: string, data: Partial<CreateRouterInput>) {
+  const db = await getTenantDb()
   const updateData: Record<string, unknown> = {}
   if (data.name !== undefined) updateData.name = data.name
   if (data.host !== undefined) updateData.host = data.host
@@ -102,19 +105,13 @@ export async function updateRouter(id: string, data: Partial<CreateRouterInput>)
   if (data.telegramOwnerId !== undefined) updateData.telegramOwnerId = data.telegramOwnerId
   if (data.botUsername !== undefined) updateData.botUsername = data.botUsername
   if (data.botToken !== undefined) {
-    // Encrypt non-empty tokens; empty string = clear the token
     updateData.botToken = data.botToken ? await encryptPassword(data.botToken) : ""
   }
 
-  return prisma.router.update({
-    where: { id },
-    data: updateData,
-    include: { user: { select: { name: true } } },
-  })
+  return db.router.update({ where: { id }, data: updateData })
 }
 
 export async function deleteRouter(id: string) {
-  return prisma.router.delete({
-    where: { id },
-  })
+  const db = await getTenantDb()
+  return db.router.delete({ where: { id } })
 }

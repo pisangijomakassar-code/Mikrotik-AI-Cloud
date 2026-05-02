@@ -28,7 +28,7 @@ export async function getUsers(filter?: UserFilter) {
   return prisma.user.findMany({
     where,
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
     orderBy: { createdAt: "desc" },
   })
@@ -38,8 +38,7 @@ export async function getUser(id: string) {
   return prisma.user.findUnique({
     where: { id },
     include: {
-      routers: true,
-      _count: { select: { routers: true, activityLogs: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 }
@@ -60,7 +59,7 @@ export async function createUser(data: CreateUserInput) {
       status: data.status || "ACTIVE",
     },
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 
@@ -96,7 +95,7 @@ export async function updateUser(id: string, data: UpdateUserInput) {
     where: { id },
     data: updateData,
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 

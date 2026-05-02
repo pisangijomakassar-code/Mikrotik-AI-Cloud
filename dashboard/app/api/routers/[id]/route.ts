@@ -14,13 +14,11 @@ export async function GET(
   const { id } = await params
 
   try {
+    // getRouter() lewat getTenantDb() — sudah filter by tenantId.
+    // Kalau router tidak ada (atau bukan milik tenant ini) → 404.
     const router = await getRouter(id)
     if (!router) {
       return Response.json({ error: "Router not found" }, { status: 404 })
-    }
-
-    if (session.user.role !== "ADMIN" && router.userId !== session.user.id) {
-      return Response.json({ error: "Forbidden" }, { status: 403 })
     }
 
     return Response.json(router)

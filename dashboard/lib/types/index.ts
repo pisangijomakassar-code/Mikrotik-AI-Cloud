@@ -40,7 +40,7 @@ export interface CreateRouterInput {
   password: string;
   label?: string;
   isDefault?: boolean;
-  userId: string;
+  // tenantId di-inject otomatis dari session di service layer (tidak perlu pass)
   // MikroTik DNS settings
   dnsHotspot?: string;
   // Hotspot branding (untuk header voucher cetak)

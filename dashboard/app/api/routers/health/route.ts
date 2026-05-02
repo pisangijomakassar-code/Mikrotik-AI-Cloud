@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 
 interface RouterHealth {
   id: string
@@ -19,7 +20,8 @@ export async function GET() {
   }
 
   try {
-    // Get user's telegram ID to query agent health API
+    // Get user's telegram ID to query agent health API (User adalah cross-tenant model
+    // — pakai prisma raw, filter by id eksplisit).
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { telegramId: true },
@@ -29,11 +31,9 @@ export async function GET() {
       return Response.json([])
     }
 
-    // Get routers from DB for ID mapping
-    const where =
-      session.user.role === "ADMIN" ? {} : { userId: session.user.id }
-    const dbRouters = await prisma.router.findMany({
-      where,
+    // Get routers from DB — tenant-scoped via getTenantDb().
+    const db = await getTenantDb()
+    const dbRouters = await db.router.findMany({
       select: { id: true, name: true },
     })
 
@@ -52,8 +52,8 @@ export async function GET() {
         const results: RouterHealth[] = dbRouters.map((dbRouter) => {
           const health = agentHealth.find((h: { name: string }) => h.name === dbRouter.name)
           if (health && health.status === "online") {
-            // Update lastSeen
-            prisma.router.update({
+            // Update lastSeen (tenant-scoped)
+            db.router.update({
               where: { id: dbRouter.id },
               data: { lastSeen: new Date(), routerosVersion: health.version || undefined },
             }).catch(() => {})
