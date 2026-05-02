@@ -171,7 +171,7 @@ export async function listTransactions(resellerId: string, page = 1, pageSize = 
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
-  } satisfies PaginatedResult<typeof data[number]>
+  }
 }
 
 // ── Voucher Batches ──
@@ -208,7 +208,7 @@ export async function listVoucherBatches(filter?: VoucherFilter) {
     page,
     pageSize,
     totalPages: Math.ceil(total / pageSize),
-  } satisfies PaginatedResult<typeof data[number]>
+  }
 }
 
 export async function getVoucherBatch(batchId: string) {
