@@ -64,13 +64,13 @@
 | B6 | Buat announcement | `/platform/broadcast/announcements` → Publish | Tampil di dashboard tenant | 🔲 |
 | B7 | Hapus announcement | Trash | Hilang dari dashboard tenant | 🔲 |
 | B8 | SUPER_ADMIN navigasi semua page platform | Buka satu per satu | Tidak ada error 500 di console | ✅ Semua halaman platform load (path benar: `/platform/billing/...`, `/platform/broadcast/...`) |
-| B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | ⚠️ BUG: dialog tetap terbuka tanpa pesan error, gagal diam-diam |
+| B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | ✅ Toast "Email already in use", dialog tetap terbuka (correct) |
 | B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | 🔲 |
 | B11 | ⚠️ Plan downgrade saat router > limit baru | PRO (2 router) → FREE (1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | 🔲 |
 | B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | 🔲 |
 | B13 | Lihat invoice semua tenant | `/platform/billing/invoices` | List paginated, filter by status | ✅ |
 | B14 | Lihat agregat usage token semua tenant | `/platform/usage` | Total + breakdown per tenant | ✅ |
-| B15 | Tenant baru otomatis dapat plan FREE | Buat tenant → cek /platform/billing/subscriptions | Plan FREE terdaftar | ⚠️ BUG: tenant baru tidak mendapat subscription FREE otomatis (tampil "—") |
+| B15 | Tenant baru otomatis dapat plan FREE | Buat tenant → cek /platform/billing/subscriptions | Plan FREE terdaftar | ✅ Plan FREE langsung muncul di kolom Plan saat tenant dibuat |
 
 ---
 
@@ -672,12 +672,12 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 
 | ID | Area | Temuan | Severity | Status |
 |---|---|---|---|---|
-| BUG-01 | Platform Tenants | Kolom "Plan" tidak tampil di `/platform/tenants` list (hanya muncul di `/platform/usage`) | 🟡 Minor | 🔴 Open |
-| BUG-02 | Platform Tenants | Buat tenant baru tidak otomatis membuat Subscription FREE — plan tampil "—" di semua view | 🔴 High | 🔴 Open |
-| BUG-03 | Platform Tenants | Submit form tenant duplikat (email sudah ada) gagal diam-diam — dialog tetap terbuka tanpa pesan error | 🔴 High | 🔴 Open |
-| BUG-04 | Billing Page | Halaman `/settings/billing` tidak menampilkan tombol Upgrade/Downgrade di bagian "Available Plans" | 🟡 Minor | 🔴 Open |
-| BUG-05 | Voucher Settings | 10 console error di `/vouchers/settings` saat load dan CRUD (perlu investigasi) | 🟡 Minor | 🔴 Open |
-| BUG-06 | Reseller Bot | 1 console error di `/resellers/bot` saat load (perlu investigasi) | 🟡 Minor | 🔴 Open |
+| BUG-01 | Platform Tenants | Kolom "Plan" tidak tampil di `/platform/tenants` list (hanya muncul di `/platform/usage`) | 🟡 Minor | 🟢 Fixed |
+| BUG-02 | Platform Tenants | Buat tenant baru tidak otomatis membuat Subscription FREE — plan tampil "—" di semua view | 🔴 High | 🟢 Fixed |
+| BUG-03 | Platform Tenants | Submit form tenant duplikat (email sudah ada) gagal diam-diam — dialog tetap terbuka tanpa pesan error | 🔴 High | 🟢 Fixed |
+| BUG-04 | Billing Page | Halaman `/settings/billing` tidak menampilkan tombol Upgrade/Downgrade di bagian "Available Plans" | 🟡 Minor | 🟢 Not a bug — tombol Upgrade memang tidak muncul saat sudah di plan tertinggi (PREMIUM) |
+| BUG-05 | Voucher Settings | 10 console error di `/vouchers/settings` saat load dan CRUD (perlu investigasi) | 🟡 Minor | 🟢 Investigated — semua 502 dari router-API (toko.net unreachable), expected; tambah `retry:0` ke quickstats polling |
+| BUG-06 | Reseller Bot | 1 console error di `/resellers/bot` saat load (perlu investigasi) | 🟡 Minor | 🟢 Investigated — 502 dari `/api/resellers/bot/info?routerId=...` (router unreachable), expected behavior |
 | INFO-01 | Router Tests | Semua test yang butuh koneksi RouterOS di-skip (C3–C12, D, E, F, G, dsb.) | — | ⏭️ Skipped |
 | INFO-02 | Telegram Bot Tests | Semua test Reseller Bot dan Owner Bot di-skip (perlu token + chat_id aktif) | — | ⏭️ Skipped |
 | INFO-03 | Midtrans Tests | N4–N7 di-skip (perlu Sandbox key nyata, bukan dummy) | — | ⏭️ Skipped |
