@@ -84,6 +84,16 @@ class RouterRegistryPG:
         row = cur.fetchone()
         return row[0] if row else None
 
+    def _get_tenant_id(self, cur, telegram_id: str) -> str | None:
+        """Look up User.tenantId by telegramId. Returns None if user absent
+        or user is SUPER_ADMIN (tenantId NULL)."""
+        cur.execute(
+            'SELECT "tenantId" FROM "User" WHERE "telegramId" = %s',
+            (str(telegram_id),),
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+
     def _require_user(self, cur, telegram_id: str) -> str:
         """Like _get_user_id but raises ValueError when missing."""
         uid = self._get_user_id(cur, telegram_id)
@@ -91,7 +101,18 @@ class RouterRegistryPG:
             raise ValueError(f"User with telegramId '{telegram_id}' not found.")
         return uid
 
-    def _get_router(self, cur, internal_user_id: str, name: str) -> dict | None:
+    def _require_tenant(self, cur, telegram_id: str) -> str:
+        """Resolve telegram_id → tenantId. Raises if user not found or no tenant
+        (mis. SUPER_ADMIN — yang tidak boleh akses bot tenant)."""
+        tid = self._get_tenant_id(cur, telegram_id)
+        if tid is None:
+            raise ValueError(
+                f"User with telegramId '{telegram_id}' not found or has no tenant "
+                "(SUPER_ADMIN tidak diizinkan akses bot tenant)."
+            )
+        return tid
+
+    def _get_router(self, cur, tenant_id: str, name: str) -> dict | None:
         """Fetch a single Router row as dict, or None."""
         cur.execute(
             """
@@ -99,9 +120,9 @@ class RouterRegistryPG:
                    label, "routerosVersion", board, "isDefault",
                    "addedAt", "lastSeen"
             FROM "Router"
-            WHERE "userId" = %s AND name = %s
+            WHERE "tenantId" = %s AND name = %s
             """,
-            (internal_user_id, name),
+            (tenant_id, name),
         )
         row = cur.fetchone()
         if row is None:
@@ -121,8 +142,8 @@ class RouterRegistryPG:
             "last_seen": row[11].isoformat() + "Z" if row[11] else None,
         }
 
-    def _all_routers(self, cur, internal_user_id: str) -> list[dict]:
-        """Fetch all Router rows for a user, including tunnel info."""
+    def _all_routers(self, cur, tenant_id: str) -> list[dict]:
+        """Fetch all Router rows for a tenant, including tunnel info."""
         cur.execute(
             """
             SELECT
@@ -150,10 +171,10 @@ class RouterRegistryPG:
                    ON tp."tunnelId" = t.id
                   AND tp."serviceName" = 'api'
                   AND tp.enabled = true
-            WHERE r."userId" = %s
+            WHERE r."tenantId" = %s
             ORDER BY r."isDefault" DESC, r."addedAt" ASC
             """,
-            (internal_user_id,),
+            (tenant_id,),
         )
         rows = cur.fetchall()
         result = []
@@ -260,26 +281,26 @@ class RouterRegistryPG:
     # ── public API (same signatures as RouterRegistry) ───────
 
     def has_routers(self, user_id: str) -> bool:
-        """Check if user has any registered routers."""
+        """Check if user (telegram_id)'s tenant has any registered routers."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._get_user_id(cur, user_id)
-            if uid is None:
+            tid = self._get_tenant_id(cur, user_id)
+            if tid is None:
                 return False
             cur.execute(
-                'SELECT COUNT(*) FROM "Router" WHERE "userId" = %s',
-                (uid,),
+                'SELECT COUNT(*) FROM "Router" WHERE "tenantId" = %s',
+                (tid,),
             )
             return cur.fetchone()[0] > 0
 
     def list_routers(self, user_id: str) -> list[dict]:
-        """List all routers for user (WITHOUT passwords).  Include default marker."""
+        """List all routers for user's tenant (WITHOUT passwords)."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._get_user_id(cur, user_id)
-            if uid is None:
+            tid = self._get_tenant_id(cur, user_id)
+            if tid is None:
                 return []
-            routers = self._all_routers(cur, uid)
+            routers = self._all_routers(cur, tid)
             return [self._router_to_public(r) for r in routers]
 
     def add_router(
@@ -294,20 +315,20 @@ class RouterRegistryPG:
         routeros_version: str = "",
         board: str = "",
     ) -> dict:
-        """Add a router.  Return status dict or error if name already exists."""
+        """Add a router to user's tenant. Return status dict or error."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._require_user(cur, user_id)
+            tid = self._require_tenant(cur, user_id)
 
-            # Check for duplicate
-            existing = self._get_router(cur, uid, name)
+            # Check for duplicate (per-tenant, name unique)
+            existing = self._get_router(cur, tid, name)
             if existing is not None:
-                return {"error": f"Router '{name}' already exists for this user."}
+                return {"error": f"Router '{name}' already exists for this tenant."}
 
             # Check if this is the first router (will become default)
             cur.execute(
-                'SELECT COUNT(*) FROM "Router" WHERE "userId" = %s',
-                (uid,),
+                'SELECT COUNT(*) FROM "Router" WHERE "tenantId" = %s',
+                (tid,),
             )
             is_first = cur.fetchone()[0] == 0
 
@@ -320,25 +341,25 @@ class RouterRegistryPG:
                 INSERT INTO "Router"
                     (id, name, host, port, username, "passwordEnc",
                      label, "routerosVersion", board, "isDefault",
-                     "addedAt", "lastSeen", "userId")
+                     "addedAt", "lastSeen", "tenantId")
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     router_id, name, host, port, username, enc_password,
                     label, routeros_version, board, is_first,
-                    now, now, uid,
+                    now, now, tid,
                 ),
             )
-            logger.info("User %s added router '%s' (%s:%s)", user_id, name, host, port)
+            logger.info("Tenant %s added router '%s' (%s:%s)", tid, name, host, port)
             return {"status": "ok", "message": f"Router '{name}' registered."}
 
     def remove_router(self, user_id: str, name: str) -> dict:
         """Remove router by name.  Adjust default if needed."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._require_user(cur, user_id)
+            tid = self._require_tenant(cur, user_id)
 
-            router = self._get_router(cur, uid, name)
+            router = self._get_router(cur, tid, name)
             if router is None:
                 return {"error": f"Router '{name}' not found."}
 
@@ -357,43 +378,43 @@ class RouterRegistryPG:
                     SET "isDefault" = true
                     WHERE id = (
                         SELECT id FROM "Router"
-                        WHERE "userId" = %s
+                        WHERE "tenantId" = %s
                         ORDER BY "addedAt"
                         LIMIT 1
                     )
                     """,
-                    (uid,),
+                    (tid,),
                 )
 
-            logger.info("User %s removed router '%s'", user_id, name)
+            logger.info("Tenant %s removed router '%s'", tid, name)
             return {"status": "ok", "message": f"Router '{name}' removed."}
 
     def get_router(self, user_id: str, name: str) -> dict:
         """Get full router details (WITH decrypted password) for connection."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._require_user(cur, user_id)
+            tid = self._require_tenant(cur, user_id)
 
-            router = self._get_router(cur, uid, name)
+            router = self._get_router(cur, tid, name)
             if router is None:
                 return {"error": f"Router '{name}' not found."}
 
             return self._router_to_connection(router)
 
     def set_default(self, user_id: str, name: str) -> dict:
-        """Set default router for this user."""
+        """Set default router for this tenant."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._require_user(cur, user_id)
+            tid = self._require_tenant(cur, user_id)
 
-            router = self._get_router(cur, uid, name)
+            router = self._get_router(cur, tid, name)
             if router is None:
                 return {"error": f"Router '{name}' not found."}
 
-            # Clear all defaults for this user, then set the chosen one
+            # Clear all defaults for this tenant, then set the chosen one
             cur.execute(
-                'UPDATE "Router" SET "isDefault" = false WHERE "userId" = %s',
-                (uid,),
+                'UPDATE "Router" SET "isDefault" = false WHERE "tenantId" = %s',
+                (tid,),
             )
             cur.execute(
                 'UPDATE "Router" SET "isDefault" = true WHERE id = %s',
@@ -406,17 +427,17 @@ class RouterRegistryPG:
         """Get the name of the default router, or None."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._get_user_id(cur, user_id)
-            if uid is None:
+            tid = self._get_tenant_id(cur, user_id)
+            if tid is None:
                 return None
 
             cur.execute(
                 """
                 SELECT name FROM "Router"
-                WHERE "userId" = %s AND "isDefault" = true
+                WHERE "tenantId" = %s AND "isDefault" = true
                 LIMIT 1
                 """,
-                (uid,),
+                (tid,),
             )
             row = cur.fetchone()
             return row[0] if row else None
@@ -428,13 +449,13 @@ class RouterRegistryPG:
         - "all"  -> return list of ALL routers with credentials
         - name   -> return that specific router
 
-        Raises ValueError if not found or user has no routers.
+        Raises ValueError if not found or tenant has no routers.
         """
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._require_user(cur, user_id)
+            tid = self._require_tenant(cur, user_id)
 
-            routers = self._all_routers(cur, uid)
+            routers = self._all_routers(cur, tid)
             if not routers:
                 raise ValueError("You have no registered routers. Use /addrouter first.")
 
@@ -473,8 +494,8 @@ class RouterRegistryPG:
         """Update last_seen timestamp and optionally version/board."""
         with self._conn() as conn:
             cur = conn.cursor()
-            uid = self._get_user_id(cur, user_id)
-            if uid is None:
+            tid = self._get_tenant_id(cur, user_id)
+            if tid is None:
                 return  # silently skip
 
             updates = ['"lastSeen" = %s']
@@ -487,13 +508,13 @@ class RouterRegistryPG:
                 updates.append('"board" = %s')
                 params.append(board)
 
-            params.extend([uid, name])
+            params.extend([tid, name])
 
             cur.execute(
                 f"""
                 UPDATE "Router"
                 SET {", ".join(updates)}
-                WHERE "userId" = %s AND name = %s
+                WHERE "tenantId" = %s AND name = %s
                 """,
                 params,
             )
