@@ -38,7 +38,10 @@ export async function GET(request: Request) {
   const tenants = await prisma.tenant.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { users: true, routers: true } } },
+    include: {
+      _count: { select: { users: true, routers: true } },
+      subscription: { select: { plan: true } },
+    },
   })
 
   return Response.json(tenants)
@@ -61,6 +64,9 @@ export async function POST(request: Request) {
   const existing = await prisma.tenant.findUnique({ where: { slug } })
   if (existing) return Response.json({ error: "Slug already taken" }, { status: 409 })
 
+  const emailTaken = await prisma.user.findUnique({ where: { email: ownerEmail } })
+  if (emailTaken) return Response.json({ error: "Email already in use" }, { status: 409 })
+
   const trialEndsAt =
     status === "TRIAL"
       ? new Date(Date.now() + Number(trialDays) * 24 * 60 * 60 * 1000)
@@ -75,9 +81,15 @@ export async function POST(request: Request) {
     await tx.user.create({
       data: { email: ownerEmail, passwordHash, role: "ADMIN", tenantId: created.id, name: ownerEmail },
     })
+    await tx.subscription.create({
+      data: { tenantId: created.id, plan: "FREE", status: "ACTIVE", tokenLimit: 100 },
+    })
     const withCount = await tx.tenant.findUniqueOrThrow({
       where: { id: created.id },
-      include: { _count: { select: { users: true, routers: true } } },
+      include: {
+        _count: { select: { users: true, routers: true } },
+        subscription: { select: { plan: true } },
+      },
     })
     return [withCount]
   })

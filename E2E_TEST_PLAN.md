@@ -46,9 +46,9 @@
 | A5 | Logout | Avatar → Logout | Session hapus, redirect `/login` | ✅ |
 | A6 | ⚠️ Brute force protection | 10× login gagal berurutan | Rate limit / captcha / delay (jika diimplementasi) | 🔲 |
 | A7 | ⚠️ Session expired | Tunggu lewat `AUTH_SESSION_MAX_AGE` | Redirect ke `/login` saat akses page | 🔲 |
-| A8 | ⚠️ Login dengan email tidak ada | Random email | Pesan generic "Invalid credentials" (tidak bocor info) | 🔲 |
-| A9 | ⚠️ SQL injection di field email | `' OR 1=1--` | Login gagal, tidak crash | 🔲 |
-| A10 | Tenant ADMIN tidak bisa akses `/platform` | Login tenant → buka `/platform/tenants` | Redirect/403 | 🔲 |
+| A8 | ⚠️ Login dengan email tidak ada | Random email | Pesan generic "Invalid credentials" (tidak bocor info) | ✅ |
+| A9 | ⚠️ SQL injection di field email | `' OR 1=1--` | Login gagal, tidak crash | ✅ |
+| A10 | Tenant ADMIN tidak bisa akses `/platform` | Login tenant → buka `/platform/tenants` | Redirect/403 | ✅ |
 
 ---
 
@@ -56,20 +56,21 @@
 
 | # | Skenario | UI Action | Expected | Status |
 |---|---|---|---|---|
-| B1 | Daftar tenant | `/platform/tenants` | List tenant + plan + status + jumlah user | ✅ |
-| B2 | Buat tenant baru | Tambah → isi nama/email admin → Submit | Tenant + user ADMIN dibuat, login berhasil | 🔲 |
-| B3 | Ubah plan FREE→PRO | Detail tenant → plan PRO → Save | Tenant sidebar tampil PRO | ✅ |
+| B1 | Daftar tenant | `/platform/tenants` | List tenant + plan + status + jumlah user | ⚠️ Plan column missing — ada di `/platform/usage` tapi tidak di `/platform/tenants` |
+| B2 | Buat tenant baru | Tambah → isi nama/email admin → Submit | Tenant + user ADMIN dibuat, login berhasil | ✅ |
+| B3 | Ubah plan FREE→PRO | `/platform/billing/subscriptions` → Change Plan | Tenant sidebar tampil PRO | ✅ |
 | B4 | Ubah plan PRO→PREMIUM | Sama | tokenLimit = -1 | ✅ |
 | B5 | Toggle feature flag tenant | Toggle ON/OFF fitur Communication | Sidebar tenant berubah real-time | 🔲 |
-| B6 | Buat announcement | `/platform/announcements` → Publish | Tampil di dashboard tenant | 🔲 |
+| B6 | Buat announcement | `/platform/broadcast/announcements` → Publish | Tampil di dashboard tenant | 🔲 |
 | B7 | Hapus announcement | Trash | Hilang dari dashboard tenant | 🔲 |
-| B8 | SUPER_ADMIN navigasi semua page platform | Buka satu per satu | Tidak ada error 500 di console | ✅ |
-| B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | 🔲 |
+| B8 | SUPER_ADMIN navigasi semua page platform | Buka satu per satu | Tidak ada error 500 di console | ✅ Semua halaman platform load (path benar: `/platform/billing/...`, `/platform/broadcast/...`) |
+| B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | ⚠️ BUG: dialog tetap terbuka tanpa pesan error, gagal diam-diam |
 | B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | 🔲 |
 | B11 | ⚠️ Plan downgrade saat router > limit baru | PRO (2 router) → FREE (1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | 🔲 |
 | B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | 🔲 |
-| B13 | Lihat invoice semua tenant | `/platform/invoices` | List paginated, filter by status | 🔲 |
-| B14 | Lihat agregat usage token semua tenant | `/platform/usage` | Total + breakdown per tenant | 🔲 |
+| B13 | Lihat invoice semua tenant | `/platform/billing/invoices` | List paginated, filter by status | ✅ |
+| B14 | Lihat agregat usage token semua tenant | `/platform/usage` | Total + breakdown per tenant | ✅ |
+| B15 | Tenant baru otomatis dapat plan FREE | Buat tenant → cek /platform/billing/subscriptions | Plan FREE terdaftar | ⚠️ BUG: tenant baru tidak mendapat subscription FREE otomatis (tampil "—") |
 
 ---
 
@@ -233,12 +234,12 @@
 
 | # | Skenario | UI Action | Expected | Status |
 |---|---|---|---|---|
-| H1 | List jenis | `/vouchers/settings` | Tabel | 🔲 |
-| H2 | Tambah jenis | Add → nama/harga/profile | Muncul + tersedia di Generate dropdown | 🔲 |
-| H3 | Edit harga | Edit | Harga baru tersimpan | 🔲 |
+| H1 | List jenis | `/vouchers/settings` | Tabel | ✅ |
+| H2 | Tambah jenis | Add → nama/harga/profile | Muncul + tersedia di Generate dropdown | ✅ |
+| H3 | Edit harga | Edit | Harga baru tersimpan | ✅ |
 | H4 | Set group 1-9 | Toggle group | Tersimpan, tampil kolom Group VCR | 🔲 |
 | H5 | Set warna VCR | Color picker | Warna tersimpan | 🔲 |
-| H6 | Hapus jenis | Trash | Hilang | 🔲 |
+| H6 | Hapus jenis | Trash | Hilang | ✅ |
 | H7 | Multi-group voucher | Centang grup 1+3+5 | Tampil di reseller bot multi-group | 🔲 |
 | H8 | ⚠️ Hapus jenis sedang dipakai bot | Hapus, lalu reseller bot pilih | Tidak crash, jenis tidak muncul lagi | 🔲 |
 | H9 | ⚠️ Tambah jenis nama duplikat | Submit | Error unique | 🔲 |
@@ -250,10 +251,10 @@
 
 | # | Skenario | UI Action | Telegram (jika ada) | Expected | Status |
 |---|---|---|---|---|---|
-| I1 | List reseller | `/resellers` | — | Tabel | 🔲 |
-| I2 | Tambah reseller | Add → nama/Telegram ID/HP | — | Reseller baru muncul | 🔲 |
+| I1 | List reseller | `/resellers` | — | Tabel | ✅ |
+| I2 | Tambah reseller | Add → nama/Telegram ID/HP | — | Reseller baru muncul | ✅ |
 | I3 | Edit (diskon%) | Edit | — | Tersimpan | 🔲 |
-| I4 | Top Up saldo | Top Up Rp 50rb | DM ke reseller: `✅ Top Up Rp 50.000 berhasil. Saldo: Rp X` | Saldo bertambah, transaksi tercatat | 🔲 |
+| I4 | Top Up saldo | Top Up Rp 50rb | DM ke reseller: `✅ Top Up Rp 50.000 berhasil. Saldo: Rp X` | Saldo bertambah, transaksi tercatat | ✅ Saldo naik (DM tidak dikirim — Telegram tidak dikonfigurasi) |
 | I5 | Top Up + bukti foto | Upload foto | DM (caption + foto) | Foto tersimpan, tampil di histori | 🔲 |
 | I6 | Top Down | Top Down Rp 20rb | DM ke reseller: `⬇️ Top Down Rp 20.000. Saldo: Rp X` | Saldo berkurang | 🔲 |
 | I7 | Cari reseller | Search nama | — | Filter | 🔲 |
@@ -472,7 +473,7 @@
 | N1 | Plan tampil dari DB | Buka billing | GET /api/plan | Plan benar (bukan default FREE) | ✅ |
 | N2 | Token usage | Sama | `SELECT TokenUsage WHERE userId AND date=today` | Angka ter-update | 🔲 |
 | N3 | List invoice | Sama | `SELECT Invoice WHERE tenantId` | List paginated | 🔲 |
-| N4 | Klik Upgrade Pro → Snap muncul | Klik btn | POST /api/billing/checkout | Snap popup QRIS muncul | ❌ (dummy key) |
+| N4 | Klik Upgrade Pro → Snap muncul | Klik btn | POST /api/billing/checkout | Snap popup QRIS muncul | ⚠️ BUG: tidak ada tombol Upgrade di halaman billing saat plan PREMIUM |
 | N5 | Pembayaran sukses | Simulasi `settlement` | Midtrans → POST /api/billing/webhook | Invoice PAID, plan naik | ❌ |
 | N6 | Pembayaran expire | Simulasi `expire` | webhook | Invoice CANCELED | ❌ |
 | N7 | Webhook duplikat | Kirim 2× | webhook idempotent | Subscription tidak double | ❌ |
@@ -662,3 +663,190 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
   expect(mockTelegram.messages).toContainMessage({ chatId: 'reseller-tg-id', text: /5 voucher/ })
 })
 ```
+
+---
+
+## Backlog — Temuan E2E Run 2026-05-03
+
+> Status: 🔴 Bug · 🟡 Minor · 🟢 Fixed
+
+| ID | Area | Temuan | Severity | Status |
+|---|---|---|---|---|
+| BUG-01 | Platform Tenants | Kolom "Plan" tidak tampil di `/platform/tenants` list (hanya muncul di `/platform/usage`) | 🟡 Minor | 🔴 Open |
+| BUG-02 | Platform Tenants | Buat tenant baru tidak otomatis membuat Subscription FREE — plan tampil "—" di semua view | 🔴 High | 🔴 Open |
+| BUG-03 | Platform Tenants | Submit form tenant duplikat (email sudah ada) gagal diam-diam — dialog tetap terbuka tanpa pesan error | 🔴 High | 🔴 Open |
+| BUG-04 | Billing Page | Halaman `/settings/billing` tidak menampilkan tombol Upgrade/Downgrade di bagian "Available Plans" | 🟡 Minor | 🔴 Open |
+| BUG-05 | Voucher Settings | 10 console error di `/vouchers/settings` saat load dan CRUD (perlu investigasi) | 🟡 Minor | 🔴 Open |
+| BUG-06 | Reseller Bot | 1 console error di `/resellers/bot` saat load (perlu investigasi) | 🟡 Minor | 🔴 Open |
+| INFO-01 | Router Tests | Semua test yang butuh koneksi RouterOS di-skip (C3–C12, D, E, F, G, dsb.) | — | ⏭️ Skipped |
+| INFO-02 | Telegram Bot Tests | Semua test Reseller Bot dan Owner Bot di-skip (perlu token + chat_id aktif) | — | ⏭️ Skipped |
+| INFO-03 | Midtrans Tests | N4–N7 di-skip (perlu Sandbox key nyata, bukan dummy) | — | ⏭️ Skipped |
+
+---
+
+## 24. Security Tests
+
+> Semua test ini tidak butuh router — jalankan langsung terhadap VPS.
+
+### 24.A. Authentication & Authorization
+
+| # | Skenario | Method | Input / Action | Expected | Status |
+|---|---|---|---|---|---|
+| SEC-A1 | IDOR: akses data tenant lain via API | GET `/api/hotspot/users?tenantId=other` | Override tenantId di query param | 403 atau data tenant sendiri (tidak bocor) | 🔲 |
+| SEC-A2 | IDOR: akses invoice tenant lain | GET `/api/plan` dengan session tenant A, manipulasi header | Data tenant A saja | 🔲 |
+| SEC-A3 | API tanpa session | Fetch `/api/vouchers` tanpa cookie | 401 | 🔲 |
+| SEC-A4 | Role escalation: tenant ADMIN akses SUPER_ADMIN API | POST `/api/platform/tenants` dengan session tenant | 403 | 🔲 |
+| SEC-A5 | Role escalation: USER (non-ADMIN) akses ADMIN endpoint | Session role USER → POST generate voucher | 403 | 🔲 |
+| SEC-A6 | JWT tampering | Modifikasi payload JWT (e.g. role → SUPER_ADMIN) | Signature invalid → 401 | 🔲 |
+| SEC-A7 | Path traversal di upload | Upload filename `../../etc/passwd` | Sanitasi, tidak ada file system access | 🔲 |
+
+### 24.B. Input Validation & Injection
+
+| # | Skenario | Input | Expected | Status |
+|---|---|---|---|---|
+| SEC-B1 | XSS di nama reseller | `<script>alert(1)</script>` | Escaped saat display | 🔲 |
+| SEC-B2 | XSS di nama voucher | `<img src=x onerror=alert(1)>` | Escaped | 🔲 |
+| SEC-B3 | XSS di deskripsi jenis voucher | HTML inject | Escaped | 🔲 |
+| SEC-B4 | SQL injection di search field | `' OR 1=1--` di field cari reseller | Query Prisma parameterized → tidak crash | 🔲 |
+| SEC-B5 | Mass assignment: extra field di POST | POST `/api/resellers` + field `role=ADMIN` | Field diabaikan | 🔲 |
+| SEC-B6 | Negative amount di Top Up | POST saldo = -100000 | Validasi → 400 | 🔲 |
+| SEC-B7 | Integer overflow di voucher qty | qty = 999999999 | Validasi max | 🔲 |
+| SEC-B8 | SSRF di router IP field | IP = `http://169.254.169.254/latest/meta-data/` | Blocked, tidak fetch internal | 🔲 |
+
+### 24.C. CSRF & Headers
+
+| # | Skenario | Method | Expected | Status |
+|---|---|---|---|---|
+| SEC-C1 | CSRF check pada POST endpoint | Cross-origin POST tanpa cookie | NextAuth CSRF token validation → 403 | 🔲 |
+| SEC-C2 | Security headers | GET halaman apa saja | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, CSP header ada | 🔲 |
+| SEC-C3 | Cookie flags | Inspect session cookie | `HttpOnly`, `Secure` (prod), `SameSite=Lax` | 🔲 |
+| SEC-C4 | Sensitive data di response | Inspect `/api/plan` response | Password hash tidak bocor, `serverKey` tidak ada di client response | 🔲 |
+
+### 24.D. Rate Limiting & Brute Force
+
+| # | Skenario | Action | Expected | Status |
+|---|---|---|---|---|
+| SEC-D1 | Login brute force | 20× POST `/api/auth/callback/credentials` salah | Rate limit 429 atau delay | 🔲 |
+| SEC-D2 | API spam voucher generate | 50× POST `/api/vouchers/generate` berturut | Throttle atau 429 | 🔲 |
+| SEC-D3 | Webhook replay attack | Kirim ulang webhook Midtrans yang sama | Idempotency check → skip, tidak double | 🔲 |
+
+---
+
+## 25. Performance Tests
+
+> Target: response < 300ms untuk API ringan, < 2s untuk page load.
+
+### 25.A. Page Load Time
+
+| # | Halaman | Target | Method | Status |
+|---|---|---|---|---|
+| PERF-A1 | `/dashboard` first load | < 3s | Playwright `page.goto` + timing | 🔲 |
+| PERF-A2 | `/vouchers` dengan 1000 voucher | < 2s | Seed data + timing | 🔲 |
+| PERF-A3 | `/resellers` dengan 100 reseller | < 1s | Timing | 🔲 |
+| PERF-A4 | `/reports` dengan 12 bulan data | < 2s | Timing | 🔲 |
+| PERF-A5 | `/hotspot/users` dengan 500 user | < 2s | Timing | 🔲 |
+
+### 25.B. API Response Time
+
+| # | Endpoint | Target | Notes | Status |
+|---|---|---|---|---|
+| PERF-B1 | GET `/api/plan` | < 100ms | Query subscription + invoice + usage | 🔲 |
+| PERF-B2 | GET `/api/vouchers` | < 200ms | Paginated query | 🔲 |
+| PERF-B3 | POST `/api/vouchers/generate` (10 voucher) | < 3s | Termasuk RouterOS call | 🔲 |
+| PERF-B4 | GET `/api/resellers` | < 150ms | List query | 🔲 |
+| PERF-B5 | GET `/api/platform/usage` | < 300ms | Agregat multi-tenant | 🔲 |
+| PERF-B6 | POST `/api/billing/checkout` | < 500ms | Termasuk Midtrans API call | 🔲 |
+
+### 25.C. Concurrent Load
+
+| # | Skenario | Setup | Expected | Status |
+|---|---|---|---|---|
+| PERF-C1 | 10 user browse dashboard bersamaan | k6 / autocannon 10 VU | No 5xx, P95 < 2s | 🔲 |
+| PERF-C2 | 5 admin generate voucher bersamaan | 5 concurrent POST generate | Semua sukses, tidak ada duplikat username | 🔲 |
+| PERF-C3 | Top Up reseller race condition | 2 POST bersamaan ke reseller sama | Saldo konsisten (transaksi atomik) | 🔲 |
+| PERF-C4 | Webhook Midtrans burst (10/sec) | Simulate batch payment | Queue / serial processing, semua diproses | 🔲 |
+
+### 25.D. Database Query
+
+| # | Skenario | Method | Expected | Status |
+|---|---|---|---|---|
+| PERF-D1 | N+1 query di voucher list | EXPLAIN ANALYZE | Tidak ada N+1, ada index scan | 🔲 |
+| PERF-D2 | Index pada `tenantId` semua tabel utama | `\d+ VoucherBatch` dsb. | Index ada | 🔲 |
+| PERF-D3 | Query laporan bulanan | EXPLAIN ANALYZE | Tidak full scan, < 500ms | 🔲 |
+
+---
+
+## 26. Compatibility Tests
+
+> Browser & device coverage minimal untuk production.
+
+### 26.A. Browser Compatibility
+
+| # | Browser | Versi | Halaman Kritis | Expected | Status |
+|---|---|---|---|---|---|
+| COMP-A1 | Chrome | Latest | `/dashboard`, `/vouchers`, `/settings/billing` | Semua render normal | 🔲 |
+| COMP-A2 | Firefox | Latest | Sama | Semua render normal | 🔲 |
+| COMP-A3 | Safari (macOS) | Latest | Sama | Terutama cek font + flexbox gap | 🔲 |
+| COMP-A4 | Edge | Latest | Sama | Semua render normal | 🔲 |
+| COMP-A5 | Chrome Mobile (Android) | Latest | `/dashboard`, `/vouchers` | Layout responsive | 🔲 |
+| COMP-A6 | Safari Mobile (iOS) | Latest | Sama | Terutama cek input date/number | 🔲 |
+
+### 26.B. Screen Size & Responsive
+
+| # | Resolusi | UI Area | Expected | Status |
+|---|---|---|---|---|
+| COMP-B1 | 1920×1080 | Semua | Tidak ada overflow | 🔲 |
+| COMP-B2 | 1280×720 | Sidebar + table | Sidebar tidak overlap tabel | 🔲 |
+| COMP-B3 | 768px (tablet) | Sidebar | Collapse atau hamburger | 🔲 |
+| COMP-B4 | 375px (iPhone SE) | Semua | Scrollable, tidak ada elemen terpotong | 🔲 |
+| COMP-B5 | 414px (Android) | Dialog/Modal | Modal tidak overflow viewport | 🔲 |
+
+### 26.C. Dark Mode & Theming
+
+| # | Skenario | Expected | Status |
+|---|---|---|---|
+| COMP-C1 | Toggle dark/light (jika ada) | Warna konsisten, tidak ada teks invisible | 🔲 |
+| COMP-C2 | OS-level dark mode | Sistem dark → app ikut (jika `prefers-color-scheme`) | 🔲 |
+| COMP-C3 | High contrast mode | Teks tetap terbaca | 🔲 |
+
+### 26.D. Network Conditions
+
+| # | Kondisi | Method | Expected | Status |
+|---|---|---|---|---|
+| COMP-D1 | Slow 3G | Chrome DevTools throttle | Halaman load < 10s, tidak blank | 🔲 |
+| COMP-D2 | Offline (service worker?) | DevTools offline | Error state jelas, tidak white screen | 🔲 |
+| COMP-D3 | Request timeout > 30s | API delay mock | Timeout message tampil, bukan spinner selamanya | 🔲 |
+
+---
+
+## Ringkasan Status (Update 2026-05-03)
+
+| Area | Total | ✅ | 🔲 | ❌ | ⚠️ Bug |
+|---|---|---|---|---|---|
+| 1. Auth | 10 | 8 | 2 | 0 | 0 |
+| 2. SUPER_ADMIN | 15 | 7 | 6 | 0 | 2 |
+| 3. Router & Health | 12 | 1 | 11 | 0 | 0 |
+| 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
+| 5. Hotspot Users | 22 | 0 | 22 | 0 | 0 |
+| 6. Hotspot Profiles | 15 | 0 | 15 | 0 | 0 |
+| 7. Server/Binding/Walled Garden | 10 | 0 | 10 | 0 | 0 |
+| 8. Voucher Generate | 22 | 0 | 22 | 0 | 0 |
+| 9. Voucher Histori & Cetak | 16 | 0 | 16 | 0 | 0 |
+| 10. Jenis Voucher | 10 | 4 | 6 | 0 | 0 |
+| 11. Reseller CRUD | 20 | 3 | 16 | 1 | 0 |
+| 12. Histori Transaksi | 7 | 1 | 6 | 0 | 0 |
+| 13. Laporan & Mikhmon | 27 | 0 | 27 | 0 | 0 |
+| 14. PPP | 11 | 0 | 11 | 0 | 0 |
+| 15. Communication | 15 | 0 | 15 | 0 | 0 |
+| 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
+| 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
+| 18. Billing Midtrans | 14 | 3 | 4 | 6 | 1 |
+| 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
+| 20. Tunnel | 10 | 0 | 8 | 2 | 0 |
+| 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
+| 22. Cross-Role | 12 | 1 | 11 | 0 | 0 |
+| 23. Negative & Resilience | 20 | 0 | 20 | 0 | 0 |
+| 24. Security | 22 | 0 | 22 | 0 | 0 |
+| 25. Performance | 16 | 0 | 16 | 0 | 0 |
+| 26. Compatibility | 18 | 0 | 18 | 0 | 0 |
+| **TOTAL** | **419** | **28** | **376** | **12** | **3** |

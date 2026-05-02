@@ -26,6 +26,7 @@ export interface TenantRow {
   expiresAt: string | null
   createdAt: string
   _count: { users: number; routers: number }
+  subscription?: { plan: string } | null
 }
 
 interface Props {
@@ -110,6 +111,7 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
           <TableHeader>
             <TableRow className="border-white/[0.06] hover:bg-transparent">
               <TableHead className="text-[#869397] font-medium">Tenant</TableHead>
+              <TableHead className="text-[#869397] font-medium">Plan</TableHead>
               <TableHead className="text-[#869397] font-medium">Status</TableHead>
               <TableHead className="text-[#869397] font-medium">Expiry</TableHead>
               <TableHead className="text-[#869397] font-medium text-center">
@@ -125,13 +127,13 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   Loading…
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   {search ? "No tenants match your search" : "No tenants found"}
                 </TableCell>
               </TableRow>
@@ -142,6 +144,9 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
                     <div className="font-semibold text-sm text-foreground">{t.name}</div>
                     <div className="text-[11px] text-[#869397] font-mono">{t.slug}</div>
                     <div className="text-[11px] text-[#869397]">{t.ownerEmail}</div>
+                  </TableCell>
+                  <TableCell className="text-xs font-mono text-[#4cd7f6]">
+                    {t.subscription?.plan ?? "—"}
                   </TableCell>
                   <TableCell>
                     <TenantStatusBadge status={t.status} />

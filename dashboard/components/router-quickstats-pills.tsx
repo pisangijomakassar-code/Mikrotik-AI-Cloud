@@ -48,6 +48,7 @@ export function RouterQuickStatsPills() {
     refetchIntervalInBackground: false,  // pause saat tab di background
     refetchOnWindowFocus: true,           // refresh saat tab kembali aktif
     staleTime: 25_000,                    // jangan double-fetch dalam window cache server
+    retry: 0,                             // jangan retry — router down = langsung fallback ke "LLM down"
   })
 
   if (!activeRouter) return null
