@@ -14,14 +14,14 @@ import { prisma } from "@/lib/db"
 // (karena perlu query realtime ke RouterOS).
 export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
-  const userId = session.user.id
+  const tenantId = session.user.tenantId
   const routerName = request.nextUrl.searchParams.get("router")
 
   // Resolve routerId untuk filter reseller
   const routerRow = routerName
-    ? await prisma.router.findFirst({ where: { userId, name: routerName }, select: { id: true } })
+    ? await prisma.router.findFirst({ where: { tenantId, name: routerName }, select: { id: true } })
     : null
   const routerId = routerRow?.id ?? null
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const start12mo = new Date(Date.UTC(witaNow.getUTCFullYear(), witaNow.getUTCMonth() - 11, 1) - WITA_OFFSET_MS)
 
   const batchWhere = (gte: Date, lte?: Date) => ({
-    userId,
+    tenantId,
     source: { startsWith: "mikhmon_import" } as const,
     ...(routerName ? { routerName } : {}),
     createdAt: { gte, ...(lte ? { lte } : {}) },
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
   const resellerIds = topResellerRows.map((r) => r.resellerId).filter((x): x is string => !!x)
   const resellers = resellerIds.length
     ? await prisma.reseller.findMany({
-        where: { id: { in: resellerIds }, userId, ...(routerId ? { routerId } : {}) },
+        where: { id: { in: resellerIds }, tenantId, ...(routerId ? { routerId } : {}) },
         select: { id: true, name: true },
       })
     : []
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
             LAG("txBytes") OVER (PARTITION BY "interfaceName" ORDER BY "takenAt") AS prev_tx,
             LAG("rxBytes") OVER (PARTITION BY "interfaceName" ORDER BY "takenAt") AS prev_rx
           FROM "TrafficSnapshot"
-          WHERE "userId" = ${userId} AND "routerName" = ${routerName}
+          WHERE "tenantId" = ${tenantId} AND "routerName" = ${routerName}
             AND "takenAt" >= ${start12mo}
         ), deltas AS (
           SELECT "takenAt",
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
             LAG("txBytes") OVER (PARTITION BY "interfaceName" ORDER BY "takenAt") AS prev_tx,
             LAG("rxBytes") OVER (PARTITION BY "interfaceName" ORDER BY "takenAt") AS prev_rx
           FROM "TrafficSnapshot"
-          WHERE "userId" = ${userId} AND "routerName" = ${routerName}
+          WHERE "tenantId" = ${tenantId} AND "routerName" = ${routerName}
             AND "takenAt" >= ${startToday}
         ), deltas AS (
           SELECT "takenAt",
