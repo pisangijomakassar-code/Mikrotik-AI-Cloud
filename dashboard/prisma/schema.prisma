@@ -46,6 +46,13 @@ enum TenantStatus {
   CHURNED
 }
 
+model FeatureFlag {
+  key         String   @id             // e.g. "multi_router", "reseller_module"
+  description String   @default("")
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
 model Tenant {
   id          String       @id @default(cuid())
   name        String       // Display name, mis. "bukakaNet"
