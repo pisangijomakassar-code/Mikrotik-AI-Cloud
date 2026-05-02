@@ -22,6 +22,7 @@ docker-compose.override.yml
 # Operational scripts with hardcoded credentials (refactor to env later)
 scripts/vps_*.py
 scripts/backfill_tenant.py
+scripts/e2e_tenant_isolation.py
 
 # Local DB backups
 backups/
