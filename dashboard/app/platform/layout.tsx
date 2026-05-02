@@ -6,8 +6,9 @@ import { Sidebar } from "@/components/sidebar"
 import { TopNavBar } from "@/components/top-navbar"
 import { SidebarProvider } from "@/components/sidebar-context"
 import { useAuth } from "@/hooks/use-auth"
+import { navGroupsPlatform } from "@/components/sidebar/nav-config-platform"
 
-export default function DashboardLayout({
+export default function PlatformLayout({
   children,
 }: {
   children: React.ReactNode
@@ -21,10 +22,9 @@ export default function DashboardLayout({
       router.push("/login")
       return
     }
-    // Strict separation: SUPER_ADMIN tidak boleh akses dashboard tenant.
-    // Redirect ke platform console — UI mereka sendiri.
-    if (user?.role === "SUPER_ADMIN") {
-      router.push("/platform/dashboard")
+    // Strict separation: hanya SUPER_ADMIN boleh akses /platform/*
+    if (user?.role !== "SUPER_ADMIN") {
+      router.push("/dashboard")
     }
   }, [isLoading, isAuthenticated, user?.role, router])
 
@@ -39,19 +39,24 @@ export default function DashboardLayout({
     )
   }
 
-  if (!isAuthenticated || user?.role === "SUPER_ADMIN") {
+  if (!isAuthenticated || user?.role !== "SUPER_ADMIN") {
     return null
   }
 
   return (
     <SidebarProvider>
-    <div className="min-h-screen bg-background text-foreground">
-      <Sidebar />
-      <TopNavBar />
-      <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">
-        {children}
-      </main>
-    </div>
+      <div className="min-h-screen bg-background text-foreground">
+        <Sidebar
+          config={navGroupsPlatform}
+          brandName="Platform Console"
+          brandSubtitle="SaaS Operations"
+          showActiveRouter={false}
+          showPlanCard={false}
+          storageKey="sidebar-platform-groups"
+        />
+        <TopNavBar />
+        <main className="lg:ml-64 p-4 lg:p-8 min-h-screen">{children}</main>
+      </div>
     </SidebarProvider>
   )
 }

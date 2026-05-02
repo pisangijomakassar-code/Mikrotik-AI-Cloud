@@ -8,9 +8,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 
+// Multi-tenant: redirect berdasarkan role.
+// SUPER_ADMIN → /platform/dashboard (SaaS console).
+// ADMIN/USER → /dashboard (tenant operations).
+function landingPathForRole(role: string | undefined): string {
+  return role === "SUPER_ADMIN" ? "/platform/dashboard" : "/dashboard"
+}
+
 export default function LoginPage() {
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -18,9 +25,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/dashboard")
+      router.replace(landingPathForRole(session?.user?.role))
     }
-  }, [status, router])
+  }, [status, session?.user?.role, router])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,6 +45,8 @@ export default function LoginPage() {
       if (result?.error) {
         toast.error("Invalid email or password")
       } else {
+        // Tunggu session update lewat useEffect — redirect otomatis berdasarkan role.
+        // Fallback: kalau session belum sync, push ke /dashboard (tenant default).
         router.push("/dashboard")
       }
     } catch {

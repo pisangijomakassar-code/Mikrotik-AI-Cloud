@@ -6,43 +6,63 @@ import { Brain, X } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/components/sidebar-context"
-import { navGroups } from "@/components/sidebar/nav-config"
+import { navGroups as defaultNavGroups, type NavGroup } from "@/components/sidebar/nav-config"
 import { CollapsibleGroup } from "@/components/sidebar/collapsible-group"
 import { PlanCard } from "@/components/sidebar/plan-card"
 import { ActiveRouterCard } from "@/components/sidebar/active-router-card"
 
-const STORAGE_KEY = "sidebar-groups"
+interface SidebarProps {
+  /** Navigation config — defaults to admin tenant navGroups. Pass `navGroupsPlatform` for SUPER_ADMIN. */
+  config?: NavGroup[]
+  /** Display name di header sidebar. Default "MikroTik AI". */
+  brandName?: string
+  /** Subtitle kecil di bawah brand name. Default "AI-Driven Network". */
+  brandSubtitle?: string
+  /** Tampilkan ActiveRouterCard (selector router) — admin tenant only. Default true. */
+  showActiveRouter?: boolean
+  /** Tampilkan PlanCard di bawah — admin tenant only. Default true. */
+  showPlanCard?: boolean
+  /** localStorage key untuk persist open state. Default "sidebar-groups". */
+  storageKey?: string
+}
 
-function loadOpenState(): Record<string, boolean> {
+function loadOpenState(key: string): Record<string, boolean> {
   if (typeof window === "undefined") return {}
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : {}
   } catch {
     return {}
   }
 }
 
-function saveOpenState(state: Record<string, boolean>) {
+function saveOpenState(key: string, state: Record<string, boolean>) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(key, JSON.stringify(state))
   } catch {}
 }
 
-export function Sidebar() {
+export function Sidebar({
+  config = defaultNavGroups,
+  brandName = "MikroTik AI",
+  brandSubtitle = "AI-Driven Network",
+  showActiveRouter = true,
+  showPlanCard = true,
+  storageKey = "sidebar-groups",
+}: SidebarProps = {}) {
   const pathname = usePathname()
   const { user, isAdmin } = useAuth()
   const { isOpen, close } = useSidebar()
 
   const visibleGroups = useMemo(
-    () => navGroups.filter((g) => !g.adminOnly || isAdmin),
-    [isAdmin]
+    () => config.filter((g) => !g.adminOnly || isAdmin),
+    [config, isAdmin]
   )
 
   const [openState, setOpenState] = useState<Record<string, boolean>>(() => {
-    const saved = loadOpenState()
+    const saved = loadOpenState(storageKey)
     const initial: Record<string, boolean> = {}
-    for (const group of navGroups) {
+    for (const group of config) {
       if (group.defaultOpen) {
         initial[group.label] = true
         continue
@@ -62,7 +82,7 @@ export function Sidebar() {
     setOpenState((prev) => {
       let changed = false
       const next = { ...prev }
-      for (const group of navGroups) {
+      for (const group of config) {
         if (group.defaultOpen) continue
         const hasActiveChild = group.items.some(
           (item) =>
@@ -74,20 +94,20 @@ export function Sidebar() {
         }
       }
       if (changed) {
-        saveOpenState(next)
+        saveOpenState(storageKey, next)
         return next
       }
       return prev
     })
-  }, [pathname])
+  }, [pathname, config, storageKey])
 
   const toggleGroup = useCallback((label: string) => {
     setOpenState((prev) => {
       const next = { ...prev, [label]: !prev[label] }
-      saveOpenState(next)
+      saveOpenState(storageKey, next)
       return next
     })
-  }, [])
+  }, [storageKey])
 
   return (
     <>
@@ -116,17 +136,17 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-br from-cyan-400 to-cyan-600 bg-clip-text text-transparent font-headline">
-              MikroTik AI
+              {brandName}
             </h1>
             <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-medium">
-              AI-Driven Network
+              {brandSubtitle}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Active Router Selector — global state, persists ke localStorage */}
-      <ActiveRouterCard />
+      {/* Active Router Selector — admin tenant only (super admin tidak punya konteks router) */}
+      {showActiveRouter && <ActiveRouterCard />}
 
       {/* Navigation */}
       <nav className="flex-1 mt-2 overflow-y-auto font-headline text-sm tracking-tight">
@@ -147,8 +167,8 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Plan Card */}
-      <PlanCard />
+      {/* Plan Card — admin tenant only */}
+      {showPlanCard && <PlanCard />}
     </aside>
     </>
   )
