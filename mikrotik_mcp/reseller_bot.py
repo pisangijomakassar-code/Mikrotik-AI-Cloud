@@ -259,7 +259,7 @@ class ResellerBot:
 
         # RESELLER flow
         try:
-            reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+            reseller, err = self._check_reseller(telegram_id)
         except Exception as exc:
             logger.error("DB error in /start: %s", exc)
             await update.message.reply_text("Terjadi kesalahan. Coba lagi nanti.")
@@ -267,7 +267,7 @@ class ResellerBot:
 
         if not reseller:
             await update.message.reply_text(
-                self.t("bot_text_not_registered") + "\n\nKetik `/daftar <nama> [phone]` untuk register.",
+                err or self.t("bot_text_not_registered"),
                 parse_mode="Markdown",
             )
             return
@@ -433,12 +433,55 @@ class ResellerBot:
             except Exception:
                 pass
 
+    # ── Reseller status guard ─────────────────────────────────
+
+    def _check_reseller(self, telegram_id: str) -> tuple[dict | None, str | None]:
+        """Returns (reseller, error_msg). Reseller is dict kalau ACTIVE, else None.
+        error_msg adalah pesan UX yg jelas untuk status non-ACTIVE atau belum daftar.
+        """
+        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        if reseller:
+            return reseller, None
+
+        # Cek status non-ACTIVE
+        status_row = self.vdb.get_reseller_status_by_telegram(telegram_id)
+        if not status_row:
+            return None, (
+                "👋 Anda belum terdaftar sebagai reseller.\n\n"
+                "Untuk daftar: ketik\n"
+                "`/daftar Nama_Anda [no_hp]`\n\n"
+                "Contoh: `/daftar Budi 081234567890`"
+            )
+
+        status = status_row.get("status", "").upper()
+        name = status_row.get("name", "")
+        if status == "PENDING":
+            return None, (
+                f"⏳ *Pendaftaran sedang menunggu approval*\n\n"
+                f"Nama: {name}\n"
+                f"Owner akan approve secepatnya. Silakan tunggu notifikasi dari bot ini."
+            )
+        if status in ("INACTIVE", "SUSPENDED"):
+            return None, (
+                f"⛔ Akun reseller Anda *{status}*.\n\n"
+                f"Hubungi owner untuk reaktivasi."
+            )
+        return None, "Status akun tidak dikenal. Hubungi owner."
+
+    async def _send_status_error(self, query_or_msg, error_msg: str) -> None:
+        """Helper: kirim pesan error dgn back button, support query (callback) atau message (cmd)."""
+        kb = self._back_button()
+        if hasattr(query_or_msg, "edit_message_text"):
+            await query_or_msg.edit_message_text(error_msg, parse_mode="Markdown", reply_markup=kb)
+        else:
+            await query_or_msg.reply_text(error_msg, parse_mode="Markdown")
+
     # ── Menu ──────────────────────────────────────────────────
 
     async def _show_menu(self, query, telegram_id: str) -> None:
-        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        reseller, err = self._check_reseller(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            await self._send_status_error(query, err or "Tidak terdaftar")
             return
         balance = reseller.get("balance", 0)
         name = reseller.get("name", "Reseller")
@@ -450,16 +493,24 @@ class ResellerBot:
     # ── Saldo ─────────────────────────────────────────────────
 
     async def _show_saldo(self, query, telegram_id: str) -> None:
-        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        reseller, err = self._check_reseller(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            await self._send_status_error(query, err or "Tidak terdaftar")
             return
         balance = reseller.get("balance", 0)
         name = reseller.get("name", "Reseller")
+        # Tambah tombol Top Up kalau saldo rendah/kosong
+        kb_buttons = []
+        if balance < 5000:
+            kb_buttons.append([InlineKeyboardButton("💳 Top Up Saldo", callback_data="deposit")])
+            note = "\n\n💡 Saldo rendah — top up dulu untuk mulai belanja voucher."
+        else:
+            note = ""
+        kb_buttons.append([InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")])
         await query.edit_message_text(
             f"💰 Saldo {name}\n\n"
-            f"Saldo saat ini: {format_rp(balance)}",
-            reply_markup=self._back_button(),
+            f"Saldo saat ini: {format_rp(balance)}{note}",
+            reply_markup=InlineKeyboardMarkup(kb_buttons),
         )
 
     # ── Pricing helper ────────────────────────────────────────
@@ -499,9 +550,25 @@ class ResellerBot:
     # ── Buy: voucher type list ───────────────────────────────
 
     async def _show_profiles(self, query, telegram_id: str) -> None:
-        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        reseller, err = self._check_reseller(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            await self._send_status_error(query, err or "Tidak terdaftar")
+            return
+
+        # Cek saldo dulu — kalau 0/sangat rendah, langsung tawarkan top up
+        balance = int(reseller.get("balance") or 0)
+        if balance == 0:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("💳 Top Up Saldo", callback_data="deposit")],
+                [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")],
+            ])
+            await query.edit_message_text(
+                "💸 *Saldo Anda Rp 0*\n\n"
+                "Untuk beli voucher, top up saldo dulu via menu di bawah.\n"
+                "Setelah owner approve, saldo otomatis bertambah dan bisa langsung belanja.",
+                parse_mode="Markdown",
+                reply_markup=kb,
+            )
             return
 
         owner_user_id = reseller["userId"]  # internal User.id (FK target)
@@ -511,7 +578,10 @@ class ResellerBot:
         types = self.vdb.list_voucher_types_for_reseller(owner_user_id, reseller_groups)
         if not types:
             await query.edit_message_text(
-                "Belum ada jenis voucher yang tersedia untuk Anda.\nHubungi admin.",
+                "📭 *Belum ada jenis voucher tersedia*\n\n"
+                "Owner belum mengonfigurasi jenis voucher untuk grup Anda.\n"
+                "Hubungi owner agar membuat *VoucherType* di dashboard.",
+                parse_mode="Markdown",
                 reply_markup=self._back_button(),
             )
             return
@@ -534,9 +604,9 @@ class ResellerBot:
 
     async def _show_buy_qty(self, query, telegram_id: str, voucher_type_id: str) -> None:
         """Tampilkan pilihan quantity (1, 5, 10, 25, 50, custom)."""
-        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        reseller, err = self._check_reseller(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            await self._send_status_error(query, err or "Tidak terdaftar")
             return
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
         if not vt or vt.get("userId") != reseller["userId"]:
@@ -546,6 +616,26 @@ class ResellerBot:
         disc = int(reseller.get("discount") or 0)
         harga_jual = self._calc_reseller_price(vt, disc)
         balance = int(reseller.get("balance") or 0)
+
+        # Saldo gak cukup utk 1 voucher pun → arahkan ke top up
+        if harga_jual > 0 and balance < harga_jual:
+            shortage = harga_jual - balance
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("💳 Top Up Sekarang", callback_data="deposit")],
+                [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu")],
+            ])
+            await query.edit_message_text(
+                f"💸 *Saldo tidak cukup*\n\n"
+                f"Voucher: {vt['namaVoucher']}\n"
+                f"Harga: {format_rp(harga_jual)}\n"
+                f"Saldo Anda: {format_rp(balance)}\n"
+                f"Kurang: *{format_rp(shortage)}*\n\n"
+                f"Top up dulu untuk lanjut belanja.",
+                parse_mode="Markdown",
+                reply_markup=kb,
+            )
+            return
+
         max_qty = balance // harga_jual if harga_jual > 0 else 100
         max_qty = min(max_qty, 100)
 
@@ -570,9 +660,9 @@ class ResellerBot:
         )
 
     async def _confirm_buy(self, query, telegram_id: str, voucher_type_id: str, qty: int = 1) -> None:
-        reseller = self.vdb.get_reseller_by_telegram(telegram_id)
+        reseller, err = self._check_reseller(telegram_id)
         if not reseller:
-            await query.edit_message_text("Anda belum terdaftar. Hubungi admin.")
+            await self._send_status_error(query, err or "Tidak terdaftar")
             return
 
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)

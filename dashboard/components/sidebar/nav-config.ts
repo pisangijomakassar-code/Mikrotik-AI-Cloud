@@ -23,7 +23,6 @@ import {
   History,
   Ticket,
   Zap,
-  Webhook,
   MessageSquareText,
   Printer,
 } from "lucide-react"
@@ -77,7 +76,6 @@ export const navGroups: NavGroup[] = [
       { label: "Setting Voucher (Bot)", href: "/settings/vouchers", icon: Ticket },
       { label: "Voucher History", href: "/resellers/vouchers", icon: Receipt },
       { label: "Reseller Bot", href: "/resellers/bot", icon: BotMessageSquare },
-      { label: "Webhook Config", href: "/settings/webhook", icon: Webhook },
       { label: "Bot Text", href: "/settings/bot-text", icon: MessageSquareText },
       { label: "Laporan", href: "/reports", icon: BarChart3 },
     ],

@@ -197,7 +197,8 @@ class VoucherDB:
     # ── Reseller lookups ──
 
     def get_reseller_by_telegram(self, telegram_id: str) -> dict | None:
-        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup, routerId, routerName."""
+        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup, routerId, routerName.
+        ONLY returns ACTIVE resellers — pakai get_reseller_status_by_telegram() utk cek status PENDING/INACTIVE."""
         if not self._pool:
             return None
 
@@ -213,6 +214,29 @@ class VoucherDB:
                 JOIN "User" u ON u."id" = r."userId"
                 LEFT JOIN "Router" ro ON ro."id" = r."routerId"
                 WHERE r."telegramId" = %s AND r."status" = 'ACTIVE'
+                """,
+                (telegram_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
+    def get_reseller_status_by_telegram(self, telegram_id: str) -> dict | None:
+        """Lookup reseller by Telegram ID untuk semua status (PENDING/ACTIVE/INACTIVE/SUSPENDED).
+        Returns minimal info: id, name, status, createdAt. Dipakai bot untuk pesan UX
+        yg membedakan 'belum daftar' vs 'menunggu approval' vs 'di-suspend'."""
+        if not self._pool:
+            return None
+        with self._conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                """
+                SELECT r."id", r."name", r."status", r."createdAt",
+                       u."telegramId" as "ownerTelegramId"
+                FROM "Reseller" r
+                JOIN "User" u ON u."id" = r."userId"
+                WHERE r."telegramId" = %s
+                ORDER BY r."createdAt" DESC
+                LIMIT 1
                 """,
                 (telegram_id,),
             )
