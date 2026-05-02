@@ -8,8 +8,20 @@ export async function GET() {
   }
 
   const userId = session.user.id as string
+  const tenantId = (session.user as { tenantId?: string }).tenantId
+
+  // SUPER_ADMIN has no tenant — return defaults immediately
+  if (session.user.role === "SUPER_ADMIN") {
+    return Response.json({
+      subscription: { plan: "FREE", status: "ACTIVE", tokenLimit: 0, tokensUsed: 0, billingCycleStart: new Date(), billingCycleEnd: null },
+      usage: { totalIn: 0, totalOut: 0, totalRequests: 0 },
+      dailyUsage: [],
+      invoices: [],
+    })
+  }
 
   // Get subscription (or return defaults for FREE plan)
+  // Subscription is tenant-scoped — use tenantId, not userId
   const subscription = await prisma.$queryRawUnsafe<
     Array<{
       id: string
@@ -22,8 +34,8 @@ export async function GET() {
     }>
   >(
     `SELECT id, plan, status, "tokenLimit", "tokensUsed", "billingCycleStart", "billingCycleEnd"
-     FROM "Subscription" WHERE "userId" = $1 LIMIT 1`,
-    userId
+     FROM "Subscription" WHERE "tenantId" = $1 LIMIT 1`,
+    tenantId
   ).then((rows) => rows[0] ?? null)
     .catch(() => null)
 
@@ -62,8 +74,8 @@ export async function GET() {
     }>
   >(
     `SELECT id, number, status, amount, currency, "periodStart", "periodEnd", "tokensUsed", "paidAt", "createdAt"
-     FROM "Invoice" WHERE "userId" = $1 ORDER BY "createdAt" DESC LIMIT 12`,
-    userId
+     FROM "Invoice" WHERE "tenantId" = $1 ORDER BY "createdAt" DESC LIMIT 12`,
+    tenantId
   ).catch(() => [])
 
   // Daily usage breakdown (last 7 days)
