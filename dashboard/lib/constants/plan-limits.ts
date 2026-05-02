@@ -7,6 +7,7 @@ export interface PlanLimits {
   label: string
   color: string
   features: string[]
+  priceIdr: number // 0 = free
 }
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
@@ -16,6 +17,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     allowedTunnelPorts: ["api"],
     label: "Free",
     color: "text-slate-400",
+    priceIdr: 0,
     features: [
       "100 tokens/day",
       "1 MikroTik device",
@@ -30,6 +32,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     allowedTunnelPorts: ["api", "winbox", "ssh", "webfig", "api-ssl"],
     label: "Pro",
     color: "text-[#4cd7f6]",
+    priceIdr: 99000,
     features: [
       "1,000 tokens/day",
       "Up to 2 MikroTik devices",
@@ -44,6 +47,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
     allowedTunnelPorts: ["api", "winbox", "ssh", "webfig", "api-ssl"],
     label: "Premium",
     color: "text-[#4ae176]",
+    priceIdr: 199000,
     features: [
       "Unlimited tokens/day",
       "Up to 5 MikroTik devices",

@@ -1,9 +1,25 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { CreditCard, Zap, TrendingUp, FileText, Loader2, CheckCircle, Clock, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PLAN_LIMITS } from "@/lib/constants/plan-limits"
+
+declare global {
+  interface Window {
+    snap?: {
+      pay: (
+        token: string,
+        options: {
+          onSuccess?: (result: unknown) => void
+          onPending?: (result: unknown) => void
+          onError?: (result: unknown) => void
+          onClose?: () => void
+        }
+      ) => void
+    }
+  }
+}
 
 interface PlanData {
   subscription: {
@@ -39,9 +55,13 @@ interface PlanData {
   }>
 }
 
-
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency }).format(amount / 100)
+}
+
+function formatPrice(priceIdr: number) {
+  if (priceIdr === 0) return "Gratis"
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(priceIdr) + "/bln"
 }
 
 function formatDate(dateStr: string) {
@@ -69,14 +89,65 @@ function statusColor(status: string) {
 export default function PlanPage() {
   const [data, setData] = useState<PlanData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [snapReady, setSnapReady] = useState(false)
 
+  // Load Midtrans Snap.js once
   useEffect(() => {
+    const existing = document.getElementById("midtrans-snap")
+    if (existing) { setSnapReady(true); return }
+
+    const script = document.createElement("script")
+    script.id = "midtrans-snap"
+    script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ?? "https://app.sandbox.midtrans.com/snap/snap.js"
+    script.setAttribute("data-client-key", process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? "")
+    script.onload = () => setSnapReady(true)
+    document.head.appendChild(script)
+  }, [])
+
+  const fetchPlan = useCallback(() => {
     fetch("/api/plan")
       .then((res) => res.json())
       .then(setData)
       .catch(() => {})
       .finally(() => setIsLoading(false))
   }, [])
+
+  useEffect(() => { fetchPlan() }, [fetchPlan])
+
+  const handleUpgrade = async (plan: string) => {
+    if (!snapReady || !window.snap) {
+      alert("Payment gateway belum siap. Coba lagi sebentar.")
+      return
+    }
+    setCheckoutLoading(plan)
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error ?? "Gagal memulai pembayaran")
+        return
+      }
+      const { snapToken } = await res.json()
+      window.snap.pay(snapToken, {
+        onSuccess: () => {
+          // Refresh data setelah bayar — webhook mungkin belum sampai, tapi invoice PENDING sudah ada
+          fetchPlan()
+        },
+        onPending: () => { fetchPlan() },
+        onError: (result) => { console.error("Snap error:", result) },
+        onClose: () => { /* user tutup popup */ },
+      })
+    } catch {
+      alert("Koneksi ke payment gateway gagal")
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -97,8 +168,10 @@ export default function PlanPage() {
       : 0
   const totalTokens = usage.totalIn + usage.totalOut
 
-  // Find max daily usage for bar chart scaling
   const maxDaily = Math.max(...dailyUsage.map((d) => d.totalIn + d.totalOut), 1)
+
+  const PLAN_ORDER = ["FREE", "PRO", "PREMIUM"]
+  const currentPlanIdx = PLAN_ORDER.indexOf(subscription.plan)
 
   return (
     <div>
@@ -147,8 +220,14 @@ export default function PlanPage() {
             </div>
 
             {subscription.plan !== "PREMIUM" && (
-              <button className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-linear-to-r from-primary to-primary-container text-primary-foreground hover:brightness-110 transition-all">
-                Upgrade Plan
+              <button
+                onClick={() => handleUpgrade("PREMIUM")}
+                disabled={!!checkoutLoading}
+                className="w-full mt-6 py-2.5 rounded-lg text-xs font-bold bg-linear-to-r from-primary to-primary-container text-primary-foreground hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {checkoutLoading === "PREMIUM" ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Memuat...</>
+                ) : "Upgrade ke Premium"}
               </button>
             )}
           </div>
@@ -157,25 +236,43 @@ export default function PlanPage() {
           <div className="bg-surface-low rounded-2xl border border-border/20 p-6">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Available Plans</span>
             <div className="mt-4 space-y-3">
-              {Object.entries(PLAN_LIMITS).map(([key, plan]) => (
-                <div
-                  key={key}
-                  className={cn(
-                    "p-3 rounded-xl border transition-colors",
-                    key === subscription.plan
-                      ? "border-primary/30 bg-primary/5"
-                      : "border-border/20 hover:border-white/10"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-sm font-bold", plan.color)}>{plan.label}</span>
-                    {key === subscription.plan && (
-                      <span className="text-[10px] text-primary font-bold">CURRENT</span>
+              {Object.entries(PLAN_LIMITS).map(([key, plan]) => {
+                const planIdx = PLAN_ORDER.indexOf(key)
+                const isUpgrade = planIdx > currentPlanIdx
+                const isCurrent = key === subscription.plan
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "p-3 rounded-xl border transition-colors",
+                      isCurrent
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-border/20 hover:border-white/10"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={cn("text-sm font-bold", plan.color)}>{plan.label}</span>
+                      {isCurrent ? (
+                        <span className="text-[10px] text-primary font-bold">CURRENT</span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500">{formatPrice(plan.priceIdr)}</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">{plan.features[0]}</p>
+                    {isUpgrade && !isCurrent && (
+                      <button
+                        onClick={() => handleUpgrade(key)}
+                        disabled={!!checkoutLoading}
+                        className="mt-2 w-full py-1.5 rounded-lg text-[10px] font-bold border border-primary/30 text-primary hover:bg-primary/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                      >
+                        {checkoutLoading === key ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> Memuat...</>
+                        ) : `Pilih ${plan.label}`}
+                      </button>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">{plan.features[0]}</p>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
@@ -215,7 +312,6 @@ export default function PlanPage() {
               </div>
             </div>
 
-            {/* Progress bar */}
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={cn(
@@ -284,9 +380,9 @@ export default function PlanPage() {
                 <tbody className="divide-y divide-border/20">
                   {invoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-3 text-xs font-mono text-primary">{inv.number.slice(0, 12)}...</td>
+                      <td className="px-6 py-3 text-xs font-mono text-primary">{inv.number.slice(0, 16)}…</td>
                       <td className="px-6 py-3 text-xs text-slate-400">
-                        {formatDate(inv.periodStart)} - {formatDate(inv.periodEnd)}
+                        {formatDate(inv.periodStart)} – {formatDate(inv.periodEnd)}
                       </td>
                       <td className="px-6 py-3 text-xs text-slate-300 font-mono">{inv.tokensUsed.toLocaleString()}</td>
                       <td className="px-6 py-3 text-xs text-foreground font-bold">{formatCurrency(inv.amount, inv.currency)}</td>
