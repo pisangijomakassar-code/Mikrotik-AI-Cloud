@@ -18,3 +18,10 @@ credentials.md
 # Local tooling configs
 .claude/
 docker-compose.override.yml
+
+# Operational scripts with hardcoded credentials (refactor to env later)
+scripts/vps_*.py
+scripts/backfill_tenant.py
+
+# Local DB backups
+backups/
