@@ -4,9 +4,10 @@ import { prisma } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user) {
+  if (!session?.user?.tenantId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
+  const tenantId = session.user.tenantId
 
   const { searchParams } = request.nextUrl
   const from = searchParams.get("from")
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   // Resolve routerName -> routerId untuk filter Reseller (yang scope-nya routerId)
   const routerRow = routerFilter
     ? await prisma.router.findFirst({
-        where: { userId: session.user.id, name: routerFilter },
+        where: { tenantId, name: routerFilter },
         select: { id: true },
       })
     : null
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
   const [batches, transactions, resellers] = await Promise.all([
     prisma.voucherBatch.findMany({
       where: {
-        userId: session.user.id,
+        tenantId,
         ...(dateFilter ? { createdAt: dateFilter } : {}),
         ...(resellerIdFilter ? { resellerId: resellerIdFilter } : {}),
         ...(routerFilter ? { routerName: routerFilter } : {}),
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     prisma.saldoTransaction.findMany({
       where: {
         reseller: {
-          userId: session.user.id,
+          tenantId,
           ...(routerId ? { routerId } : {}),
         },
         ...(dateFilter ? { createdAt: dateFilter } : {}),
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
     }),
     prisma.reseller.findMany({
       where: {
-        userId: session.user.id,
+        tenantId,
         ...(routerId ? { routerId } : {}),
       },
       select: { id: true, name: true, balance: true, status: true },

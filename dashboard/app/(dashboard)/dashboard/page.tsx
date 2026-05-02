@@ -198,7 +198,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <QuickAction href="/vouchers" icon={<Zap className="h-4 w-4 text-orange-400" />} title="Generate Voucher" subtitle="Bikin batch voucher baru" />
           <QuickAction href="/resellers" icon={<TrendingUp className="h-4 w-4 text-blue-400" />} title="Top Up Reseller" subtitle="Isi saldo reseller" />
-          <QuickAction href="/vouchers/print" icon={<Printer className="h-4 w-4 text-purple-400" />} title="Print Voucher" subtitle="Cetak batch terakhir" />
+          <QuickAction href="/vouchers" icon={<Printer className="h-4 w-4 text-purple-400" />} title="Print Voucher" subtitle="Cetak batch terakhir" />
           <QuickAction href="/reports" icon={<BarChart3 className="h-4 w-4 text-tertiary" />} title="Lihat Laporan" subtitle="Detail penjualan" />
         </div>
       </div>

@@ -18,13 +18,13 @@ export async function GET() {
       botToken: true,
       role: true,
       status: true,
+      tenantId: true,
       createdAt: true,
       lastActiveAt: true,
       validUntil: true,
       isLocked: true,
       notifAsOwner: true,
       notifAsReseller: true,
-      _count: { select: { routers: true } },
     },
   })
 
@@ -32,7 +32,15 @@ export async function GET() {
     return Response.json({ error: "User not found" }, { status: 404 })
   }
 
-  return Response.json(user)
+  // Router count per-tenant (Router sekarang owned by Tenant, bukan User)
+  const routerCount = user.tenantId
+    ? await prisma.router.count({ where: { tenantId: user.tenantId } })
+    : 0
+
+  return Response.json({
+    ...user,
+    _count: { routers: routerCount },
+  })
 }
 
 export async function PATCH(request: Request) {

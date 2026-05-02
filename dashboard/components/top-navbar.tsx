@@ -73,7 +73,7 @@ export function TopNavBar() {
               Profile
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => router.push("/plan")}
+              onClick={() => router.push("/settings/billing")}
               className="text-xs gap-2 cursor-pointer focus:bg-muted focus:text-primary"
             >
               <CreditCard className="h-3.5 w-3.5" />

@@ -21,7 +21,7 @@ export async function GET(
     const tunnel = await prisma.tunnel.findFirst({
       where: {
         routerId,
-        router: { userId: session.user.id },
+        router: { tenantId: session.user.tenantId ?? "__none__" },
       },
       include: {
         ports: true,
@@ -58,7 +58,7 @@ export async function DELETE(
     const tunnel = await prisma.tunnel.findFirst({
       where: {
         routerId,
-        router: { userId: session.user.id },
+        router: { tenantId: session.user.tenantId ?? "__none__" },
       },
     })
 

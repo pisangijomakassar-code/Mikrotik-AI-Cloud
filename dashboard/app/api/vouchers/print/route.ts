@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 
 // GET /api/vouchers/print
 // Returns voucher batches matching the filter, plus the router branding meta
@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
   const routerName = sp.get("routerName") ?? undefined
 
   type BatchWhere = {
-    userId: string
     resellerId?: string | null
     profile?: string
     routerName?: string
@@ -35,7 +34,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const where: BatchWhere = { userId: session.user.id }
+    const db = await getTenantDb()
+    const where: BatchWhere = {}
 
     if (resellerId === "__none__") {
       where.resellerId = null
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       if (range.gte || range.lte) where.createdAt = range
     }
 
-    const batches = await prisma.voucherBatch.findMany({
+    const batches = await db.voucherBatch.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: mode === "latest" ? 1 : 200,
@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
       routerName ?? batches[0]?.routerName ?? undefined
 
     const router = targetRouterName
-      ? await prisma.router.findFirst({
-          where: { userId: session.user.id, name: targetRouterName },
+      ? await db.router.findFirst({
+          where: { name: targetRouterName },
           select: {
             name: true,
             hotspotName: true,
@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
             dnsHotspot: true,
           },
         })
-      : await prisma.router.findFirst({
-          where: { userId: session.user.id, isDefault: true },
+      : await db.router.findFirst({
+          where: { isDefault: true },
           select: {
             name: true,
             hotspotName: true,

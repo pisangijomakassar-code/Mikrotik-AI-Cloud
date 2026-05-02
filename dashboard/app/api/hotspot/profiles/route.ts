@@ -55,14 +55,16 @@ export async function GET(request: NextRequest) {
     const agentData = await res.json() as { profiles?: Array<{ name: string; rateLimit?: string; sharedUsers?: number; sessionTimeout?: string }> }
     const profiles = agentData.profiles ?? []
 
-    // Merge price from VoucherProfileSetting per profile name
-    const settings = await prisma.voucherProfileSetting.findMany({
-      where: {
-        userId: session.user.id,
-        profileName: { in: profiles.map((p) => p.name) },
-      },
-      select: { profileName: true, price: true },
-    })
+    // Merge price from VoucherProfileSetting per profile name (tenant-scoped)
+    const settings = session.user.tenantId
+      ? await prisma.voucherProfileSetting.findMany({
+          where: {
+            tenantId: session.user.tenantId,
+            profileName: { in: profiles.map((p) => p.name) },
+          },
+          select: { profileName: true, price: true },
+        })
+      : []
     const priceMap = Object.fromEntries(settings.map((s) => [s.profileName, s.price]))
 
     const enriched = profiles.map((p) => ({

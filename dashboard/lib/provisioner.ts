@@ -17,7 +17,7 @@ export async function syncAndRestart() {
   const configPath = path.join(process.cwd(), "..", "config", "config.json")
   const config = JSON.parse(fs.readFileSync(configPath, "utf8"))
 
-  config.channels.telegram.allowFrom = eligibleUsers.map((u: { telegramId: string }) => u.telegramId)
+  config.channels.telegram.allowFrom = eligibleUsers.map((u: { telegramId: string | null }) => u.telegramId).filter(Boolean)
 
   const outPath = path.join(
     process.cwd(),

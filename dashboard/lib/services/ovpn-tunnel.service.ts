@@ -125,7 +125,7 @@ async function allocateOvpnAddress(
 ): Promise<{ subnetOctet: number; routerOctet: number }> {
   const router = await prisma.router.findUnique({
     where: { id: routerId },
-    select: { userId: true },
+    select: { tenantId: true },
   })
   if (!router) throw new Error(`Router ${routerId} not found`)
 
@@ -134,17 +134,17 @@ async function allocateOvpnAddress(
     select: {
       subnetOctet: true,
       routerOctet: true,
-      router: { select: { userId: true } },
+      router: { select: { tenantId: true } },
     },
   })
 
-  // Map userId → set of subnetOctets they already own in the OVPN space
-  const userSubnets = new Map<string, Set<number>>()
+  // Map tenantId → set of subnetOctets they already own in the OVPN space
+  const tenantSubnets = new Map<string, Set<number>>()
   for (const t of allOvpnTunnels) {
     if (t.subnetOctet === null) continue
-    const uid = t.router.userId
-    if (!userSubnets.has(uid)) userSubnets.set(uid, new Set())
-    userSubnets.get(uid)!.add(t.subnetOctet)
+    const tid = t.router.tenantId
+    if (!tenantSubnets.has(tid)) tenantSubnets.set(tid, new Set())
+    tenantSubnets.get(tid)!.add(t.subnetOctet)
   }
 
   // All globally used OVPN subnet octets
@@ -152,7 +152,7 @@ async function allocateOvpnAddress(
     allOvpnTunnels.map((t) => t.subnetOctet).filter((x): x is number => x !== null),
   )
 
-  const mySubnets = userSubnets.get(router.userId) ?? new Set<number>()
+  const mySubnets = tenantSubnets.get(router.tenantId) ?? new Set<number>()
 
   // Build map: subnetOctet → set of used routerOctets
   const subnetRouterOctets = new Map<number, Set<number>>()

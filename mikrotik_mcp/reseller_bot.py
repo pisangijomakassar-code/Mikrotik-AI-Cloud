@@ -130,8 +130,10 @@ def _get_routers_with_bot_token() -> list[dict]:
         cur.execute(
             '''SELECT r."id" AS router_id, r."name" AS router_name,
                       r."botToken" AS bot_token_enc, r."botUsername" AS bot_username,
-                      u."telegramId" AS owner_telegram_id, u."id" AS owner_user_id
-               FROM "Router" r JOIN "User" u ON u."id" = r."userId"
+                      u."telegramId" AS owner_telegram_id, u."id" AS owner_user_id,
+                      r."tenantId" AS tenant_id
+               FROM "Router" r
+               JOIN "User" u ON u."tenantId" = r."tenantId" AND u."role" = 'ADMIN'
                WHERE r."botToken" IS NOT NULL AND r."botToken" != '' '''
         )
         rows = [dict(r) for r in cur.fetchall()]
@@ -571,11 +573,11 @@ class ResellerBot:
             )
             return
 
-        owner_user_id = reseller["userId"]  # internal User.id (FK target)
+        tenant_id = reseller["tenantId"]  # tenant ownership (replaces owner_user_id)
         reseller_groups = reseller.get("voucherGroup") or "default"
         reseller_disc = int(reseller.get("discount") or 0)
 
-        types = self.vdb.list_voucher_types_for_reseller(owner_user_id, reseller_groups)
+        types = self.vdb.list_voucher_types_for_reseller(tenant_id, reseller_groups)
         if not types:
             await query.edit_message_text(
                 "📭 *Belum ada jenis voucher tersedia*\n\n"
@@ -609,7 +611,7 @@ class ResellerBot:
             await self._send_status_error(query, err or "Tidak terdaftar")
             return
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
-        if not vt or vt.get("userId") != reseller["userId"]:
+        if not vt or vt.get("tenantId") != reseller["tenantId"]:
             await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
             return
 
@@ -666,7 +668,7 @@ class ResellerBot:
             return
 
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
-        if not vt or vt.get("userId") != reseller["userId"]:
+        if not vt or vt.get("tenantId") != reseller["tenantId"]:
             await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
             return
 
@@ -709,7 +711,7 @@ class ResellerBot:
             return
 
         vt = self.vdb.get_voucher_type_by_id(voucher_type_id)
-        if not vt or vt.get("userId") != reseller["userId"]:
+        if not vt or vt.get("tenantId") != reseller["tenantId"]:
             await query.edit_message_text("Jenis voucher tidak ditemukan.", reply_markup=self._back_button())
             return
 
@@ -1242,14 +1244,14 @@ class ResellerBot:
         if self._is_owner(telegram_id):
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
-                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+                cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (telegram_id,))
                 row = cur.fetchone()
-                if not row:
-                    await update.message.reply_text("⚠️ User tidak ditemukan."); return
-                uid = row[0]
+                if not row or not row[0]:
+                    await update.message.reply_text("⚠️ User/tenant tidak ditemukan."); return
+                tid = row[0]
                 cur.execute(
-                    'SELECT name, balance, status FROM "Reseller" WHERE "userId" = %s ORDER BY balance DESC',
-                    (uid,),
+                    'SELECT name, balance, status FROM "Reseller" WHERE "tenantId" = %s ORDER BY balance DESC',
+                    (tid,),
                 )
                 resellers = cur.fetchall()
             if not resellers:
@@ -1341,17 +1343,17 @@ class ResellerBot:
         try:
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
-                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (self.owner_telegram_id,))
+                cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (self.owner_telegram_id,))
                 row = cur.fetchone()
-                if not row:
-                    await update.message.reply_text("⚠️ Owner tidak ditemukan di sistem.")
+                if not row or not row[0]:
+                    await update.message.reply_text("⚠️ Owner/tenant tidak ditemukan di sistem.")
                     return
-                user_internal_id = row[0]
+                tenant_id = row[0]
                 router_id = self.router_id
                 if not router_id:
                     cur.execute(
-                        'SELECT id FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC LIMIT 1',
-                        (user_internal_id,),
+                        'SELECT id FROM "Router" WHERE "tenantId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC LIMIT 1',
+                        (tenant_id,),
                     )
                     rrow = cur.fetchone()
                     if not rrow:
@@ -1381,10 +1383,10 @@ class ResellerBot:
                 cur.execute(
                     """INSERT INTO "Reseller"
                        (id, name, phone, "telegramId", balance, discount, "voucherGroup",
-                        uplink, status, "createdAt", "updatedAt", "userId", "routerId")
+                        uplink, status, "createdAt", "updatedAt", "tenantId", "routerId")
                        VALUES (%s, %s, %s, %s, 0, 0, 'default', '', 'PENDING',
                                NOW(), NOW(), %s, %s)""",
-                    (cuid, name, phone, telegram_id, user_internal_id, router_id),
+                    (cuid, name, phone, telegram_id, tenant_id, router_id),
                 )
                 reseller_id = cuid
         except Exception as exc:
@@ -1545,10 +1547,17 @@ class ResellerBot:
         try:
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
+                # TokenUsage skema multi-tenant: butuh tenantId. Lookup dari User.
+                cur.execute('SELECT "tenantId" FROM "User" WHERE id = %s', (user_internal_id,))
+                row = cur.fetchone()
+                if not row or not row[0]:
+                    logger.warning("Token usage insert skipped: user %s has no tenant", user_internal_id)
+                    return
+                tenant_id = row[0]
                 cur.execute(
-                    'INSERT INTO "TokenUsage" (id, "userId", "tokensIn", "tokensOut", model, "sessionId", timestamp) '
-                    'VALUES (gen_random_uuid()::text, %s, %s, %s, %s, %s, NOW())',
-                    (user_internal_id, tokens_in, tokens_out, model, session_id),
+                    'INSERT INTO "TokenUsage" (id, "userId", "tenantId", "tokensIn", "tokensOut", model, "sessionId", timestamp) '
+                    'VALUES (gen_random_uuid()::text, %s, %s, %s, %s, %s, %s, NOW())',
+                    (user_internal_id, tenant_id, tokens_in, tokens_out, model, session_id),
                 )
         except Exception as exc:
             logger.warning("Token usage insert failed: %s", exc)
@@ -1693,14 +1702,14 @@ class ResellerBot:
     # ── Admin commands ───────────────────────────────────────
 
     def _list_owner_routers(self, telegram_id: str) -> list[str]:
-        """Return list of router names owned by this user (default first)."""
+        """Return list of router names in this owner's tenant (default first)."""
         with self.vdb._conn() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (telegram_id,))
             row = cur.fetchone()
-            if not row: return []
+            if not row or not row[0]: return []
             cur.execute(
-                'SELECT name FROM "Router" WHERE "userId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC',
+                'SELECT name FROM "Router" WHERE "tenantId" = %s ORDER BY "isDefault" DESC, "addedAt" ASC',
                 (row[0],),
             )
             return [r[0] for r in cur.fetchall()]
@@ -1821,31 +1830,31 @@ class ResellerBot:
 
             with self.vdb._conn() as conn:
                 cur = conn.cursor()
-                cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+                cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (telegram_id,))
                 row = cur.fetchone()
-                if not row:
-                    await msg.reply_text("⚠️ User tidak ditemukan."); return
-                uid = row[0]
+                if not row or not row[0]:
+                    await msg.reply_text("⚠️ User/tenant tidak ditemukan."); return
+                tid = row[0]
                 cur.execute(
                     """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
-                       FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
+                       FROM "VoucherBatch" WHERE "tenantId"=%s AND source LIKE 'mikhmon_import%%'
                          AND "createdAt" >= %s""",
-                    (uid, start_today),
+                    (tid, start_today),
                 )
                 t_b, t_v, t_r = cur.fetchone()
                 cur.execute(
                     """SELECT COUNT(*), COALESCE(SUM(count),0), COALESCE(SUM("totalCost"),0)
-                       FROM "VoucherBatch" WHERE "userId"=%s AND source LIKE 'mikhmon_import%%'
+                       FROM "VoucherBatch" WHERE "tenantId"=%s AND source LIKE 'mikhmon_import%%'
                          AND "createdAt" >= %s""",
-                    (uid, start_month),
+                    (tid, start_month),
                 )
                 m_b, m_v, m_r = cur.fetchone()
                 cur.execute(
                     """SELECT r.name, SUM(vb."totalCost") as rev, SUM(vb.count) as vc
                        FROM "VoucherBatch" vb JOIN "Reseller" r ON r.id = vb."resellerId"
-                       WHERE vb."userId"=%s AND vb."createdAt" >= %s
+                       WHERE vb."tenantId"=%s AND vb."createdAt" >= %s
                        GROUP BY r.name ORDER BY rev DESC LIMIT 5""",
-                    (uid, start_month),
+                    (tid, start_month),
                 )
                 top_resellers = cur.fetchall()
 
@@ -1895,14 +1904,14 @@ class ResellerBot:
 
         with self.vdb._conn() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (telegram_id,))
             row = cur.fetchone()
-            if not row:
-                await msg.reply_text("⚠️ User tidak ditemukan."); return
-            uid = row[0]
+            if not row or not row[0]:
+                await msg.reply_text("⚠️ User/tenant tidak ditemukan."); return
+            tid = row[0]
             cur.execute(
-                'SELECT name, "telegramId" FROM "Reseller" WHERE "userId" = %s AND "telegramId" != %s',
-                (uid, ""),
+                'SELECT name, "telegramId" FROM "Reseller" WHERE "tenantId" = %s AND "telegramId" != %s',
+                (tid, ""),
             )
             resellers = cur.fetchall()
 
@@ -1961,14 +1970,14 @@ class ResellerBot:
         """Show daftar reseller dengan inline button. Reusable dari /topup atau button shortcut."""
         with self.vdb._conn() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT id FROM "User" WHERE "telegramId" = %s', (telegram_id,))
+            cur.execute('SELECT "tenantId" FROM "User" WHERE "telegramId" = %s', (telegram_id,))
             row = cur.fetchone()
-            if not row:
-                await msg.reply_text("⚠️ User tidak ditemukan."); return
-            uid = row[0]
+            if not row or not row[0]:
+                await msg.reply_text("⚠️ User/tenant tidak ditemukan."); return
+            tid = row[0]
             cur.execute(
-                'SELECT id, name, balance FROM "Reseller" WHERE "userId" = %s ORDER BY name',
-                (uid,),
+                'SELECT id, name, balance FROM "Reseller" WHERE "tenantId" = %s ORDER BY name',
+                (tid,),
             )
             resellers = cur.fetchall()
         if not resellers:

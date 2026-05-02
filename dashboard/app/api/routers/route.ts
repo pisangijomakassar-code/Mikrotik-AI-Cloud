@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import { getRouters, createRouter } from "@/lib/services/router.service"
 import { createCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
 import { createSstpTunnel } from "@/lib/services/sstp-tunnel.service"
@@ -17,11 +18,8 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get("search") ?? undefined
 
-    // Non-admin users only see their own routers
-    const userId =
-      session.user.role === "ADMIN" ? undefined : session.user.id
-
-    const routers = await getRouters(userId, search)
+    // Multi-tenant: getRouters() lewat getTenantDb() — auto filter by current tenantId.
+    const routers = await getRouters(search)
     return Response.json(routers)
   } catch (error) {
     console.error("Failed to fetch routers:", error)
@@ -45,27 +43,25 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    if (!body.name || !body.host || !body.username || !body.password || !body.userId) {
+    if (!body.name || !body.host || !body.username || !body.password) {
       return Response.json(
-        { error: "Name, host, username, password, and userId are required" },
+        { error: "Name, host, username, and password are required" },
         { status: 400 }
       )
     }
 
-    // Enforce router limit based on target user's subscription plan
-    const targetSub = await prisma.$queryRawUnsafe<Array<{ plan: string }>>(
-      `SELECT plan FROM "Subscription" WHERE "userId" = $1 LIMIT 1`,
-      body.userId as string
-    ).then((rows) => rows[0] ?? { plan: "FREE" })
-
-    const planLimits = PLAN_LIMITS[targetSub.plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.FREE
-    const existingCount = await prisma.router.count({ where: { userId: body.userId as string } })
+    // Enforce router limit per-tenant (based on tenant's subscription plan)
+    const db = await getTenantDb()
+    const targetSub = await db.subscription.findFirst()
+    const plan = targetSub?.plan ?? "FREE"
+    const planLimits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.FREE
+    const existingCount = await db.router.count()
 
     if (existingCount >= planLimits.maxRouters) {
       return Response.json(
         {
           error: "router_limit_exceeded",
-          message: `Plan ${targetSub.plan} hanya mendukung maksimal ${planLimits.maxRouters} router. Saat ini: ${existingCount}.`,
+          message: `Plan ${plan} hanya mendukung maksimal ${planLimits.maxRouters} router. Saat ini: ${existingCount}.`,
           limit: planLimits.maxRouters,
           current: existingCount,
         },
@@ -143,15 +139,15 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        // Mark router as TUNNEL connection
-        await prisma.router.update({
+        // Mark router as TUNNEL connection (tenant-scoped via db)
+        await db.router.update({
           where: { id: router.id },
           data: { connectionMethod: "TUNNEL" },
         })
       } catch (tunnelError) {
         // Tunnel creation failed — clean up the router record to avoid orphans
         console.error("Tunnel provisioning failed, rolling back router:", tunnelError)
-        await prisma.router.delete({ where: { id: router.id } }).catch(() => {})
+        await db.router.delete({ where: { id: router.id } }).catch(() => {})
         throw tunnelError
       }
     }

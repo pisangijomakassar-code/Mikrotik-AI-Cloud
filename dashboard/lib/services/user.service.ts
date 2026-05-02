@@ -28,7 +28,7 @@ export async function getUsers(filter?: UserFilter) {
   return prisma.user.findMany({
     where,
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
     orderBy: { createdAt: "desc" },
   })
@@ -38,8 +38,7 @@ export async function getUser(id: string) {
   return prisma.user.findUnique({
     where: { id },
     include: {
-      routers: true,
-      _count: { select: { routers: true, activityLogs: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 }
@@ -60,7 +59,7 @@ export async function createUser(data: CreateUserInput) {
       status: data.status || "ACTIVE",
     },
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 
@@ -96,7 +95,7 @@ export async function updateUser(id: string, data: UpdateUserInput) {
     where: { id },
     data: updateData,
     include: {
-      _count: { select: { routers: true } },
+      _count: { select: { activityLogs: true } },
     },
   })
 
@@ -132,9 +131,12 @@ export async function getUserStats(userId?: string): Promise<DashboardStats> {
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
   if (userId) {
-    // User-scoped stats for non-admin
+    // User-scoped stats: ActivityLog masih per-user (audit), Router sekarang
+    // per-tenant — lookup tenantId dulu lalu count Router by tenantId.
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } })
+    const tenantId = u?.tenantId
     const [totalRouters, totalLogs, recentActivity] = await Promise.all([
-      prisma.router.count({ where: { userId } }),
+      tenantId ? prisma.router.count({ where: { tenantId } }) : Promise.resolve(0),
       prisma.activityLog.count({ where: { userId } }),
       prisma.activityLog.count({
         where: { userId, timestamp: { gte: oneDayAgo } },

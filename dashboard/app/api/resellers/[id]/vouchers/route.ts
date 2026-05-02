@@ -19,7 +19,7 @@ export async function GET(
   const { id } = await params
 
   try {
-    const data = await listVoucherBatches(session.user.id, { resellerId: id })
+    const data = await listVoucherBatches({ resellerId: id })
     return Response.json(data)
   } catch (error) {
     console.error("Failed to fetch voucher batches:", error)
@@ -55,7 +55,7 @@ export async function POST(
 
     // Step 1: Deduct saldo
     try {
-      await topDownSaldo(id, session.user.id, {
+      await topDownSaldo(id, {
         amount: totalCost,
         description: `Voucher purchase: ${body.count}x ${body.profile} @ Rp ${body.pricePerUnit.toLocaleString("id-ID")}`,
       })

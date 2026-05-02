@@ -27,8 +27,9 @@ enum ConnectionMethod {
 }
 
 enum UserRole {
-  ADMIN
-  USER
+  SUPER_ADMIN  // Platform owner, lihat lintas tenant; tenantId NULL
+  ADMIN        // Tenant admin/owner
+  USER         // Reserved untuk operator/staff di future
 }
 
 enum UserStatus {
@@ -37,12 +38,64 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CHURNED
+}
+
+model FeatureFlag {
+  key         String   @id             // e.g. "multi_router", "reseller_module"
+  description String   @default("")
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  type      String   @default("info")  // info | warning | critical
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tenant {
+  id          String       @id @default(cuid())
+  name        String       // Display name, mis. "bukakaNet"
+  slug        String       @unique  // URL-safe id, mis. "bukakanet"
+  ownerEmail  String       // Email admin utama (untuk billing notif)
+  status      TenantStatus @default(ACTIVE)
+  trialEndsAt DateTime?
+  expiresAt   DateTime?    // Subscription expiry
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  users                  User[]
+  routers                Router[]
+  activityLogs           ActivityLog[]
+  resellers              Reseller[]
+  voucherBatches         VoucherBatch[]
+  voucherProfileSettings VoucherProfileSetting[]
+  voucherTypes           VoucherType[]
+  trafficSnapshots       TrafficSnapshot[]
+  subscription           Subscription?
+  invoices               Invoice[]
+  tokenUsages            TokenUsage[]
+
+  @@index([status])
+  @@index([slug])
+}
+
 model User {
   id            String     @id @default(cuid())
   email         String?    @unique
   passwordHash  String?
-  name          String
-  telegramId    String     @unique
+  name          String?
+  telegramId    String?    @unique
   botToken      String?
   role          UserRole   @default(USER)
   status        UserStatus @default(ACTIVE)
@@ -57,20 +110,21 @@ model User {
   notifAsOwner     Boolean   @default(true)
   notifAsReseller  Boolean   @default(true)
 
-  routers                Router[]
-  activityLogs           ActivityLog[]
-  subscription           Subscription?
-  tokenUsages            TokenUsage[]
-  invoices               Invoice[]
-  resellers              Reseller[]
-  voucherBatches         VoucherBatch[]
-  voucherProfileSettings VoucherProfileSetting[]
-  voucherTypes           VoucherType[]
-  trafficSnapshots       TrafficSnapshot[]
-  resellerBotToken       String?
+  // Multi-tenant: NULL untuk SUPER_ADMIN (lintas tenant);
+  // di-set untuk ADMIN/USER yang melekat ke tenant tertentu.
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // ActivityLog & TokenUsage tetap link ke User untuk audit/per-user tracking.
+  // Model lain (Router, Reseller, Voucher*, Subscription, Invoice, TrafficSnapshot)
+  // sekarang owned by Tenant — query filter via tenantId.
+  activityLogs ActivityLog[]
+  tokenUsages  TokenUsage[]
+  resellerBotToken String?
 
   @@index([telegramId])
   @@index([status])
+  @@index([tenantId])
 }
 
 model Router {
@@ -102,15 +156,16 @@ model Router {
   botToken              String @default("") // Fernet-encrypted when saved (same as password)
   botUsername           String @default("")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   activityLogs ActivityLog[]
   resellers    Reseller[]
   netwatchTopology NetwatchTopology[]
 
-  @@unique([userId, name])
-  @@index([userId])
+  @@unique([tenantId, name])
+  @@index([tenantId])
 }
 
 model Tunnel {
@@ -175,14 +230,20 @@ model ActivityLog {
   details    String?
   errorMsg   String?
 
+  // Keep userId untuk audit "siapa yang lakukan apa"
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   routerId String?
   router   Router? @relation(fields: [routerId], references: [id], onDelete: SetNull)
 
+  // Tenant filter scope — NOT NULL enforced.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([timestamp])
+  @@index([tenantId])
 }
 
 model SystemSetting {
@@ -226,8 +287,9 @@ model Subscription {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (1 tenant = 1 subscription).
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 // LLM provider config — DB-backed override untuk env var. Singleton row (id="singleton").
@@ -250,11 +312,17 @@ model TokenUsage {
   sessionId   String?
   durationMs  Int?
 
+  // Keep userId untuk per-user AI cost tracking
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Tenant filter scope — NOT NULL enforced.
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([timestamp])
+  @@index([tenantId])
 }
 
 model Invoice {
@@ -271,11 +339,12 @@ model Invoice {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
   @@index([status])
+  @@index([tenantId])
 }
 
 // ── Reseller Models ──
@@ -305,18 +374,20 @@ model Reseller {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   routerId String
   router   Router @relation(fields: [routerId], references: [id], onDelete: Cascade)
+
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   transactions   SaldoTransaction[]
   voucherBatches VoucherBatch[]
 
   @@unique([routerId, name])  // nama reseller unik per router
-  @@index([userId])
   @@index([routerId])
   @@index([telegramId])
+  @@index([tenantId])
 }
 
 model SaldoTransaction {
@@ -354,11 +425,12 @@ model VoucherProfileSetting {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, profileName])
-  @@index([userId])
+  @@unique([tenantId, profileName])
+  @@index([tenantId])
 }
 
 model VoucherType {
@@ -383,10 +455,11 @@ model VoucherType {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([tenantId])
 }
 
 model VoucherBatch {
@@ -407,12 +480,13 @@ model VoucherBatch {
   resellerId String?
   reseller   Reseller? @relation(fields: [resellerId], references: [id], onDelete: SetNull)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([resellerId])
-  @@index([userId])
   @@index([createdAt])
+  @@index([tenantId])
 }
 
 
@@ -429,11 +503,12 @@ model TrafficSnapshot {
   rxBytes     BigInt
   takenAt     DateTime @default(now())
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant-owned (Step 1.C.2: dropped userId)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([userId, routerName, interfaceName, takenAt])
-  @@index([userId, routerName, takenAt])
+  @@index([tenantId, routerName, interfaceName, takenAt])
+  @@index([tenantId, routerName, takenAt])
   @@index([takenAt])
 }
 

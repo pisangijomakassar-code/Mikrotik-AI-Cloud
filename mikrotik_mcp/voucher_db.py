@@ -62,6 +62,15 @@ class VoucherDB:
         row = cur.fetchone()
         return row[0] if row else None
 
+    def _get_tenant_id(self, cur, telegram_id: str) -> str | None:
+        """Resolve telegramId → User.tenantId (multi-tenant)."""
+        cur.execute(
+            'SELECT "tenantId" FROM "User" WHERE "telegramId" = %s',
+            (telegram_id,),
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+
     # ── VoucherBatch ──
 
     def save_batch(
@@ -89,9 +98,9 @@ class VoucherDB:
 
         with self._conn() as conn:
             cur = conn.cursor()
-            internal_uid = self._get_user_id(cur, user_id)
-            if not internal_uid:
-                logger.warning("VoucherDB.save_batch: user %s not found", user_id)
+            tenant_id = self._get_tenant_id(cur, user_id)
+            if not tenant_id:
+                logger.warning("VoucherDB.save_batch: user %s has no tenant", user_id)
                 return None
 
             batch_id = _cuid_like()
@@ -105,14 +114,14 @@ class VoucherDB:
                     ("id", "routerName", "profile", "count", "pricePerUnit",
                      "totalCost", "vouchers", "source", "createdAt",
                      "discount", "markUp", "hargaEndUser",
-                     "resellerId", "userId")
+                     "resellerId", "tenantId")
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     batch_id, router_name, profile, count, price_per_unit,
                     total_cost, json.dumps(vouchers), source, batch_timestamp,
                     int(discount or 0), int(mark_up or 0), int(harga_end_user or 0),
-                    reseller_id, internal_uid,
+                    reseller_id, tenant_id,
                 ),
             )
             return batch_id
@@ -187,7 +196,7 @@ class VoucherDB:
                 """
                 SELECT u."telegramId", r."name"
                 FROM "Router" r
-                JOIN "User" u ON u."id" = r."userId"
+                JOIN "User" u ON u."tenantId" = r."tenantId" AND u."role" = 'ADMIN'
                 WHERE u."status" = 'ACTIVE'
                 ORDER BY u."telegramId", r."name"
                 """
@@ -197,8 +206,9 @@ class VoucherDB:
     # ── Reseller lookups ──
 
     def get_reseller_by_telegram(self, telegram_id: str) -> dict | None:
-        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, userId, discount, voucherGroup, routerId, routerName.
-        ONLY returns ACTIVE resellers — pakai get_reseller_status_by_telegram() utk cek status PENDING/INACTIVE."""
+        """Lookup reseller by Telegram ID. Returns dict with id, name, balance, tenantId,
+        discount, voucherGroup, routerId, routerName, ownerTelegramId.
+        ONLY returns ACTIVE resellers — pakai get_reseller_status_by_telegram() utk cek status."""
         if not self._pool:
             return None
 
@@ -208,12 +218,13 @@ class VoucherDB:
                 """
                 SELECT r."id", r."name", r."balance", r."phone", r."status",
                        r."discount", r."voucherGroup",
-                       r."userId", u."telegramId" as "ownerTelegramId",
+                       r."tenantId", u."telegramId" as "ownerTelegramId",
                        r."routerId", ro."name" as "routerName"
                 FROM "Reseller" r
-                JOIN "User" u ON u."id" = r."userId"
+                LEFT JOIN "User" u ON u."tenantId" = r."tenantId" AND u."role" = 'ADMIN'
                 LEFT JOIN "Router" ro ON ro."id" = r."routerId"
                 WHERE r."telegramId" = %s AND r."status" = 'ACTIVE'
+                LIMIT 1
                 """,
                 (telegram_id,),
             )
@@ -233,7 +244,7 @@ class VoucherDB:
                 SELECT r."id", r."name", r."status", r."createdAt",
                        u."telegramId" as "ownerTelegramId"
                 FROM "Reseller" r
-                JOIN "User" u ON u."id" = r."userId"
+                LEFT JOIN "User" u ON u."tenantId" = r."tenantId" AND u."role" = 'ADMIN'
                 WHERE r."telegramId" = %s
                 ORDER BY r."createdAt" DESC
                 LIMIT 1
@@ -246,9 +257,9 @@ class VoucherDB:
     # ── VoucherType lookups (for reseller bot pricing) ──
 
     def list_voucher_types_for_reseller(
-        self, owner_user_id_internal: str, reseller_voucher_group: str
+        self, tenant_id: str, reseller_voucher_group: str
     ) -> list[dict]:
-        """Return VoucherTypes owned by user, filtered by reseller's voucherGroup.
+        """Return VoucherTypes owned by tenant, filtered by reseller's voucherGroup.
 
         VoucherType.voucherGroup and Reseller.voucherGroup are both comma-separated
         strings (e.g. "default,1,2"). A VoucherType is visible if any of its groups
@@ -271,10 +282,10 @@ class VoucherDB:
                        "typeChar", "typeLogin", "prefix", "panjangKarakter",
                        "voucherGroup"
                 FROM "VoucherType"
-                WHERE "userId" = %s
+                WHERE "tenantId" = %s
                 ORDER BY "harga" ASC, "namaVoucher" ASC
                 """,
-                (owner_user_id_internal,),
+                (tenant_id,),
             )
             rows = cur.fetchall()
 
@@ -299,7 +310,7 @@ class VoucherDB:
                        "server", "profile", "limitUptime",
                        "limitQuotaDl", "limitQuotaUl", "limitQuotaTotal",
                        "typeChar", "typeLogin", "prefix", "panjangKarakter",
-                       "voucherGroup", "userId"
+                       "voucherGroup", "tenantId"
                 FROM "VoucherType"
                 WHERE "id" = %s
                 """,
@@ -469,7 +480,7 @@ class VoucherDB:
                 SELECT vb."id", vb."routerName", vb."profile", vb."count",
                        vb."pricePerUnit", vb."vouchers", vb."source", vb."createdAt"
                 FROM "VoucherBatch" vb
-                JOIN "User" u ON u."id" = vb."userId"
+                JOIN "User" u ON u."tenantId" = vb."tenantId"
                 WHERE u."telegramId" = %s
                 ORDER BY vb."createdAt" DESC
                 LIMIT %s
@@ -496,8 +507,9 @@ class VoucherDB:
                 """
                 SELECT u."telegramId"
                 FROM "Reseller" r
-                JOIN "User" u ON u."id" = r."userId"
+                JOIN "User" u ON u."tenantId" = r."tenantId" AND u."role" = 'ADMIN'
                 WHERE r."id" = %s
+                LIMIT 1
                 """,
                 (reseller_id,),
             )
@@ -519,19 +531,19 @@ class VoucherDB:
             return False
         with self._conn() as conn:
             cur = conn.cursor()
-            user_id = self._get_user_id(cur, telegram_id)
-            if not user_id:
+            tenant_id = self._get_tenant_id(cur, telegram_id)
+            if not tenant_id:
                 return False
             cur.execute(
                 """
                 INSERT INTO "TrafficSnapshot"
                   ("id", "routerName", "interfaceName", "txBytes", "rxBytes",
-                   "takenAt", "userId")
+                   "takenAt", "tenantId")
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     _cuid_like(), router_name, interface_name,
-                    int(tx_bytes), int(rx_bytes), _now(), user_id,
+                    int(tx_bytes), int(rx_bytes), _now(), tenant_id,
                 ),
             )
             return True
@@ -574,19 +586,19 @@ class VoucherDB:
 
         with self._conn() as conn:
             cur = conn.cursor()
-            user_id = self._get_user_id(cur, telegram_id)
-            if not user_id:
+            tenant_id = self._get_tenant_id(cur, telegram_id)
+            if not tenant_id:
                 return {"interfaces": [], "totalTx": 0, "totalRx": 0}
 
             cur.execute(
                 """
                 SELECT "interfaceName", "txBytes", "rxBytes", "takenAt"
                 FROM "TrafficSnapshot"
-                WHERE "userId" = %s AND "routerName" = %s
+                WHERE "tenantId" = %s AND "routerName" = %s
                   AND "takenAt" >= %s AND "takenAt" < %s
                 ORDER BY "interfaceName", "takenAt"
                 """,
-                (user_id, router_name, period_start, period_end),
+                (tenant_id, router_name, period_start, period_end),
             )
             rows = cur.fetchall()
 

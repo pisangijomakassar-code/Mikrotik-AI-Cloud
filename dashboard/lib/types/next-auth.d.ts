@@ -5,16 +5,18 @@ import "@auth/core/jwt";
 declare module "next-auth" {
   interface User {
     role: UserRole;
-    telegramId: string;
+    telegramId: string | null;
+    tenantId: string | null; // NULL untuk SUPER_ADMIN
   }
 
   interface Session {
     user: {
       id: string;
-      name: string;
+      name: string | null;
       email: string;
       role: UserRole;
-      telegramId: string;
+      telegramId: string | null;
+      tenantId: string | null;
     };
   }
 }
@@ -23,6 +25,7 @@ declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     role: UserRole;
-    telegramId: string;
+    telegramId: string | null;
+    tenantId: string | null;
   }
 }

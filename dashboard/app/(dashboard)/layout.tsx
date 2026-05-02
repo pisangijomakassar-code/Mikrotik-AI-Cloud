@@ -12,14 +12,21 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (isLoading) return
+    if (!isAuthenticated) {
       router.push("/login")
+      return
     }
-  }, [isLoading, isAuthenticated, router])
+    // Strict separation: SUPER_ADMIN tidak boleh akses dashboard tenant.
+    // Redirect ke platform console — UI mereka sendiri.
+    if (user?.role === "SUPER_ADMIN") {
+      router.push("/platform/dashboard")
+    }
+  }, [isLoading, isAuthenticated, user?.role, router])
 
   if (isLoading) {
     return (
@@ -32,7 +39,7 @@ export default function DashboardLayout({
     )
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || user?.role === "SUPER_ADMIN") {
     return null
   }
 

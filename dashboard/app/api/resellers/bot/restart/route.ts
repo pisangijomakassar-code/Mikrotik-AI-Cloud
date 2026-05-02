@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import { agentFetch } from "@/lib/agent-fetch"
 
 // POST /api/resellers/bot/restart?routerId=X
@@ -12,9 +12,10 @@ export async function POST(request: NextRequest) {
   const routerId = request.nextUrl.searchParams.get("routerId")
   if (!routerId) return Response.json({ error: "routerId required" }, { status: 400 })
 
-  // Validasi ownership
-  const router = await prisma.router.findFirst({
-    where: { id: routerId, userId: session.user.id },
+  // Validasi ownership (tenant-scoped via getTenantDb)
+  const db = await getTenantDb()
+  const router = await db.router.findFirst({
+    where: { id: routerId },
     select: { id: true },
   })
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })

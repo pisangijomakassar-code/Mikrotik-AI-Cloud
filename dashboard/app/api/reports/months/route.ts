@@ -3,11 +3,11 @@ import { prisma } from "@/lib/db"
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const batches = await prisma.voucherBatch.findMany({
     where: {
-      userId: session.user.id,
+      tenantId: session.user.tenantId,
       source: { startsWith: "mikhmon_import" },
     },
     select: { source: true, count: true, totalCost: true },

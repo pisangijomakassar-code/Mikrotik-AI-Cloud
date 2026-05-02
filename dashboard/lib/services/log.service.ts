@@ -12,7 +12,7 @@ interface ActivityLogWithRelations {
   errorMsg: string | null
   userId: string
   routerId: string | null
-  user: { name: string }
+  user: { name: string | null }
   router: { name: string } | null
 }
 

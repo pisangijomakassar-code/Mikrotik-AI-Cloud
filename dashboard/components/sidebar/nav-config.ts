@@ -24,7 +24,6 @@ import {
   Ticket,
   Zap,
   MessageSquareText,
-  Printer,
 } from "lucide-react"
 
 export interface NavItem {
@@ -41,6 +40,9 @@ export interface NavGroup {
   defaultOpen?: boolean
 }
 
+// Mikhmon-style English labels for menu (UX in pages tetap Bahasa Indonesia).
+// Multi-tenant: semua menu di sini POV Admin Tenant. Super Admin punya
+// sidebar terpisah di app/(platform)/ (Phase 3).
 export const navGroups: NavGroup[] = [
   {
     label: "Overview",
@@ -61,46 +63,59 @@ export const navGroups: NavGroup[] = [
   {
     label: "PPP",
     items: [
-      { label: "PPP Users", href: "/ppp/secrets", icon: Network },
-      { label: "Active Sessions", href: "/ppp/active", icon: Activity },
+      { label: "PPP Secrets", href: "/ppp/secrets", icon: Network },
+      { label: "PPP Active", href: "/ppp/active", icon: Activity },
       { label: "PPP Profiles", href: "/ppp/profiles", icon: Settings2 },
+    ],
+  },
+  {
+    label: "Voucher",
+    items: [
+      { label: "Generate", href: "/vouchers/generate", icon: Zap },
+      { label: "Voucher List", href: "/vouchers", icon: Receipt },
+      { label: "Settings", href: "/vouchers/settings", icon: Ticket },
     ],
   },
   {
     label: "Reseller",
     items: [
       { label: "Reseller List", href: "/resellers", icon: Store },
-      { label: "History Transaksi", href: "/resellers/transactions", icon: History },
-      { label: "Generate Voucher", href: "/vouchers", icon: Zap },
-      { label: "Cetak Voucher", href: "/vouchers/print", icon: Printer },
-      { label: "Setting Voucher (Bot)", href: "/settings/vouchers", icon: Ticket },
-      { label: "Voucher History", href: "/resellers/vouchers", icon: Receipt },
+      { label: "Transactions", href: "/resellers/transactions", icon: History },
       { label: "Reseller Bot", href: "/resellers/bot", icon: BotMessageSquare },
-      { label: "Bot Text", href: "/settings/bot-text", icon: MessageSquareText },
-      { label: "Laporan", href: "/reports", icon: BarChart3 },
+      { label: "Bot Text Templates", href: "/resellers/bot-text", icon: MessageSquareText },
     ],
   },
   {
-    label: "System",
+    label: "Network",
     items: [
       { label: "Routers", href: "/routers", icon: Router },
       { label: "Tunnel", href: "/tunnel", icon: Cable },
       { label: "Netwatch", href: "/netwatch", icon: Activity },
-      { label: "Users", href: "/users", icon: Users, adminOnly: true },
-      { label: "Log Aktivitas", href: "/logs", icon: Terminal },
-      { label: "Hotspot Log", href: "/logs/hotspot", icon: Wifi },
-      { label: "User Log", href: "/logs/user", icon: UserCog },
       { label: "Communication", href: "/communication", icon: MessageSquare },
+      { label: "Logs", href: "/logs", icon: Terminal },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { label: "Reports", href: "/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Settings",
+    adminOnly: true,
+    items: [
+      { label: "Dashboard Users", href: "/settings/users", icon: Users },
+      { label: "App Settings", href: "/settings", icon: Settings },
+      { label: "LLM Provider", href: "/settings/llm", icon: Bot },
+      { label: "Billing & Plan", href: "/settings/billing", icon: CreditCard },
     ],
   },
   {
     label: "Account",
     items: [
       { label: "Profile", href: "/profile", icon: UserCircle },
-      { label: "Plan", href: "/plan", icon: CreditCard },
-      { label: "Settings", href: "/settings", icon: Settings, adminOnly: true },
-      { label: "LLM Provider", href: "/settings/llm", icon: Bot, adminOnly: true },
-      { label: "Dokumentasi", href: "/docs", icon: BookOpen },
+      { label: "Documentation", href: "/docs", icon: BookOpen },
     ],
   },
 ]

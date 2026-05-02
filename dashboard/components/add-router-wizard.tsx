@@ -204,7 +204,6 @@ export function AddRouterWizard() {
         password,
         label: label.trim() || undefined,
         isDefault,
-        userId: session?.user?.id ?? "",
       },
       {
         onSuccess: () => {
@@ -231,7 +230,6 @@ export function AddRouterWizard() {
         password,
         label: label.trim() || undefined,
         isDefault,
-        userId: session?.user?.id ?? "",
       },
       {
         onSuccess: (router) => {

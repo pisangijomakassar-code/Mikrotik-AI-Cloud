@@ -141,7 +141,7 @@ export default function CommunicationPage() {
           Communication panel tersedia hanya untuk plan Premium. Upgrade untuk mengirim pesan ke reseller via Telegram.
         </p>
         <a
-          href="/plan"
+          href="/settings/billing"
           className="px-6 py-3 rounded-lg text-sm font-bold bg-linear-to-r from-primary to-primary-container text-primary-foreground hover:brightness-110 transition-all"
         >
           Upgrade ke Premium

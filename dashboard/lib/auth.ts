@@ -44,6 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.role,
           telegramId: user.telegramId,
+          tenantId: user.tenantId, // NULL untuk SUPER_ADMIN
         }
       },
     }),
@@ -54,6 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id as string
         token.role = user.role
         token.telegramId = user.telegramId
+        token.tenantId = user.tenantId
       }
       return token
     },
@@ -61,6 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = token.id
       session.user.role = token.role
       session.user.telegramId = token.telegramId
+      session.user.tenantId = token.tenantId
       return session
     },
   },

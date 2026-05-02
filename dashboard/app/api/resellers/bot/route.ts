@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import { agentFetch } from "@/lib/agent-fetch"
 import {
   encryptBotToken,
@@ -22,10 +22,11 @@ async function triggerBotRestart(routerId: string): Promise<{ ok: boolean; statu
   }
 }
 
-async function resolveRouter(userId: string, routerId: string | null) {
+async function resolveRouter(routerId: string | null) {
   if (!routerId) return null
-  return prisma.router.findFirst({
-    where: { id: routerId, userId },
+  const db = await getTenantDb()
+  return db.router.findFirst({
+    where: { id: routerId },
     select: { id: true, name: true, botToken: true, botUsername: true, telegramOwnerUsername: true, telegramOwnerId: true },
   })
 }
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const router = await resolveRouter(session.user.id, routerId)
+  const router = await resolveRouter(routerId)
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
 
   const token = router.botToken ? await decryptBotToken(router.botToken) : ""
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const router = await resolveRouter(session.user.id, routerId)
+  const router = await resolveRouter(routerId)
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
 
   const body = (await request.json()) as { token?: string; telegramOwnerId?: string; telegramOwnerUsername?: string }
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
   }
 
   const encrypted = await encryptBotToken(token)
-  await prisma.router.update({
+  const dbT = await getTenantDb()
+  await dbT.router.update({
     where: { id: router.id },
     data: {
       botToken: encrypted,
@@ -100,10 +102,11 @@ export async function DELETE(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const router = await resolveRouter(session.user.id, routerId)
+  const router = await resolveRouter(routerId)
   if (!router) return Response.json({ error: "router not found" }, { status: 404 })
 
-  await prisma.router.update({
+  const dbT = await getTenantDb()
+  await dbT.router.update({
     where: { id: router.id },
     data: { botToken: "", botUsername: "" },
   })
