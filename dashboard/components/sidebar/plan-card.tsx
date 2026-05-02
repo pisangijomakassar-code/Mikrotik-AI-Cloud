@@ -43,7 +43,7 @@ export function PlanCard() {
 
   return (
     <div className="p-6">
-      <Link href="/plan" className="block">
+      <Link href="/settings/billing" className="block">
         <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/20 transition-colors">
           <div className="flex items-center gap-3 mb-3">
             <Sparkles className={cn("h-5 w-5", planInfo?.plan === "PREMIUM" ? "text-tertiary" : planInfo?.plan === "PRO" ? "text-primary" : "text-muted-foreground")} />
