@@ -24,7 +24,7 @@ export async function POST(
       )
     }
 
-    const transaction = await topDownSaldo(id, session.user.id, body)
+    const transaction = await topDownSaldo(id, body)
     return Response.json(transaction, { status: 201 })
   } catch (error: unknown) {
     console.error("Failed to top down saldo:", error)

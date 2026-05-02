@@ -1,21 +1,21 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import { listResellers, createReseller } from "@/lib/services/reseller.service"
 import type { CreateResellerInput } from "@/lib/types"
 
-// Resolve router name (from query / body) to routerId, scoped to current user.
-// Falls back to user's default router (or oldest) if no name provided.
-async function resolveRouterId(userId: string, routerName: string | null): Promise<string | null> {
+// Resolve router name (from query / body) to routerId, scoped to current tenant.
+// Falls back to tenant's default router (or oldest) if no name provided.
+async function resolveRouterId(routerName: string | null): Promise<string | null> {
+  const db = await getTenantDb()
   if (routerName) {
-    const r = await prisma.router.findFirst({
-      where: { userId, name: routerName },
+    const r = await db.router.findFirst({
+      where: { name: routerName },
       select: { id: true },
     })
     return r?.id ?? null
   }
-  const r = await prisma.router.findFirst({
-    where: { userId },
+  const r = await db.router.findFirst({
     orderBy: [{ isDefault: "desc" }, { addedAt: "asc" }],
     select: { id: true },
   })
@@ -30,11 +30,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const routerName = request.nextUrl.searchParams.get("router")
-    const routerId = await resolveRouterId(session.user.id, routerName)
-    // No router yet → no resellers (must add a router first).
+    const routerId = await resolveRouterId(routerName)
     if (!routerId) return Response.json([])
 
-    const data = await listResellers(session.user.id, routerId)
+    const data = await listResellers(routerId)
     return Response.json(data)
   } catch (error) {
     console.error("Failed to fetch resellers:", error)
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Name is required" }, { status: 400 })
     }
 
-    const routerId = await resolveRouterId(session.user.id, body.routerName ?? null)
+    const routerId = await resolveRouterId(body.routerName ?? null)
     if (!routerId) {
       return Response.json(
         { error: "Tambah router terlebih dahulu sebelum membuat reseller" },
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const reseller = await createReseller(session.user.id, routerId, body)
+    const reseller = await createReseller(routerId, body)
     return Response.json(reseller, { status: 201 })
   } catch (error: unknown) {
     console.error("Failed to create reseller:", error)

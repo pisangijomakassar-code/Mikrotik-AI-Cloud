@@ -18,7 +18,7 @@ export async function GET(
     const page = parseInt(searchParams.get("page") ?? "1", 10)
     const pageSize = parseInt(searchParams.get("pageSize") ?? "20", 10)
 
-    const data = await listTransactions(id, session.user.id, page, pageSize)
+    const data = await listTransactions(id, page, pageSize)
     if (!data) {
       return Response.json({ error: "Reseller not found" }, { status: 404 })
     }

@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { getVoucherBatch } from "@/lib/services/reseller.service"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import QRCode from "qrcode"
 
 async function generateVoucherHTML(
@@ -158,7 +158,7 @@ export async function GET(
   const { batchId } = await params
 
   try {
-    const batch = await getVoucherBatch(batchId, session.user.id)
+    const batch = await getVoucherBatch(batchId)
     if (!batch) {
       return Response.json(
         { error: "Voucher batch not found" },
@@ -169,7 +169,8 @@ export async function GET(
     const vouchers = batch.vouchers as { username: string; password: string }[]
 
     // Pull qrColor from VoucherProfileSetting if configured; else default black
-    const profileSetting = await prisma.voucherProfileSetting.findFirst({
+    const dbT = await getTenantDb()
+    const profileSetting = await dbT.voucherProfileSetting.findFirst({
       where: { profileName: batch.profile },
       select: { qrColor: true },
     }).catch(() => null)

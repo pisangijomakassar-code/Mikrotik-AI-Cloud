@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { getTenantDb } from "@/lib/db-tenant"
 import {
   decryptBotToken,
   tgGetMe,
@@ -9,10 +9,11 @@ import {
   tgDeleteWebhook,
 } from "@/lib/services/router-bot.service"
 
-async function resolveRouterToken(userId: string, routerId: string | null) {
+async function resolveRouterToken(routerId: string | null) {
   if (!routerId) return null
-  const router = await prisma.router.findFirst({
-    where: { id: routerId, userId },
+  const db = await getTenantDb()
+  const router = await db.router.findFirst({
+    where: { id: routerId },
     select: { id: true, name: true, botToken: true, botUsername: true },
   })
   if (!router || !router.botToken) return null
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const ctx = await resolveRouterToken(session.user.id, routerId)
+  const ctx = await resolveRouterToken(routerId)
   if (!ctx) return Response.json({ error: "Bot belum dikonfigurasi untuk router ini" }, { status: 404 })
 
   const [me, webhook] = await Promise.all([tgGetMe(ctx.token), tgGetWebhookInfo(ctx.token)])
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const ctx = await resolveRouterToken(session.user.id, routerId)
+  const ctx = await resolveRouterToken(routerId)
   if (!ctx) return Response.json({ error: "Bot belum dikonfigurasi" }, { status: 404 })
 
   const body = (await request.json()) as { url?: string }
@@ -76,7 +77,7 @@ export async function DELETE(request: NextRequest) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const routerId = request.nextUrl.searchParams.get("routerId")
-  const ctx = await resolveRouterToken(session.user.id, routerId)
+  const ctx = await resolveRouterToken(routerId)
   if (!ctx) return Response.json({ error: "Bot belum dikonfigurasi" }, { status: 404 })
 
   const result = await tgDeleteWebhook(ctx.token)

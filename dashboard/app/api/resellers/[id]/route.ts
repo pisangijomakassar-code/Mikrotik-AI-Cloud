@@ -19,7 +19,7 @@ export async function GET(
   const { id } = await params
 
   try {
-    const reseller = await getReseller(id, session.user.id)
+    const reseller = await getReseller(id)
     if (!reseller) {
       return Response.json({ error: "Reseller not found" }, { status: 404 })
     }
@@ -46,7 +46,7 @@ export async function PATCH(
 
   try {
     const body = (await request.json()) as UpdateResellerInput
-    const reseller = await updateReseller(id, session.user.id, body)
+    const reseller = await updateReseller(id, body)
     if (!reseller) {
       return Response.json({ error: "Reseller not found" }, { status: 404 })
     }
@@ -72,7 +72,7 @@ export async function DELETE(
   const { id } = await params
 
   try {
-    const reseller = await deleteReseller(id, session.user.id)
+    const reseller = await deleteReseller(id)
     if (!reseller) {
       return Response.json({ error: "Reseller not found" }, { status: 404 })
     }

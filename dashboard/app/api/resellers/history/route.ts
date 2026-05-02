@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const searchParams = request.nextUrl.searchParams
@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") ?? "1", 10)
     const pageSize = parseInt(searchParams.get("pageSize") ?? "30", 10)
 
+    // SaldoTransaction tidak punya tenantId langsung di skema (cascade dari
+    // Reseller); filter via reseller relation.
     const where: Record<string, unknown> = {
-      reseller: { userId: session.user.id },
+      reseller: { tenantId: session.user.tenantId },
     }
 
     if (search) {

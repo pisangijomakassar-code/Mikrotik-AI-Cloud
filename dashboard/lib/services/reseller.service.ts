@@ -1,4 +1,6 @@
 import { prisma } from "../db"
+import { auth } from "../auth"
+import { getTenantDb } from "../db-tenant"
 import type {
   CreateResellerInput,
   UpdateResellerInput,
@@ -9,34 +11,39 @@ import type {
 
 // ── Reseller CRUD ──
 //
-// Resellers are scoped per Router (1 router N resellers; 1 reseller = 1 router).
-// All queries take an optional `routerId`. When provided, only resellers
-// belonging to that router are returned/created.
+// Resellers are scoped per Tenant (via getTenantDb extension), filterable
+// per Router (1 router → N resellers; 1 reseller = 1 router).
 
-export async function listResellers(userId: string, routerId?: string) {
-  return prisma.reseller.findMany({
-    where: { userId, ...(routerId ? { routerId } : {}) },
+async function requireTenantId(): Promise<string> {
+  const session = await auth()
+  const tenantId = session?.user?.tenantId
+  if (!tenantId) throw new Error("No tenant context")
+  return tenantId
+}
+
+export async function listResellers(routerId?: string) {
+  const db = await getTenantDb()
+  return db.reseller.findMany({
+    where: { ...(routerId ? { routerId } : {}) },
     include: { _count: { select: { voucherBatches: true } } },
     orderBy: { createdAt: "desc" },
   })
 }
 
-export async function getReseller(resellerId: string, userId: string) {
-  const reseller = await prisma.reseller.findUnique({
+export async function getReseller(resellerId: string) {
+  const db = await getTenantDb()
+  return db.reseller.findFirst({
     where: { id: resellerId },
     include: { _count: { select: { voucherBatches: true, transactions: true } } },
   })
-  if (!reseller || reseller.userId !== userId) return null
-  return reseller
 }
 
-export async function createReseller(
-  userId: string,
-  routerId: string,
-  data: CreateResellerInput,
-) {
-  return prisma.reseller.create({
+export async function createReseller(routerId: string, data: CreateResellerInput) {
+  const db = await getTenantDb()
+  const tenantId = await requireTenantId()
+  return db.reseller.create({
     data: {
+      tenantId,
       name: data.name,
       phone: data.phone ?? "",
       telegramId: data.telegramId ?? "",
@@ -44,40 +51,45 @@ export async function createReseller(
       discount: data.discount ?? 0,
       voucherGroup: data.voucherGroup ?? "default",
       uplink: data.uplink ?? "",
-      userId,
       routerId,
     },
   })
 }
 
-export async function updateReseller(
-  resellerId: string,
-  userId: string,
-  data: UpdateResellerInput,
-) {
-  const existing = await prisma.reseller.findUnique({ where: { id: resellerId } })
-  if (!existing || existing.userId !== userId) return null
-  return prisma.reseller.update({ where: { id: resellerId }, data })
+export async function updateReseller(resellerId: string, data: UpdateResellerInput) {
+  const db = await getTenantDb()
+  const existing = await db.reseller.findFirst({ where: { id: resellerId } })
+  if (!existing) return null
+  return db.reseller.update({ where: { id: resellerId }, data })
 }
 
-export async function deleteReseller(resellerId: string, userId: string) {
-  const existing = await prisma.reseller.findUnique({ where: { id: resellerId } })
-  if (!existing || existing.userId !== userId) return null
-  return prisma.reseller.delete({ where: { id: resellerId } })
+export async function deleteReseller(resellerId: string) {
+  const db = await getTenantDb()
+  const existing = await db.reseller.findFirst({ where: { id: resellerId } })
+  if (!existing) return null
+  return db.reseller.delete({ where: { id: resellerId } })
 }
 
 // ── Saldo Operations (atomic via $transaction) ──
+//
+// $transaction callback dapat raw Prisma client (tanpa extension). Untuk
+// menjaga tenant safety, kita verify ownership dulu via getTenantDb()
+// sebelum transaction. Inside transaction, query by resellerId (unique)
+// + tenant filter eksplisit.
 
-export async function topUpSaldo(
-  resellerId: string,
-  userId: string,
-  input: SaldoOperationInput,
-) {
+export async function topUpSaldo(resellerId: string, input: SaldoOperationInput) {
+  const tenantId = await requireTenantId()
+  const db = await getTenantDb()
+
+  // Pre-check: pastikan reseller milik tenant ini
+  const exists = await db.reseller.findFirst({ where: { id: resellerId } })
+  if (!exists) throw new Error("Reseller not found")
+
   return prisma.$transaction(async (tx) => {
-    const reseller = await tx.reseller.findUnique({ where: { id: resellerId } })
-    if (!reseller || reseller.userId !== userId) {
-      throw new Error("Reseller not found")
-    }
+    const reseller = await tx.reseller.findFirst({
+      where: { id: resellerId, tenantId },
+    })
+    if (!reseller) throw new Error("Reseller not found")
 
     const balanceBefore = reseller.balance
     const balanceAfter = balanceBefore + input.amount
@@ -101,19 +113,19 @@ export async function topUpSaldo(
   })
 }
 
-export async function topDownSaldo(
-  resellerId: string,
-  userId: string,
-  input: SaldoOperationInput,
-) {
+export async function topDownSaldo(resellerId: string, input: SaldoOperationInput) {
+  const tenantId = await requireTenantId()
+  const db = await getTenantDb()
+
+  const exists = await db.reseller.findFirst({ where: { id: resellerId } })
+  if (!exists) throw new Error("Reseller not found")
+
   return prisma.$transaction(async (tx) => {
-    const reseller = await tx.reseller.findUnique({ where: { id: resellerId } })
-    if (!reseller || reseller.userId !== userId) {
-      throw new Error("Reseller not found")
-    }
-    if (reseller.balance < input.amount) {
-      throw new Error("Saldo tidak mencukupi")
-    }
+    const reseller = await tx.reseller.findFirst({
+      where: { id: resellerId, tenantId },
+    })
+    if (!reseller) throw new Error("Reseller not found")
+    if (reseller.balance < input.amount) throw new Error("Saldo tidak mencukupi")
 
     const balanceBefore = reseller.balance
     const balanceAfter = balanceBefore - input.amount
@@ -138,14 +150,10 @@ export async function topDownSaldo(
 
 // ── Transaction History ──
 
-export async function listTransactions(
-  resellerId: string,
-  userId: string,
-  page = 1,
-  pageSize = 20,
-) {
-  const reseller = await prisma.reseller.findUnique({ where: { id: resellerId } })
-  if (!reseller || reseller.userId !== userId) return null
+export async function listTransactions(resellerId: string, page = 1, pageSize = 20) {
+  const db = await getTenantDb()
+  const reseller = await db.reseller.findFirst({ where: { id: resellerId } })
+  if (!reseller) return null
 
   const [data, total] = await Promise.all([
     prisma.saldoTransaction.findMany({
@@ -168,14 +176,12 @@ export async function listTransactions(
 
 // ── Voucher Batches ──
 
-export async function listVoucherBatches(
-  userId: string,
-  filter?: VoucherFilter,
-) {
+export async function listVoucherBatches(filter?: VoucherFilter) {
+  const db = await getTenantDb()
   const page = filter?.page ?? 1
   const pageSize = filter?.pageSize ?? 20
 
-  const where: Record<string, unknown> = { userId }
+  const where: Record<string, unknown> = {}
   if (filter?.resellerId) where.resellerId = filter.resellerId
   if (filter?.source) where.source = filter.source
   if (filter?.from || filter?.to) {
@@ -186,14 +192,14 @@ export async function listVoucherBatches(
   }
 
   const [data, total] = await Promise.all([
-    prisma.voucherBatch.findMany({
+    db.voucherBatch.findMany({
       where,
       include: { reseller: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.voucherBatch.count({ where }),
+    db.voucherBatch.count({ where }),
   ])
 
   return {
@@ -205,8 +211,7 @@ export async function listVoucherBatches(
   } satisfies PaginatedResult<typeof data[number]>
 }
 
-export async function getVoucherBatch(batchId: string, userId: string) {
-  const batch = await prisma.voucherBatch.findUnique({ where: { id: batchId } })
-  if (!batch || batch.userId !== userId) return null
-  return batch
+export async function getVoucherBatch(batchId: string) {
+  const db = await getTenantDb()
+  return db.voucherBatch.findFirst({ where: { id: batchId } })
 }
