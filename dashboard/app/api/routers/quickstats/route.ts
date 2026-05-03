@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
 
   const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
   try {
-    const res = await fetch(`${agentUrl}/router-quickstats/${telegramId}${qs}`, {
-      signal: AbortSignal.timeout(8000),
+    const res = await fetch(`${agentUrl}/router-quickstats/${encodeURIComponent(telegramId)}${qs}`, {
+      signal: AbortSignal.timeout(20000),
     })
     const data = await res.json()
     return Response.json(data, { status: res.ok ? 200 : res.status })

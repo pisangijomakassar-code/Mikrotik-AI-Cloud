@@ -19,7 +19,7 @@ import time
 
 logger = logging.getLogger("health_server")
 from http.server import HTTPServer, BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -444,25 +444,25 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # Router health (CPU, memory, clients, uptime)
         if path.startswith("/router-health/"):
-            self._handle_router_health(path.split("/router-health/")[1])
+            self._handle_router_health(unquote(path.split("/router-health/")[1]))
             return
 
         # Interface traffic stats (for Network Throughput chart)
         if path.startswith("/router-traffic/"):
-            self._handle_router_traffic(path.split("/router-traffic/")[1])
+            self._handle_router_traffic(unquote(path.split("/router-traffic/")[1]))
             return
 
         # Bundled quick stats for top-bar UI (CPU/RAM/HDD + hotspot counts).
         # ?router=<name> optional. Cached server-side 25s untuk hemat load di RB.
         if path.startswith("/router-quickstats/"):
-            user_id = path.split("/router-quickstats/")[1].strip("/")
+            user_id = unquote(path.split("/router-quickstats/")[1].strip("/"))
             router_name = params.get("router", [None])[0]
             self._handle_router_quickstats(user_id, router_name)
             return
 
         # Netwatch — list host yang dimonitor (status up/down + script up/down)
         if path.startswith("/netwatch/"):
-            user_id = path.split("/netwatch/")[1].strip("/")
+            user_id = unquote(path.split("/netwatch/")[1].strip("/"))
             router_name = params.get("router", [None])[0]
             self._handle_netwatch(user_id, router_name)
             return
@@ -470,7 +470,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         # Router system logs (real-time, no LLM)
         if path.startswith("/router-logs/"):
             parts = path.split("/router-logs/")[1].split("/")
-            user_id = parts[0]
+            user_id = unquote(parts[0])
             router_name = parts[1] if len(parts) > 1 else None
             count = int(params.get("count", ["50"])[0])
             self._handle_router_logs(user_id, router_name, count)
@@ -479,21 +479,21 @@ class HealthHandler(BaseHTTPRequestHandler):
         # Full router detail (for edit forms)
         if path.startswith("/router-detail/"):
             parts = path.split("/router-detail/")[1].split("/")
-            user_id = parts[0]
+            user_id = unquote(parts[0])
             router_name = parts[1] if len(parts) > 1 else None
             self._handle_router_detail(user_id, router_name)
             return
 
         # Hotspot users
         if path.startswith("/hotspot-users/"):
-            user_id = path.split("/hotspot-users/")[1]
+            user_id = unquote(path.split("/hotspot-users/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_hotspot_users(user_id, router_name)
             return
 
         # Hotspot active sessions
         if path.startswith("/hotspot-active/"):
-            user_id = path.split("/hotspot-active/")[1]
+            user_id = unquote(path.split("/hotspot-active/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_hotspot_active(user_id, router_name)
             return
@@ -502,6 +502,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/hotspot-profiles/"):
             remainder = path.split("/hotspot-profiles/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             router_name = params.get("router", [None])[0]
             if len(parts) == 1:
                 # GET /hotspot-profiles/{user_id}
@@ -513,21 +514,21 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # Hotspot servers list
         if path.startswith("/hotspot-servers/"):
-            user_id = path.split("/hotspot-servers/")[1]
+            user_id = unquote(path.split("/hotspot-servers/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_hotspot_servers(user_id, router_name)
             return
 
         # Hotspot stats (aggregated counts)
         if path.startswith("/hotspot-stats/"):
-            user_id = path.split("/hotspot-stats/")[1]
+            user_id = unquote(path.split("/hotspot-stats/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_hotspot_stats(user_id, router_name)
             return
 
         # Mikhmon sync status — last auto-sync timestamps per (user, router).
         if path.startswith("/mikhmon-sync-status/"):
-            user_id = path.split("/mikhmon-sync-status/")[1].strip("/")
+            user_id = unquote(path.split("/mikhmon-sync-status/")[1].strip("/"))
             self._handle_mikhmon_sync_status(user_id)
             return
 
@@ -535,7 +536,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         # ?router=<name>&year=<y>&month=<m> → bulan tsb
         # ?router=<name>&start=<iso>&end=<iso> → rentang custom (mis. 30 hari)
         if path.startswith("/router-traffic-monthly/"):
-            user_id = path.split("/router-traffic-monthly/")[1].strip("/")
+            user_id = unquote(path.split("/router-traffic-monthly/")[1].strip("/"))
             router_name = params.get("router", [None])[0]
             year = int(params.get("year", [0])[0]) or None
             month = int(params.get("month", [0])[0]) or None
@@ -548,21 +549,21 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # IP pools (used as hotspot address-pool)
         if path.startswith("/ip-pools/"):
-            user_id = path.split("/ip-pools/")[1]
+            user_id = unquote(path.split("/ip-pools/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_ip_pools(user_id, router_name)
             return
 
         # Simple queues (used as parent-queue in hotspot profile)
         if path.startswith("/queues/"):
-            user_id = path.split("/queues/")[1]
+            user_id = unquote(path.split("/queues/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_queues(user_id, router_name)
             return
 
         # Mikhmon scripts preview (list scripts from MikroTik in Mikhmon format)
         if path.startswith("/mikhmon-scripts/"):
-            user_id = path.split("/mikhmon-scripts/")[1].strip("/")
+            user_id = unquote(path.split("/mikhmon-scripts/")[1].strip("/"))
             router_name = params.get("router", [None])[0]
             if user_id:
                 self._handle_mikhmon_scripts_list(user_id, router_name)
@@ -570,21 +571,21 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # PPP secrets
         if path.startswith("/ppp-secrets/"):
-            user_id = path.split("/ppp-secrets/")[1]
+            user_id = unquote(path.split("/ppp-secrets/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_ppp_secrets(user_id, router_name)
             return
 
         # PPP active sessions
         if path.startswith("/ppp-active/"):
-            user_id = path.split("/ppp-active/")[1]
+            user_id = unquote(path.split("/ppp-active/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_ppp_active(user_id, router_name)
             return
 
         # PPP profiles
         if path.startswith("/ppp-profiles/"):
-            user_id = path.split("/ppp-profiles/")[1]
+            user_id = unquote(path.split("/ppp-profiles/")[1])
             router_name = params.get("router", [None])[0]
             self._handle_ppp_profiles(user_id, router_name)
             return
@@ -654,6 +655,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/hotspot-user/"):
             remainder = path.split("/hotspot-user/")[1]
             parts = remainder.strip("/").split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 1:
                 # POST /hotspot-user/{user_id} — create user
                 self._handle_hotspot_user_add(parts[0])
@@ -667,6 +669,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/hotspot-profile/"):
             remainder = path.split("/hotspot-profile/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 1:
                 # POST /hotspot-profile/{user_id} — add
                 self._handle_hotspot_profile_add(parts[0])
@@ -678,7 +681,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # Generate vouchers
         if path.startswith("/generate-vouchers/"):
-            user_id = path.split("/generate-vouchers/")[1].strip("/")
+            user_id = unquote(path.split("/generate-vouchers/")[1].strip("/"))
             self._handle_generate_vouchers(user_id)
             return
 
@@ -686,6 +689,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/ppp-secret/"):
             remainder = path.split("/ppp-secret/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 1:
                 self._handle_ppp_secret_add(parts[0])
                 return
@@ -694,6 +698,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/ppp-active/"):
             remainder = path.split("/ppp-active/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 3 and parts[2] == "kick":
                 # POST /ppp-active/{user_id}/{id}/kick
                 self._handle_ppp_kick(parts[0], parts[1])
@@ -752,13 +757,13 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         # AI insight
         if path.startswith("/ai-insight/"):
-            user_id = path.split("/ai-insight/")[1].strip("/")
+            user_id = unquote(path.split("/ai-insight/")[1].strip("/"))
             self._handle_ai_insight(user_id)
             return
 
         # Send telegram message
         if path.startswith("/send-telegram/"):
-            user_id = path.split("/send-telegram/")[1].strip("/")
+            user_id = unquote(path.split("/send-telegram/")[1].strip("/"))
             self._handle_send_telegram(user_id)
             return
 
@@ -767,25 +772,25 @@ class HealthHandler(BaseHTTPRequestHandler):
             remainder = path.split("/hotspot-cleanup/")[1].strip("/")
             parts = remainder.split("/")
             if len(parts) == 2:
-                user_id, cleanup_type = parts[0], parts[1]
+                user_id, cleanup_type = unquote(parts[0]), parts[1]
                 self._handle_hotspot_cleanup(user_id, cleanup_type)
                 return
 
         # Mikhmon script import
         if path.startswith("/mikhmon-cleanup/"):
-            user_id = path.split("/mikhmon-cleanup/")[1].strip("/")
+            user_id = unquote(path.split("/mikhmon-cleanup/")[1].strip("/"))
             self._handle_mikhmon_cleanup(user_id)
             return
 
         if path.startswith("/mikhmon-import/"):
-            user_id = path.split("/mikhmon-import/")[1].strip("/")
+            user_id = unquote(path.split("/mikhmon-import/")[1].strip("/"))
             if user_id:
                 self._handle_mikhmon_import(user_id)
                 return
 
         # Manual traffic cleanup — body: {retentionMonths: 12, dryRun: false}.
         if path.startswith("/router-traffic-cleanup/"):
-            user_id = path.split("/router-traffic-cleanup/")[1].strip("/")
+            user_id = unquote(path.split("/router-traffic-cleanup/")[1].strip("/"))
             self._handle_router_traffic_cleanup(user_id)
             return
 
@@ -810,6 +815,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/hotspot-user/"):
             remainder = path.split("/hotspot-user/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 2:
                 self._handle_hotspot_user_delete(parts[0], parts[1])
                 return
@@ -818,6 +824,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/hotspot-profile/"):
             remainder = path.split("/hotspot-profile/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 2:
                 self._handle_hotspot_profile_delete(parts[0], parts[1])
                 return
@@ -826,6 +833,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         if path.startswith("/ppp-secret/"):
             remainder = path.split("/ppp-secret/")[1].strip("/")
             parts = remainder.split("/")
+            parts[0] = unquote(parts[0])
             if len(parts) == 2:
                 self._handle_ppp_secret_delete(parts[0], parts[1])
                 return
