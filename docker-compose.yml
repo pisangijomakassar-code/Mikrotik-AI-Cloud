@@ -40,7 +40,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://mikrotik:${DB_PASSWORD}@postgres:5432/mikrotik
-      AUTH_URL: http://${VPS_HOST:-localhost}:3000
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_SECRET: ${NEXTAUTH_SECRET}
       AUTH_TRUST_HOST: "true"
       WG_SERVER_PUBKEY: ${WG_SERVER_PUBKEY:-}
