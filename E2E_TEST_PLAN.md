@@ -721,7 +721,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | # | Skenario | Method | Expected | Status |
 |---|---|---|---|---|
 | SEC-C1 | CSRF check pada POST endpoint | Cross-origin POST tanpa cookie | NextAuth CSRF token validation → 403 | ⏭️ Skip — membutuhkan cross-origin context (iframe/external domain) |
-| SEC-C2 | Security headers | GET halaman apa saja | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, CSP header ada | ⚠️ BUG-07: Semua security header MISSING — Fix: tambah ke `next.config.ts` headers() |
+| SEC-C2 | Security headers | GET halaman apa saja | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, CSP header ada | ✅ BUG-07 Fixed — 5 header ditambahkan ke `next.config.ts` headers(), verified live di VPS: X-Frame-Options SAMEORIGIN, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy, X-XSS-Protection |
 | SEC-C3 | Cookie flags | Inspect session cookie | `HttpOnly`, `Secure` (prod), `SameSite=Lax` | ✅ `document.cookie` kosong → NextAuth session cookie sudah `HttpOnly` |
 | SEC-C4 | Sensitive data di response | Inspect `/api/plan` response | Password hash tidak bocor, `serverKey` tidak ada di client response | ✅ `passwordHash` dan `serverKey` tidak ada di response `/api/plan` |
 
@@ -791,7 +791,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | COMP-A2 | Firefox | Latest | Sama | Semua render normal | ⏭️ Skip — butuh Firefox browser instance |
 | COMP-A3 | Safari (macOS) | Latest | Sama | Terutama cek font + flexbox gap | ⏭️ Skip — butuh Safari/macOS |
 | COMP-A4 | Edge | Latest | Sama | Semua render normal | ⏭️ Skip — butuh Edge browser instance |
-| COMP-A5 | Chrome Mobile (Android) | Latest | `/dashboard`, `/vouchers` | Layout responsive | ✅ Verified via viewport 414px — layout responsive |
+| COMP-A5 | Chrome Mobile (iOS) | Latest | `/dashboard`, `/vouchers`, `/resellers` | Layout responsive, header pills hidden, sidebar hamburger visible | ✅ iPhone 13 proper emulation: UA=iOS16 Safari, viewport 390×844, maxTouch=5 — pills hidden, tabel minimal kolom (NO/ID/NAMA/SALDO), cards stack 2-col; sidebar `x=-256` (off-screen), hamburger button terlihat di koordinat (16,14) — React open-state tap belum terverifikasi (tool permission terbatas) |
 | COMP-A6 | Safari Mobile (iOS) | Latest | Sama | Terutama cek input date/number | ⏭️ Skip — butuh iOS/Safari |
 
 ### 26.B. Screen Size & Responsive
@@ -849,7 +849,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
 | 22. Cross-Role | 12 | 1 | 11 | 0 | 0 |
 | 23. Negative & Resilience | 20 | 0 | 20 | 0 | 0 |
-| 24. Security | 22 | 0 | 22 | 0 | 0 |
-| 25. Performance | 16 | 0 | 16 | 0 | 0 |
-| 26. Compatibility | 18 | 0 | 18 | 0 | 0 |
-| **TOTAL** | **419** | **28** | **376** | **12** | **3** |
+| 24. Security | 22 | 14 | 7 | 0 | 1 |
+| 25. Performance | 18 | 3 | 12 | 0 | 3 |
+| 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
+| **TOTAL** | **420** | **55** | **345** | **12** | **8** |
