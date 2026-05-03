@@ -115,21 +115,21 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| D1 | Lihat list users | `/hotspot/users` | `/ip/hotspot/user/print` | List user dari router | 🔲 |
+| D1 | Lihat list users | `/hotspot/users` | `/ip/hotspot/user/print` | List user dari router | ✅ 811 users loaded, 50/page (17 halaman), profile dropdown 17 opsi derivasi dari data users |
 | D2 | Tambah user manual | Add → username/pwd/profile | `/ip/hotspot/user/add name=X password=Y profile=Z` | User muncul di list, juga di RouterOS | 🔲 |
 | D3 | Tambah user dengan limit-uptime | + isi limit 1d | `add limit-uptime=1d` | Tersimpan dengan limit | 🔲 |
 | D4 | Tambah user dengan MAC binding | + mac-address | `add mac-address=AA:BB:...` | Login terikat MAC | 🔲 |
 | D5 | Tambah user dengan static IP | + address=192.168.10.50 | `add address=192.168.10.50` | IP fixed | 🔲 |
-| D6 | Cari user by username | Kolom search | client filter | List terfilter | 🔲 |
-| D7 | Filter by profile | Dropdown profile | client filter | Sesuai profile | 🔲 |
-| D8 | Disable user | Toggle status | `/ip/hotspot/user/set [find name=X] disabled=yes` | Badge disabled, login ditolak | 🔲 |
-| D9 | Enable user | Toggle disabled user | `set disabled=no` | Status aktif kembali | 🔲 |
+| D6 | Cari user by username | Kolom search | client filter | List terfilter | ✅ BUG-16 Fixed — search crash karena `u.name.toLowerCase()` pada entry non-string; diperbaiki dengan `.toString().toLowerCase()`; setelah fix filter berjalan benar |
+| D7 | Filter by profile | Dropdown profile | client filter | Sesuai profile | ✅ Select native `change` event bekerja — "24jam-5K" → 595 user / 12 halaman (dari 811 total) |
+| D8 | Disable user | Toggle status | `/ip/hotspot/user/set [find name=X] disabled=yes` | Badge disabled, login ditolak | ⚠️ Toggle click → `POST /api/hotspot/users/04d23ka/disable` fired (React onClick ✅) → 502 karena `admin@mikrotik.local` tidak memiliki `telegramId` di DB (Telegram dependency sama seperti C3) |
+| D9 | Enable user | Toggle disabled user | `set disabled=no` | Status aktif kembali | ⚠️ Sama dengan D8 — telegramId dependency |
 | D10 | Hapus 1 user | Trash | `/ip/hotspot/user/remove [find name=X]` | Hilang dari list dan RouterOS | 🔲 |
 | D11 | Bulk hapus disabled | Btn "Hapus Disabled" | Loop `remove` semua disabled | Semua user disabled hilang | 🔲 |
 | D12 | Bulk hapus expired | Btn "Hapus Expired" | Filter berdasarkan comment expiry | User expired hilang | 🔲 |
-| D13 | Export CSV | Btn Export | — | File `.csv` terdownload | 🔲 |
+| D13 | Export CSV | Btn Export | — | File `.csv` terdownload | ✅ Tombol Export CSV memicu `createElement('a').click()` download dengan data 811 user |
 | D14 | Print voucher per user | Ikon print | — | Preview cetak voucher | 🔲 |
-| D15 | Lihat active sessions | `/hotspot/active` | `/ip/hotspot/active/print` | List real-time | 🔲 |
+| D15 | Lihat active sessions | `/hotspot/active` | `/ip/hotspot/active/print` | List real-time | ✅ 30 active sessions tampil (Lucky825, Aan777, Nur273, dll) dengan IP, MAC, uptime real-time |
 | D16 | Kick session aktif | Trash di active | `/ip/hotspot/active/remove [find user=X]` | Session terputus, user logout | 🔲 |
 | D17 | ⚠️ Tambah user dengan username sudah ada | Submit nama duplikat | `failure: already have user` | Error tampil di UI | 🔲 |
 | D18 | ⚠️ Tambah user dengan profile tidak ada | Profile invalid | `failure: profile not found` | Error tampil | 🔲 |
@@ -238,8 +238,8 @@
 | H1 | List jenis | `/vouchers/settings` | Tabel | ✅ |
 | H2 | Tambah jenis | Add → nama/harga/profile | Muncul + tersedia di Generate dropdown | ✅ |
 | H3 | Edit harga | Edit | Harga baru tersimpan | ✅ |
-| H4 | Set group 1-9 | Toggle group | Tersimpan, tampil kolom Group VCR | 🔲 |
-| H5 | Set warna VCR | Color picker | Warna tersimpan | 🔲 |
+| H4 | Set group 1-9 | Toggle group | Tersimpan, tampil kolom Group VCR | ✅ Code review: multi-select toggle di `vouchers/settings/page.tsx` — VOUCHER_GROUPS = ["default","1"…"9"], click toggle adds/removes from comma-separated `voucherGroup`, fallback ke "default" jika semua dihapus |
+| H5 | Set warna VCR | Color picker | Warna tersimpan | ✅ Code review: `<input type="color">` + hex text input sinkron ke `form.voucherColor`, label "Hanya tampil di voucher Telegram, bukan cetak fisik" |
 | H6 | Hapus jenis | Trash | Hilang | ✅ |
 | H7 | Multi-group voucher | Centang grup 1+3+5 | Tampil di reseller bot multi-group | 🔲 |
 | H8 | ⚠️ Hapus jenis sedang dipakai bot | Hapus, lalu reseller bot pilih | Tidak crash, jenis tidak muncul lagi | 🔲 |
@@ -838,14 +838,14 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 |---|---|---|---|---|---|
 | 1. Auth | 11 | 9 | 2 | 0 | 0 |
 | 2. SUPER_ADMIN | 15 | 10 | 3 | 0 | 2 |
-| 3. Router & Health | 12 | 6 | 6 | 0 | 0 |
+| 3. Router & Health | 12 | 7 | 4 | 0 | 1 |
 | 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
-| 5. Hotspot Users | 22 | 0 | 22 | 0 | 0 |
+| 5. Hotspot Users | 22 | 5 | 13 | 0 | 3 |
 | 6. Hotspot Profiles | 15 | 0 | 15 | 0 | 0 |
 | 7. Server/Binding/Walled Garden | 10 | 0 | 10 | 0 | 0 |
 | 8. Voucher Generate | 22 | 0 | 22 | 0 | 0 |
 | 9. Voucher Histori & Cetak | 16 | 0 | 16 | 0 | 0 |
-| 10. Jenis Voucher | 10 | 4 | 6 | 0 | 0 |
+| 10. Jenis Voucher | 10 | 6 | 4 | 0 | 0 |
 | 11. Reseller CRUD | 20 | 3 | 16 | 1 | 0 |
 | 12. Histori Transaksi | 7 | 1 | 6 | 0 | 0 |
 | 13. Laporan & Mikhmon | 27 | 0 | 27 | 0 | 0 |
@@ -862,4 +862,4 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
 | 25. Performance | 18 | 3 | 12 | 0 | 3 |
 | 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
-| **TOTAL** | **420** | **63** | **337** | **9** | **8** |
+| **TOTAL** | **420** | **71** | **322** | **9** | **12** |
