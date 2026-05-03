@@ -662,10 +662,10 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 21. Background Jobs | 11 | 2 | 6 | 3 | 0 |
 | 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
 | 23. Negative & Resilience | 20 | 1 | 19 | 0 | 0 |
-| 24. Security | 20 | 12 | 5 | 0 | 3 |
-| 25. Performance | 17 | 4 | 13 | 0 | 0 |
-| 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **144** | **180** | **20** | **47** |
+| 24. Security | 22 | 15 | 7 | 0 | 0 |
+| 25. Performance | 18 | 3 | 15 | 0 | 0 |
+| 26. Compatibility | 17 | 10 | 7 | 0 | 0 |
+| **TOTAL** | **406** | **154** | **188** | **20** | **44** |
 
 ---
 
