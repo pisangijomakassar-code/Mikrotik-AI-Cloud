@@ -2174,8 +2174,10 @@ class HealthHandler(BaseHTTPRequestHandler):
 
                 if vdb and vouchers:
                     try:
-                        # Use first voucher's price as price_per_unit (same profile = same price)
                         price_per = vouchers[0]["price"] if vouchers else 0
+                        # Remove any existing batch for this (month, profile, router) before re-inserting
+                        # so the hourly cron (deleteAfterImport=False) doesn't create duplicates.
+                        vdb.delete_mikhmon_batch(user_id, router_display, profile, f"mikhmon_import:{month}")
 
                         # Parse batch date: use earliest date in the group
                         batch_timestamp = None

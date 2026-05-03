@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
 
   const batchWhere = (gte: Date, lte?: Date) => ({
     tenantId,
-    source: { startsWith: "mikhmon_import" } as const,
     ...(routerName ? { routerName } : {}),
     createdAt: { gte, ...(lte ? { lte } : {}) },
   })
