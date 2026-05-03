@@ -533,16 +533,25 @@
 
 | # | Skenario | UI Action | Backend Command | Expected | Status |
 |---|---|---|---|---|---|
-| T1 | Cloudflare tunnel — buat | Form router TUNNEL/CLOUDFLARE | API Cloudflare buat tunnel + DNS record | Tunnel ID + token tersimpan | 🔲 |
-| T2 | Cloudflare — port api+winbox | enabledPorts | Setiap port → ingress rule | Bisa diakses via subdomain | 🔲 |
-| T3 | SSTP tunnel — buat | TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN tersimpan | 🔲 |
-| T4 | SSTP — script setup ke RouterOS | Download .rsc | — | Script konfig SSTP client | 🔲 |
-| T5 | WireGuard peer add | Form TUNNEL/WG | `wg set wg0 peer ...` | Peer aktif | ❌ (jika ada) |
-| T6 | OpenVPN user | Form TUNNEL/OVPN | passwd file + iptables DNAT | User OpenVPN bisa konek | ❌ (jika ada) |
-| T7 | Hapus tunnel saat router dihapus | Trash router | revoke Cloudflare / vpncmd UserDelete | Tunnel di-cleanup | 🔲 |
-| T8 | ⚠️ Cloudflare API down saat buat | Mock 5xx | — | Rollback router record | 🔲 |
-| T9 | ⚠️ Tunnel duplikat user (race) | 2× submit cepat | — | Constraint DB unique | 🔲 |
-| T10 | Test akses winbox via tunnel | Konek via Winbox client | TCP via tunnel | Login berhasil | 🔲 |
+| T1 | Cloudflare tunnel — buat | Form router TUNNEL/CLOUDFLARE | API Cloudflare buat tunnel + DNS record | Tunnel ID + token tersimpan | ⚠️ |
+| T2 | Cloudflare — port api+winbox | enabledPorts | Setiap port → ingress rule | Bisa diakses via subdomain | ✅ |
+| T3 | SSTP tunnel — buat | TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN tersimpan | ⏭️ |
+| T4 | SSTP — script setup ke RouterOS | Download .rsc | — | Script konfig SSTP client | ⚠️ |
+| T5 | WireGuard peer add | Form TUNNEL/WG | `wg set wg0 peer ...` | Peer aktif | ⚠️ |
+| T6 | OpenVPN user | Form TUNNEL/OVPN | passwd file + iptables DNAT | User OpenVPN bisa konek | ⚠️ |
+| T7 | Hapus tunnel saat router dihapus | Trash router | revoke Cloudflare / vpncmd UserDelete | Tunnel di-cleanup | ⏭️ |
+| T8 | ⚠️ Cloudflare API down saat buat | Mock 5xx | — | Rollback router record | ⏭️ |
+| T9 | ⚠️ Tunnel duplikat user (race) | 2× submit cepat | — | Constraint DB unique | ⏭️ |
+| T10 | Test akses winbox via tunnel | Konek via Winbox client | TCP via tunnel | Login berhasil | ⚠️ |
+
+> **T1 ⚠️:** Form setup tunnel tersedia (4 metode: Cloudflare, SSTP, OVPN, WireGuard), namun klik "Aktifkan Tunnel" mengembalikan HTTP 500 dari `/api/tunnels` tanpa error toast ke user. Kemungkinan: method selection ter-reset saat klik port toggle (React state bug), atau Cloudflare credentials tidak dikonfigurasi. Counter tetap "2 / 1" — tidak ada tunnel yang dibuat.
+> **T2 ✅:** Manage Tunnel menampilkan 5/5 port aktif (API wajib, Winbox/SSH/WebFig/API-SSL toggleable) untuk plan PREMIUM. Plan notice tampil. Method filter labels (CLOUDFLARE/SSTP/OVPN/WIREGUARD) adalah info display, bukan filter interaktif.
+> **T3 ⏭️:** Skip — membuat SSTP tunnel akan membuat user VPN nyata di SoftEther server. Opsi SSTP ada di form.
+> **T4 ⚠️:** Tab "Instruksi Setup" menampilkan script RouterOS CLI (copy-paste) beserta kredensial VPN lengkap. Tidak ada tombol download file `.rsc` — hanya copy-paste. Diverifikasi untuk OVPN (Burhan).
+> **T5 ⚠️:** Opsi "WireGuard UDP (RouterOS 7)" tersedia di form setup — bukan ❌. Create tidak ditest di prod.
+> **T6 ⚠️:** Opsi "OpenVPN TCP (RouterOS 6)" tersedia di form setup; Burhan sudah punya OVPN tunnel aktif (10.9.1.2, terhubung). Bukan ❌.
+> **T7 ⏭️:** Skip — menghapus router dilarang di prod.
+> **T10 ⚠️:** Tombol "Winbox" pada router Burhan dapat diklik (status [active]) — kemungkinan trigger `winbox://` URI. Uji konektivitas nyata membutuhkan Winbox client.
 
 ---
 
@@ -644,14 +653,14 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
 | 18. Billing Midtrans | 14 | 3 | 8 | 0 | 3 |
 | 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
-| 20. Tunnel | 10 | 0 | 0 | 2 | 8 |
+| 20. Tunnel | 10 | 1 | 9 | 0 | 0 |
 | 21. Background Jobs | 11 | 0 | 3 | 0 | 8 |
 | 22. Cross-Role | 12 | 2 | 0 | 0 | 10 |
 | 23. Negative & Resilience | 20 | 0 | 0 | 0 | 20 |
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **140** | **139** | **19** | **93** |
+| **TOTAL** | **391** | **141** | **148** | **17** | **85** |
 
 ---
 
@@ -879,7 +888,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
 | 18. Billing Midtrans | 14 | 3 | 4 | 6 | 1 |
 | 19. AI Assistant | 10 | 0 | 0 | 0 | 1 |
-| 20. Tunnel | 10 | 0 | 8 | 2 | 0 |
+| 20. Tunnel | 10 | 1 | 4 | 0 | 5 |
 | 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
 | 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
 | 23. Negative & Resilience | 20 | 1 | 19 | 0 | 0 |
