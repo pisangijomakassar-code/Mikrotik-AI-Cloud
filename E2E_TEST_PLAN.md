@@ -584,16 +584,16 @@
 |---|---|---|---|---|
 | P1 | SUPER_ADMIN buat tenant → tenant login | B2 → A2 dengan kredensial baru | Login OK, dashboard kosong tapi fungsional | ✅ Reset password `admin@e2etest.local` via B12 → login → redirect `/dashboard` tenant, sidebar Indonesian, FREE plan "Tokens: 0/100", "Tambah Router" prompt — fungsional |
 | P2 | SUPER_ADMIN ubah plan → sidebar tenant | B3 → tenant refresh | Sidebar plan baru | ✅ |
-| P3 | Reseller bot beli voucher → tampil di Reports | RB14 → K1 | Batch source=reseller_bot tampil | 🔲 |
-| P4 | Reseller bot beli → reseller detail histori | RB14 → I12 | Transaksi tercatat | 🔲 |
-| P5 | Top Up via dashboard → DM Telegram | I4 | Reseller dapat DM | 🔲 |
-| P6 | Top Up via bot deposit → muncul di histori dashboard | RB27 → I12 | Tercatat | 🔲 |
-| P7 | Generate voucher dashboard untuk reseller → saldo terpotong | I13 | Saldo turun | 🔲 |
-| P8 | Hapus reseller → histori tetap | I8 → K6 filter | Histori tetap menampilkan reseller terhapus | 🔲 |
-| P9 | Hapus router → batch & user tetap di DB | C4 → K1 | Data historis tetap | 🔲 |
-| P10 | Plan downgrade FREE setelah PREMIUM | B11 | Existing router tetap, tambah baru ditolak | 🔲 |
-| P11 | Tenant A tidak bisa lihat data Tenant B | Login A → cek API tenant B id | 403/empty | 🔲 |
-| P12 | Multi-tenant isolasi RouterOS | Tenant A pakai router X, B pakai router Y | API health A tidak return router B | 🔲 |
+| P3 | Reseller bot beli voucher → tampil di Reports | RB14 → K1 | Batch source=reseller_bot tampil | ⏭️ |
+| P4 | Reseller bot beli → reseller detail histori | RB14 → I12 | Transaksi tercatat | ⏭️ |
+| P5 | Top Up via dashboard → DM Telegram | I4 | Reseller dapat DM | ⏭️ |
+| P6 | Top Up via bot deposit → muncul di histori dashboard | RB27 → I12 | Tercatat | ⏭️ |
+| P7 | Generate voucher dashboard untuk reseller → saldo terpotong | I13 | Saldo turun | ⏭️ |
+| P8 | Hapus reseller → histori tetap | I8 → K6 filter | Histori tetap menampilkan reseller terhapus | ⏭️ |
+| P9 | Hapus router → batch & user tetap di DB | C4 → K1 | Data historis tetap | ⏭️ |
+| P10 | Plan downgrade FREE setelah PREMIUM | B11 | Existing router tetap, tambah baru ditolak | ⏭️ |
+| P11 | Tenant A tidak bisa lihat data Tenant B | Login A → cek API tenant B id | 403/empty | ⏭️ |
+| P12 | Multi-tenant isolasi RouterOS | Tenant A pakai router X, B pakai router Y | API health A tidak return router B | ⏭️ |
 
 ---
 
@@ -660,12 +660,12 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
 | 20. Tunnel | 10 | 1 | 9 | 0 | 0 |
 | 21. Background Jobs | 11 | 2 | 6 | 3 | 0 |
-| 22. Cross-Role | 12 | 2 | 0 | 0 | 10 |
+| 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
 | 23. Negative & Resilience | 20 | 0 | 0 | 0 | 20 |
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **143** | **151** | **20** | **77** |
+| **TOTAL** | **391** | **143** | **161** | **20** | **67** |
 
 ---
 
