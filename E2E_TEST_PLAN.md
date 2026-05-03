@@ -254,24 +254,30 @@
 |---|---|---|---|---|---|
 | I1 | List reseller | `/resellers` | — | Tabel | ✅ |
 | I2 | Tambah reseller | Add → nama/Telegram ID/HP | — | Reseller baru muncul | ✅ |
-| I3 | Edit (diskon%) | Edit | — | Tersimpan | 🔲 |
+| I3 | Edit (diskon%) | Edit | — | Tersimpan | ⏭️ |
 | I4 | Top Up saldo | Top Up Rp 50rb | DM ke reseller: `✅ Top Up Rp 50.000 berhasil. Saldo: Rp X` | Saldo bertambah, transaksi tercatat | ✅ Saldo naik (DM tidak dikirim — Telegram tidak dikonfigurasi) |
-| I5 | Top Up + bukti foto | Upload foto | DM (caption + foto) | Foto tersimpan, tampil di histori | 🔲 |
-| I6 | Top Down | Top Down Rp 20rb | DM ke reseller: `⬇️ Top Down Rp 20.000. Saldo: Rp X` | Saldo berkurang | 🔲 |
-| I7 | Cari reseller | Search nama | — | Filter | 🔲 |
-| I8 | Hapus reseller | Trash | — | Hilang dari list | 🔲 |
-| I9 | Lihat detail | Klik nama | — | Halaman detail | 🔲 |
-| I10 | Histori voucher reseller | Tab Voucher | — | Semua batch dari reseller | 🔲 |
-| I11 | Download PDF batch | Btn PDF | — | File PDF | 🔲 |
-| I12 | Histori transaksi saldo | Tab Transaction | — | Semua TopUp/Down/Pembelian | 🔲 |
-| I13 | Generate voucher dari detail | Generate | DM voucher delivery (jika via bot) | Batch atas nama reseller | 🔲 |
-| I14 | Saldo terpotong saat beli | Generate dengan reseller | — | Saldo turun = qty × harga - diskon | 🔲 |
-| I15 | ⚠️ Top Down saldo > yang ada | Down 100rb dari saldo 50rb | — | Validasi: tidak boleh negatif | 🔲 |
-| I16 | ⚠️ Hapus reseller dengan saldo aktif | Trash | — | Konfirmasi double, transaksi histori tetap | 🔲 |
-| I17 | ⚠️ Top Up nominal 0 | Submit 0 | — | Validasi UI | 🔲 |
-| I18 | ⚠️ Telegram ID invalid (bukan angka) | Form input "abc" | — | Validasi UI | 🔲 |
-| I19 | ⚠️ Telegram ID sudah dipakai | Duplikat | — | Error unique | 🔲 |
+| I5 | Top Up + bukti foto | Upload foto | DM (caption + foto) | Foto tersimpan, tampil di histori | ⚠️ |
+| I6 | Top Down | Top Down Rp 20rb | DM ke reseller: `⬇️ Top Down Rp 20.000. Saldo: Rp X` | Saldo berkurang | ⏭️ |
+| I7 | Cari reseller | Search nama | — | Filter | ✅ |
+| I8 | Hapus reseller | Trash | — | Hilang dari list | ✅ |
+| I9 | Lihat detail | Klik nama | — | Halaman detail | ⚠️ |
+| I10 | Histori voucher reseller | Tab Voucher | — | Semua batch dari reseller | ✅ |
+| I11 | Download PDF batch | Btn PDF | — | File PDF | ❌ |
+| I12 | Histori transaksi saldo | Tab Transaction | — | Semua TopUp/Down/Pembelian | ✅ |
+| I13 | Generate voucher dari detail | Generate | DM voucher delivery (jika via bot) | Batch atas nama reseller | ⏭️ |
+| I14 | Saldo terpotong saat beli | Generate dengan reseller | — | Saldo turun = qty × harga - diskon | ⏭️ |
+| I15 | ⚠️ Top Down saldo > yang ada | Down 100rb dari saldo 50rb | — | Validasi: tidak boleh negatif | ✅ |
+| I16 | ⚠️ Hapus reseller dengan saldo aktif | Trash | — | Konfirmasi double, transaksi histori tetap | ⏭️ |
+| I17 | ⚠️ Top Up nominal 0 | Submit 0 | — | Validasi UI | ✅ |
+| I18 | ⚠️ Telegram ID invalid (bukan angka) | Form input "abc" | — | Validasi UI | ❌ |
+| I19 | ⚠️ Telegram ID sudah dipakai | Duplikat | — | Error unique | ❌ |
 | I20 | Bulk top up via CSV | Upload CSV (jika fitur ada) | DM batch | Saldo semua reseller terupdate | ❌ |
+
+> **BUG-I18 ❌:** Tidak ada validasi format Telegram ID — form menerima teks non-numerik seperti "abc" tanpa error; data tersimpan di DB. Idealnya validasi hanya integer positif (atau mulai dengan `-` untuk group chat).
+> **BUG-I19 ❌:** Tidak ada validasi uniqueness Telegram ID — duplikat ID diterima tanpa error; dapat menyebabkan bot mengirim pesan ke reseller yang salah.
+> **I5 ⚠️:** Form Top Up tidak memiliki tombol upload foto bukti transfer; lampiran foto tidak bisa dilakukan dari halaman ini.
+> **I9 ⚠️:** Halaman detail reseller (`/resellers/[id]`) dapat diakses via URL langsung (CUID), tetapi tidak ada link dari tabel list — nama reseller di kolom list bukan hyperlink.
+> **I11 ❌:** Tombol PDF di tab Voucher tidak berfungsi — tidak ada handler download PDF batch per reseller.
 
 ---
 
@@ -629,7 +635,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 8. Voucher Generate | 22 | 13 | 0 | 0 | 9 |
 | 9. Voucher Histori & Cetak | 16 | 11 | 4 | 1 | 0 |
 | 10. Jenis Voucher | 10 | 6 | 3 | 1 | 0 |
-| 11. Reseller CRUD | 20 | 4 | 0 | 1 | 15 |
+| 11. Reseller CRUD | 20 | 9 | 7 | 4 | 0 |
 | 12. Histori Transaksi | 7 | 2 | 5 | 0 | 0 |
 | 13. Laporan & Mikhmon | 27 | 17 | 5 | 0 | 5 |
 | 14. PPP | 11 | 4 | 6 | 1 | 0 |
@@ -645,7 +651,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **135** | **132** | **16** | **108** |
+| **TOTAL** | **391** | **140** | **139** | **19** | **93** |
 
 ---
 
@@ -864,7 +870,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 8. Voucher Generate | 22 | 0 | 22 | 0 | 0 |
 | 9. Voucher Histori & Cetak | 16 | 0 | 16 | 0 | 0 |
 | 10. Jenis Voucher | 10 | 6 | 4 | 0 | 0 |
-| 11. Reseller CRUD | 20 | 3 | 16 | 1 | 0 |
+| 11. Reseller CRUD | 20 | 9 | 5 | 4 | 2 |
 | 12. Histori Transaksi | 7 | 2 | 0 | 0 | 4 |
 | 13. Laporan & Mikhmon | 27 | 0 | 27 | 0 | 0 |
 | 14. PPP | 11 | 4 | 0 | 1 | 1 |
