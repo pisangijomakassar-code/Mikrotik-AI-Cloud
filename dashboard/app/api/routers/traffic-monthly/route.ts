@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(
       `${agentUrl}/router-traffic-monthly/${user.telegramId}?${qs.toString()}`,
-      { signal: AbortSignal.timeout(15000) },
+      { signal: AbortSignal.timeout(8000) },
     )
     const data = await res.json()
     return Response.json(data, { status: res.ok ? 200 : res.status })

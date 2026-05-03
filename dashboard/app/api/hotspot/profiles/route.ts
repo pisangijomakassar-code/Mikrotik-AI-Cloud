@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     })
     const data = await res.json()
     return Response.json(data, { status: res.ok ? 200 : res.status })
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(
       `${agentUrl}/hotspot-profiles/${user.telegramId}${qs}`,
-      { signal: AbortSignal.timeout(15000) }
+      { signal: AbortSignal.timeout(8000) }
     )
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: "Agent error" }))

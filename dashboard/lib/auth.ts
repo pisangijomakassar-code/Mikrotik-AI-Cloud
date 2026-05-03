@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "./db"
+import { checkRateLimit, resetRateLimit } from "./rate-limit"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -12,8 +13,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null
+
+        const ip =
+          request?.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+          request?.headers.get("x-real-ip") ||
+          "unknown"
+
+        if (!checkRateLimit(ip)) return null
 
         const email = credentials.email as string
         const password = credentials.password as string
@@ -23,6 +31,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const isValid = await bcrypt.compare(password, user.passwordHash)
         if (!isValid) return null
+
+        resetRateLimit(ip)
 
         await prisma.user.update({
           where: { id: user.id },

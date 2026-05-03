@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(`${agentUrl}${path}`, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     })
     if (res.ok) return Response.json(await res.json())
   } catch { /* fallthrough */ }

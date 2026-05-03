@@ -46,7 +46,7 @@ export async function GET() {
     for (const [tgId, routers] of byOwner) {
       try {
         const res = await fetch(`${AGENT_URL}/router-health/${tgId}`, {
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(8000),
         })
         if (res.ok) {
           const agentHealth = await res.json() as Array<{ name: string; status: string; cpuLoad?: number; memoryPercent?: number; uptime?: string; activeClients?: number; version?: string }>

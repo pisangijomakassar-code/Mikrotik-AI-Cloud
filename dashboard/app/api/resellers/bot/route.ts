@@ -14,7 +14,7 @@ async function triggerBotRestart(routerId: string): Promise<{ ok: boolean; statu
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ router_id: routerId }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     })
     return (await res.json()) as { ok: boolean; status?: string; message?: string }
   } catch (e) {

@@ -28,7 +28,7 @@ export async function DELETE(
       `${agentUrl}/ppp-secret/${user.telegramId}/${encodeURIComponent(name)}`,
       {
         method: "DELETE",
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       }
     )
     const data = await res.json()

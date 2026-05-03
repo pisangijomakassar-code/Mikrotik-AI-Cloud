@@ -25,7 +25,7 @@ export async function DELETE(
   try {
     const res = await fetch(
       `${agentUrl}/hotspot-user/${user.telegramId}/${encodeURIComponent(username)}`,
-      { method: "DELETE", signal: AbortSignal.timeout(15000) }
+      { method: "DELETE", signal: AbortSignal.timeout(8000) }
     )
     const data = await res.json()
     return Response.json(data, { status: res.status })

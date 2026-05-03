@@ -43,7 +43,7 @@ export async function GET(
   let userMap: Map<string, MikrotikUser> = new Map()
   try {
     const res = await fetch(`${agentUrl}/hotspot-users/${user.telegramId}${router}`, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     })
     if (res.ok) {
       const json = await res.json()

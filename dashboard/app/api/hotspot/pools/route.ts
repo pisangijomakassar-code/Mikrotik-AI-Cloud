@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const res = await fetch(`${agentUrl}/ip-pools/${user.telegramId}${qs}`, {
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: "Agent error" }))

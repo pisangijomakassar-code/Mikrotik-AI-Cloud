@@ -73,7 +73,7 @@ export async function PUT(request: NextRequest) {
           model: saved.model,
           apiKey: apiKeyToSave,  // plaintext (sekali ini), agent akan tulis ke config.json
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       }).catch(() => null)
     } catch { /* best-effort */ }
 

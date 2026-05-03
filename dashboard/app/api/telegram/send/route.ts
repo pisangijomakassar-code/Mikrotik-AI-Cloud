@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
           chat_ids: body.chatIds,
           message: body.message,
         }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       })
     }
 

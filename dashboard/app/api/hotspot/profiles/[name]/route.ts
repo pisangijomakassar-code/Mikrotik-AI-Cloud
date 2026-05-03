@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   try {
     const res = await fetch(
       `${agentUrl}/hotspot-profiles/${user.telegramId}/${encodeURIComponent(name)}${qs}`,
-      { signal: AbortSignal.timeout(15000) }
+      { signal: AbortSignal.timeout(8000) }
     )
     const data = await res.json()
     return Response.json(data, { status: res.ok ? 200 : res.status })
@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       }
     )
     const data = await res.json()
@@ -73,7 +73,7 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
     const res = await fetch(
       `${agentUrl}/hotspot-profile/${user.telegramId}/${encodeURIComponent(name)}`,
-      { method: "DELETE", signal: AbortSignal.timeout(15000) }
+      { method: "DELETE", signal: AbortSignal.timeout(8000) }
     )
     const data = await res.json()
     return Response.json(data, { status: res.ok ? 200 : res.status })

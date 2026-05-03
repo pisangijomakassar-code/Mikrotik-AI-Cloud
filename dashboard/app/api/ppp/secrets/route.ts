@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(
       `${agentUrl}/ppp-secrets/${user.telegramId}${qs}`,
-      { signal: AbortSignal.timeout(15000) }
+      { signal: AbortSignal.timeout(8000) }
     )
     if (res.ok) return Response.json(await res.json())
   } catch { /* fallthrough */ }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
       }
     )
     const data = await res.json()
