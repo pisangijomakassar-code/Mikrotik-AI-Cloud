@@ -10,9 +10,16 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog"
 import { TenantStatusBadge } from "./tenant-status-badge"
 import { EditTenantDialog } from "./edit-tenant-dialog"
-import { MoreHorizontal, Search, Router, Users, Pencil, ShieldOff, ShieldCheck, Trash2 } from "lucide-react"
+import { MoreHorizontal, Search, Router, Users, Pencil, ShieldOff, ShieldCheck, Trash2, KeyRound, Copy, Check } from "lucide-react"
 import { toast } from "sonner"
 import { formatDistanceToNow, format, isPast } from "date-fns"
 
@@ -39,6 +46,10 @@ interface Props {
 export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: Props) {
   const [search, setSearch] = useState("")
   const [editTarget, setEditTarget] = useState<TenantRow | null>(null)
+  const [churnTarget, setChurnTarget] = useState<TenantRow | null>(null)
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [resetting, setResetting] = useState<string | null>(null)
 
   const filtered = search
     ? tenants.filter(
@@ -66,19 +77,45 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
     [onRefresh]
   )
 
-  const deleteTenant = useCallback(
-    async (id: string, name: string) => {
-      if (!confirm(`Mark "${name}" as churned? This is reversible via Edit.`)) return
-      const res = await fetch(`/api/platform/tenants/${id}`, { method: "DELETE" })
+  const confirmChurn = useCallback(async () => {
+    if (!churnTarget) return
+    const res = await fetch(`/api/platform/tenants/${churnTarget.id}`, { method: "DELETE" })
+    if (res.ok) {
+      toast.success(`${churnTarget.name} marked as churned`)
+      onRefresh()
+    } else {
+      toast.error("Failed to churn tenant")
+    }
+    setChurnTarget(null)
+  }, [churnTarget, onRefresh])
+
+  const resetPassword = useCallback(async (id: string) => {
+    setResetting(id)
+    try {
+      const res = await fetch(`/api/platform/tenants/${id}/reset-password`, { method: "POST" })
+      const data = await res.json()
       if (res.ok) {
-        toast.success(`${name} marked as churned`)
-        onRefresh()
+        setResetResult(data)
       } else {
-        toast.error("Failed to churn tenant")
+        toast.error(data.error ?? "Failed to reset password")
       }
-    },
-    [onRefresh]
-  )
+    } finally {
+      setResetting(null)
+    }
+  }, [])
+
+  function copyPassword(pw: string) {
+    navigator.clipboard.writeText(pw).catch(() => {
+      const ta = document.createElement("textarea")
+      ta.value = pw
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
+    })
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   function expiryLabel(t: TenantRow) {
     const date = t.status === "TRIAL" ? t.trialEndsAt : t.expiresAt
@@ -168,6 +205,13 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
                         <DropdownMenuItem onClick={() => setEditTarget(t)}>
                           <Pencil className="h-4 w-4 mr-2" /> Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => resetPassword(t.id)}
+                          disabled={resetting === t.id}
+                        >
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          {resetting === t.id ? "Resetting…" : "Reset Password"}
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/10" />
                         {t.status !== "ACTIVE" && (
                           <DropdownMenuItem onClick={() => setStatus(t.id, "ACTIVE")}>
@@ -182,7 +226,7 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
                         <DropdownMenuSeparator className="bg-white/10" />
                         <DropdownMenuItem
                           className="text-red-400 focus:text-red-400"
-                          onClick={() => deleteTenant(t.id, t.name)}
+                          onClick={() => setChurnTarget(t)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" /> Mark Churned
                         </DropdownMenuItem>
@@ -201,6 +245,69 @@ export function TenantTable({ tenants, loading, onRefresh, showSearch = true }: 
         onOpenChange={(v) => { if (!v) setEditTarget(null) }}
         onUpdated={() => { setEditTarget(null); onRefresh() }}
       />
+
+      {/* Mark Churned confirmation */}
+      <AlertDialog open={!!churnTarget} onOpenChange={(v) => { if (!v) setChurnTarget(null) }}>
+        <AlertDialogContent className="bg-[#0d1929] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline text-red-400">Mark as Churned?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#869397]">
+              <span className="block">
+                <strong className="text-foreground">{churnTarget?.name}</strong> and all its data will be marked as churned.
+                The tenant will no longer be able to log in.
+              </span>
+              <span className="block mt-2">This action can be reversed by editing the tenant status back to Active.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-500 font-semibold"
+              onClick={confirmChurn}
+            >
+              Mark Churned
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset password result */}
+      <Dialog open={!!resetResult} onOpenChange={(v) => { if (!v) { setResetResult(null); setCopied(false) } }}>
+        <DialogContent className="sm:max-w-sm bg-[#0d1929] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="font-headline">Password Reset</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-[#869397]">
+              New password for <strong className="text-foreground">{resetResult?.email}</strong>:
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 font-mono text-sm bg-white/5 border border-white/10 rounded px-3 py-2 text-[#4cd7f6] select-all">
+                {resetResult?.password}
+              </code>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 shrink-0"
+                onClick={() => copyPassword(resetResult?.password ?? "")}
+              >
+                {copied ? <Check className="h-4 w-4 text-[#4ae176]" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-amber-400">
+              Share this password securely. It will not be shown again.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              className="bg-[#4cd7f6] text-[#003640] hover:brightness-105 font-headline font-bold"
+              onClick={() => { setResetResult(null); setCopied(false) }}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

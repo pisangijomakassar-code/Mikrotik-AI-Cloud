@@ -65,9 +65,9 @@
 | B7 | Hapus announcement | Trash | Hilang dari dashboard tenant | ✅ Klik hapus → "0 announcements", list kembali ke "No announcements yet" |
 | B8 | SUPER_ADMIN navigasi semua page platform | Buka satu per satu | Tidak ada error 500 di console | ✅ Semua halaman platform load (path benar: `/platform/billing/...`, `/platform/broadcast/...`) |
 | B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | ✅ Toast "Email already in use", dialog tetap terbuka (correct) |
-| B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | ❌ Tidak ada tombol Delete di action menu tenant (hanya Edit/Activate/Suspend/Mark Churned) — fitur belum diimplementasi |
-| B11 | ⚠️ Plan downgrade saat router > limit baru | PREMIUM (3 router) → FREE (max 1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | ❌ BUG-15: Tidak ada warning/konfirmasi — plan langsung berubah tanpa notifikasi kelebihan router; reverted ke PREMIUM manual |
-| B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | ❌ Tidak ada fitur reset password di Edit Tenant dialog maupun action menu — belum diimplementasi |
+| B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | ✅ Tombol "Mark Churned" di action menu → AlertDialog konfirmasi → soft-delete (status=CHURNED, reversible via Edit). Hard cascade delete tidak diimplementasi (soft-delete lebih aman untuk prod). |
+| B11 | ⚠️ Plan downgrade saat router > limit baru | PREMIUM (3 router) → FREE (max 1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | ✅ BUG-15 Fixed — AlertDialog dengan info "X routers, plan baru max Y" ditampilkan sebelum downgrade; downgrade tidak bisa tanpa konfirmasi. Router tetap aktif tapi tenant tidak bisa tambah baru. |
+| B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | ✅ Tombol "Reset Password" di action menu tenant → POST `/api/platform/tenants/{id}/reset-password` → generate random 16-char hex password + bcrypt hash → tampilkan di dialog dengan tombol copy; password TIDAK disimpan plain di DB. |
 | B13 | Lihat invoice semua tenant | `/platform/billing/invoices` | List paginated, filter by status | ✅ |
 | B14 | Lihat agregat usage token semua tenant | `/platform/usage` | Total + breakdown per tenant | ✅ |
 | B15 | Tenant baru otomatis dapat plan FREE | Buat tenant → cek /platform/billing/subscriptions | Plan FREE terdaftar | ✅ Plan FREE langsung muncul di kolom Plan saat tenant dibuat |
@@ -688,7 +688,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | BUG-11 | Tambah Router — Copy Button | Tombol copy (salin script/perintah) di form tambah router tidak berfungsi — router sudah konek tapi tidak bisa copy teks | 🟡 Minor | 🟢 Fixed — `copyText()` helper dengan `document.execCommand` fallback untuk HTTP context |
 | BUG-12 | Tambah Router — Winbox & API | ~~Koneksi via Winbox dan API gagal~~ | — | 🟢 Not a bug — koneksi berhasil, masalahnya hanya tombol copy |
 | BUG-13 | Router Management — Status Hijau | Setelah router berhasil ditambah dan konek, status router management di halaman router tidak berubah hijau (tetap offline/abu-abu) | 🔴 High | 🟢 Fixed — (1) `useCreateRouter.onSuccess` invalidate `["routers-health"]`; (2) health API pakai `router.telegramOwnerId` bukan `session.user.telegramId` |
-| BUG-15 | Plan Downgrade — No Warning | Downgrade plan tenant dari PREMIUM ke FREE (saat tenant punya 3 router, FREE max 1) tidak menampilkan warning/konfirmasi — perubahan langsung terjadi | 🟡 Minor | 🔴 Open — perlu dialog konfirmasi dengan info "X router melebihi limit plan baru" |
+| BUG-15 | Plan Downgrade — No Warning | Downgrade plan tenant dari PREMIUM ke FREE (saat tenant punya 3 router, FREE max 1) tidak menampilkan warning/konfirmasi — perubahan langsung terjadi | 🟡 Minor | 🟢 Fixed — AlertDialog muncul dengan info router count vs new plan limit; downgrade hanya berjalan setelah konfirmasi "Downgrade Anyway" |
 | BUG-14 | Data Cross-Router | Switching router di sidebar tidak refresh semua data — live traffic (`useRouterTraffic`), voucher list, dan dialog profiles menampilkan data router lama | 🔴 High | 🟢 Fixed — `useRouterTraffic` + `/api/routers/traffic` terima `?router=` param; `useAllVouchers` + `/api/vouchers` + `listVoucherBatches` filter `routerName`; `GenerateVoucherDialog` scope profiles ke `activeRouter` |
 | INFO-01 | Router Tests | Semua test yang butuh koneksi RouterOS di-skip (C3–C12, D, E, F, G, dsb.) | — | ⏭️ Skipped |
 | INFO-02 | Telegram Bot Tests | Semua test Reseller Bot dan Owner Bot di-skip (perlu token + chat_id aktif) | — | ⏭️ Skipped |
@@ -836,7 +836,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | Area | Total | ✅ | 🔲 | ❌ | ⚠️ Bug |
 |---|---|---|---|---|---|
 | 1. Auth | 10 | 8 | 2 | 0 | 0 |
-| 2. SUPER_ADMIN | 15 | 7 | 6 | 0 | 2 |
+| 2. SUPER_ADMIN | 15 | 10 | 3 | 0 | 2 |
 | 3. Router & Health | 12 | 1 | 11 | 0 | 0 |
 | 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
 | 5. Hotspot Users | 22 | 0 | 22 | 0 | 0 |
@@ -861,4 +861,4 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
 | 25. Performance | 18 | 3 | 12 | 0 | 3 |
 | 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
-| **TOTAL** | **420** | **55** | **345** | **12** | **8** |
+| **TOTAL** | **420** | **58** | **342** | **9** | **8** |

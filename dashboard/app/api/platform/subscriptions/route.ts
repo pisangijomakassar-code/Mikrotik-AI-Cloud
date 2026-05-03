@@ -15,7 +15,12 @@ export async function GET() {
   const subs = await prisma.subscription.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      tenant: { select: { id: true, name: true, slug: true, status: true } },
+      tenant: {
+        select: {
+          id: true, name: true, slug: true, status: true,
+          _count: { select: { routers: true } },
+        },
+      },
     },
   })
   return Response.json(subs)
