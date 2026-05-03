@@ -118,7 +118,7 @@ export default function HotspotUsersPage() {
   // 1. Filter
   const filteredSorted = useMemo(() => {
     const filtered = (users ?? []).filter((u) => {
-      const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase())
+      const matchSearch = !search || (u.name ?? "").toString().toLowerCase().includes(search.toLowerCase())
       const matchProfile = !profileFilter || (u.profile || "").trim().toLowerCase() === profileFilter.trim().toLowerCase()
       const matchComment = !commentSearch || (u.comment || "").toLowerCase().includes(commentSearch.toLowerCase())
       return matchSearch && matchProfile && matchComment

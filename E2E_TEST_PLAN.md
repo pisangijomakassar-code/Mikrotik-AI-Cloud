@@ -81,7 +81,7 @@
 |---|---|---|---|---|---|
 | C1 | Tambah router DIRECT | Form → IP/user/pwd → Submit | `/system/identity/print` (verifikasi konek) | Router masuk DB, status online | ✅ |
 | C2 | Tolak tambah jika limit plan | Plan FREE max 1 → tambah ke-2 | — | "Slot penuh", tombol disabled | ✅ |
-| C3 | Health pill online/offline | `/routers` | `/system/resource/print` + `/interface/print` | CPU/RAM/Uptime/clients tampil | 🔲 |
+| C3 | Health pill online/offline | `/routers` | `/system/resource/print` + `/interface/print` | CPU/RAM/Uptime/clients tampil | ⚠️ `/api/routers/health` requires `telegramOwnerId` set on router (routes to agent `/router-health/{tgId}`); routers dengan no Telegram owner always offline. Dashboard/topbar menampilkan data live via quickstats (mechanism berbeda). Fungsional jika Telegram bot terhubung. |
 | C4 | Hapus router | Trash → konfirmasi | — | DB record hilang, tunnel di-revoke | 🔲 |
 | C5 | Tambah router via TUNNEL Cloudflare | Form → method TUNNEL/CLOUDFLARE → ports api+winbox | Setup script Cloudflared | Tunnel aktif, host ter-route | 🔲 |
 | C6 | Tambah router via TUNNEL SSTP | Form → method TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN dibuat | 🔲 |
@@ -90,7 +90,7 @@
 | C9 | ⚠️ Tambah router port API tidak aktif | Port 8728 closed | TCP refused | Error "API service mati" + saran enable | ✅ Code review: `socket.on("error")` → `"Koneksi TCP gagal: <error.message>"` |
 | C10 | Edit router (ganti IP) | Edit → simpan IP baru | Re-test connection | Status ter-update | 🔲 |
 | C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | ✅ BUG-14 Fixed + Live verified — switch `active-router` localStorage `toko.net`→`Burhan`: `/api/vouchers?router=toko.net` kemudian `/api/vouchers?router=Burhan`; React Query cache key per-router bekerja benar |
-| C12 | Quick stats di topbar | Buka dashboard | `/system/resource/print` cached 25s | CPU/RAM/HDD pill ter-update | 🔲 |
+| C12 | Quick stats di topbar | Buka dashboard | `/system/resource/print` cached 25s | CPU/RAM/HDD pill ter-update | ✅ Topbar menampilkan CPU 6% · RAM 18.2% · HDD 85.9% · uptime 40m32s dari `/api/routers/quickstats?router=Burhan` (live data via agent) |
 
 ---
 

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { useAddHotspotUser, useHotspotProfiles } from "@/hooks/use-hotspot"
 import { addHotspotUserSchema, type AddHotspotUserFormData } from "@/lib/schemas/hotspot.schema"
+import { useActiveRouter } from "@/components/active-router-context"
 
 interface AddHotspotUserDialogProps {
   open: boolean
@@ -15,7 +16,8 @@ interface AddHotspotUserDialogProps {
 }
 
 export function AddHotspotUserDialog({ open, onOpenChange }: AddHotspotUserDialogProps) {
-  const { data: profiles } = useHotspotProfiles()
+  const { activeRouter } = useActiveRouter()
+  const { data: profiles } = useHotspotProfiles(activeRouter || undefined)
   const addUser = useAddHotspotUser()
 
   const {
