@@ -112,6 +112,7 @@ export function useCreateRouter() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routers"] })
+      queryClient.invalidateQueries({ queryKey: ["routers-health"] })
       queryClient.invalidateQueries({ queryKey: ["stats"] })
     },
   })

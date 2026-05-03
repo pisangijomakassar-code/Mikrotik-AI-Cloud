@@ -17,6 +17,23 @@ interface TunnelSetupWizardProps {
   embedded?: boolean
 }
 
+function copyText(text: string): Promise<void> {
+  if (navigator.clipboard) {
+    return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text))
+  }
+  return Promise.resolve(fallbackCopy(text))
+}
+
+function fallbackCopy(text: string) {
+  const el = document.createElement("textarea")
+  el.value = text
+  el.style.cssText = "position:fixed;opacity:0;pointer-events:none"
+  document.body.appendChild(el)
+  el.select()
+  document.execCommand("copy")
+  document.body.removeChild(el)
+}
+
 function CodeBlock({
   code,
   label,
@@ -27,7 +44,7 @@ function CodeBlock({
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
-    navigator.clipboard.writeText(code).then(() => {
+    copyText(code).then(() => {
       setCopied(true)
       toast.success("Disalin ke clipboard")
       setTimeout(() => setCopied(false), 2000)
@@ -213,7 +230,7 @@ function CredentialRow({ label, value }: { label: string; value: string | null |
   const [copied, setCopied] = useState(false)
   if (!value) return null
   function handleCopy() {
-    navigator.clipboard.writeText(value!).then(() => {
+    copyText(value!).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })

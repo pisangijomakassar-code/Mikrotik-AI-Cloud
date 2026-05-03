@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/db"
 import { getTenantDb } from "@/lib/db-tenant"
+import { AGENT_URL } from "@/lib/agent-fetch"
 
 interface RouterHealth {
   id: string
@@ -21,68 +21,64 @@ export async function GET() {
   if (session.user.role === "SUPER_ADMIN") return Response.json([])
 
   try {
-    // Get user's telegram ID to query agent health API (User adalah cross-tenant model
-    // — pakai prisma raw, filter by id eksplisit).
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { telegramId: true },
-    })
-
-    if (!user?.telegramId) {
-      return Response.json([])
-    }
-
-    // Get routers from DB — tenant-scoped via getTenantDb().
     const db = await getTenantDb()
     const dbRouters = await db.router.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true, telegramOwnerId: true },
     })
 
-    // Call agent's health API (runs on port 8080 inside mikrotik-agent container)
-    const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
+    if (!dbRouters.length) return Response.json([])
 
-    try {
-      const res = await fetch(`${agentUrl}/router-health/${user.telegramId}`, {
-        signal: AbortSignal.timeout(15000),
-      })
-
-      if (res.ok) {
-        const agentHealth = await res.json()
-
-        // Map agent results to DB router IDs
-        const results: RouterHealth[] = dbRouters.map((dbRouter) => {
-          const health = agentHealth.find((h: { name: string }) => h.name === dbRouter.name)
-          if (health && health.status === "online") {
-            // Update lastSeen (tenant-scoped)
-            db.router.update({
-              where: { id: dbRouter.id },
-              data: { lastSeen: new Date(), routerosVersion: health.version || undefined },
-            }).catch(() => {})
-
-            return {
-              id: dbRouter.id,
-              name: dbRouter.name,
-              status: "online",
-              cpuLoad: health.cpuLoad ?? 0,
-              memoryPercent: health.memoryPercent ?? 0,
-              uptime: health.uptime ?? "",
-              activeClients: health.activeClients ?? 0,
-              version: health.version ?? "",
-            }
-          }
-          return { id: dbRouter.id, name: dbRouter.name, status: "offline" }
-        })
-
-        return Response.json(results)
+    // Group routers by their telegramOwnerId so we make one agent call per owner.
+    const byOwner = new Map<string, typeof dbRouters>()
+    const noOwner: typeof dbRouters = []
+    for (const r of dbRouters) {
+      if (r.telegramOwnerId) {
+        const list = byOwner.get(r.telegramOwnerId) ?? []
+        list.push(r)
+        byOwner.set(r.telegramOwnerId, list)
+      } else {
+        noOwner.push(r)
       }
-    } catch {
-      // Agent health API not reachable — fallback to TCP check
     }
 
-    // Fallback: return all as unknown
-    return Response.json(
-      dbRouters.map((r) => ({ id: r.id, name: r.name, status: "offline" as const }))
-    )
+    const results: RouterHealth[] = []
+
+    for (const [tgId, routers] of byOwner) {
+      try {
+        const res = await fetch(`${AGENT_URL}/router-health/${tgId}`, {
+          signal: AbortSignal.timeout(15000),
+        })
+        if (res.ok) {
+          const agentHealth = await res.json() as Array<{ name: string; status: string; cpuLoad?: number; memoryPercent?: number; uptime?: string; activeClients?: number; version?: string }>
+          for (const dbRouter of routers) {
+            const h = agentHealth.find((a) => a.name === dbRouter.name)
+            if (h?.status === "online") {
+              db.router.update({
+                where: { id: dbRouter.id },
+                data: { lastSeen: new Date(), routerosVersion: h.version || undefined },
+              }).catch(() => {})
+              results.push({
+                id: dbRouter.id, name: dbRouter.name, status: "online",
+                cpuLoad: h.cpuLoad ?? 0, memoryPercent: h.memoryPercent ?? 0,
+                uptime: h.uptime ?? "", activeClients: h.activeClients ?? 0,
+                version: h.version ?? "",
+              })
+            } else {
+              results.push({ id: dbRouter.id, name: dbRouter.name, status: "offline" })
+            }
+          }
+        } else {
+          for (const r of routers) results.push({ id: r.id, name: r.name, status: "offline" })
+        }
+      } catch {
+        for (const r of routers) results.push({ id: r.id, name: r.name, status: "offline" })
+      }
+    }
+
+    // Routers with no telegramOwnerId configured — always offline until owner is set.
+    for (const r of noOwner) results.push({ id: r.id, name: r.name, status: "offline" })
+
+    return Response.json(results)
   } catch (error) {
     console.error("Health check failed:", error)
     return Response.json({ error: "Health check failed" }, { status: 500 })
