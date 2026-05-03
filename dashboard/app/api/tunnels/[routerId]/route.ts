@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { deleteCloudflareTunnel } from "@/lib/services/cloudflare-tunnel.service"
 import { deleteSstpTunnel } from "@/lib/services/sstp-tunnel.service"
+import { deleteOvpnTunnel } from "@/lib/services/ovpn-tunnel.service"
+import { deleteWireguardTunnel } from "@/lib/services/wg-tunnel.service"
 
 // GET /api/tunnels/[routerId]
 // Returns the tunnel and its ports for a specific router (ownership verified).
@@ -54,12 +56,13 @@ export async function DELETE(
   const { routerId } = await params
 
   try {
-    // Verify ownership
+    // Verify ownership — include ports so delete services can reference them
     const tunnel = await prisma.tunnel.findFirst({
       where: {
         routerId,
         router: { tenantId: session.user.tenantId ?? "__none__" },
       },
+      include: { ports: true },
     })
 
     if (!tunnel) {
@@ -71,6 +74,10 @@ export async function DELETE(
       await deleteCloudflareTunnel(tunnel.cloudflareTunnelId)
     } else if (tunnel.method === "SSTP" && tunnel.vpnUsername) {
       await deleteSstpTunnel(tunnel.vpnUsername)
+    } else if (tunnel.method === "OVPN" && tunnel.vpnUsername) {
+      await deleteOvpnTunnel(tunnel, tunnel.vpnUsername)
+    } else if (tunnel.method === "WIREGUARD") {
+      await deleteWireguardTunnel(tunnel)
     }
 
     // Delete tunnel record (cascade deletes TunnelPort rows)

@@ -43,6 +43,7 @@ export interface TunnelWithPorts {
   wgClientPrivKey: string | null
   wgClientPubKey: string | null
   wgServerPubKey: string | null
+  vpnAssignedIp: string | null
   vpnUsername: string | null
   ports: { serviceName: string; remotePort: number }[]
 }
@@ -225,6 +226,18 @@ export async function createWireguardTunnel(
 
   const vpnIp = `10.8.${subnetOctet}.${routerOctet}`
 
+  // Register peer on the WireGuard server (add peer + iptables DNAT for winbox port)
+  const res = await agentFetch(`/wg-peer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "add", pubKey: publicKey, vpnIp, winboxPort }),
+    signal: AbortSignal.timeout(30000),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => `HTTP ${res.status}`)
+    throw new Error(`health_server /wg-peer add failed: ${text}`)
+  }
+
   return {
     clientPrivKey: encryptedPrivKey,
     clientPubKey:  publicKey,
@@ -310,7 +323,8 @@ export async function deleteWireguardTunnel(tunnel: TunnelWithPorts): Promise<vo
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "delete",
-      publicKey: tunnel.wgClientPubKey,
+      pubKey: tunnel.wgClientPubKey,
+      vpnIp: tunnel.vpnAssignedIp,
       winboxPort: tunnel.winboxPort,
     }),
   })
