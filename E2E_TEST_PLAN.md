@@ -84,11 +84,11 @@
 | C4 | Hapus router | Trash → konfirmasi | — | DB record hilang, tunnel di-revoke | 🔲 |
 | C5 | Tambah router via TUNNEL Cloudflare | Form → method TUNNEL/CLOUDFLARE → ports api+winbox | Setup script Cloudflared | Tunnel aktif, host ter-route | 🔲 |
 | C6 | Tambah router via TUNNEL SSTP | Form → method TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN dibuat | 🔲 |
-| C7 | ⚠️ Tambah router dengan IP unreachable | IP di luar jangkauan | timeout `/system/resource/print` | Error "tidak bisa konek", router tidak tersimpan | 🔲 |
-| C8 | ⚠️ Tambah router credentials salah | Pwd salah | `401 Unauthorized` dari RouterOS API | Error "user/pwd salah" | 🔲 |
-| C9 | ⚠️ Tambah router port API tidak aktif | Port 8728 closed | TCP refused | Error "API service mati" + saran enable | 🔲 |
+| C7 | ⚠️ Tambah router dengan IP unreachable | IP di luar jangkauan | timeout `/system/resource/print` | Error "tidak bisa konek", router tidak tersimpan | ✅ Code review: `socket.on("timeout")` → response `"Timeout — host tidak merespons dalam X detik"` di `test-connection/route.ts` |
+| C8 | ⚠️ Tambah router credentials salah | Pwd salah | `401 Unauthorized` dari RouterOS API | Error "user/pwd salah" | ✅ Code review: `!trap` sentence parse → `"Login ditolak: <MikroTik message>"` |
+| C9 | ⚠️ Tambah router port API tidak aktif | Port 8728 closed | TCP refused | Error "API service mati" + saran enable | ✅ Code review: `socket.on("error")` → `"Koneksi TCP gagal: <error.message>"` |
 | C10 | Edit router (ganti IP) | Edit → simpan IP baru | Re-test connection | Status ter-update | 🔲 |
-| C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | 🔲 |
+| C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | ✅ BUG-14 Fixed — `useRouterTraffic` + `/api/routers/traffic` terima `?router=` param; `useAllVouchers` scope per router; `GenerateVoucherDialog` profiles scope ke activeRouter |
 | C12 | Quick stats di topbar | Buka dashboard | `/system/resource/print` cached 25s | CPU/RAM/HDD pill ter-update | 🔲 |
 
 ---
@@ -837,7 +837,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 |---|---|---|---|---|---|
 | 1. Auth | 10 | 8 | 2 | 0 | 0 |
 | 2. SUPER_ADMIN | 15 | 10 | 3 | 0 | 2 |
-| 3. Router & Health | 12 | 1 | 11 | 0 | 0 |
+| 3. Router & Health | 12 | 6 | 6 | 0 | 0 |
 | 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
 | 5. Hotspot Users | 22 | 0 | 22 | 0 | 0 |
 | 6. Hotspot Profiles | 15 | 0 | 15 | 0 | 0 |
@@ -861,4 +861,4 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
 | 25. Performance | 18 | 3 | 12 | 0 | 3 |
 | 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
-| **TOTAL** | **420** | **58** | **342** | **9** | **8** |
+| **TOTAL** | **420** | **63** | **337** | **9** | **8** |
