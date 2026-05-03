@@ -2292,9 +2292,6 @@ def _run_bot_in_thread(
                 logger.warning("on_loop_ready callback failed: %s", exc)
 
         if use_webhook:
-            cert_path = "/app/config/webhook_cert.pem"
-            key_path = "/app/config/webhook_key.pem"
-            _ensure_webhook_cert(cert_path, key_path, vps_host)
             url_path = app.bot.token.split(":")[-1]
             webhook_url = f"https://{vps_host}:{webhook_port}/{url_path}"
             loop.run_until_complete(app.updater.start_webhook(
@@ -2302,8 +2299,6 @@ def _run_bot_in_thread(
                 port=webhook_port,
                 url_path=url_path,
                 webhook_url=webhook_url,
-                cert=cert_path,
-                key=key_path,
                 drop_pending_updates=True,
             ))
             logger.info(

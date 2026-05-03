@@ -90,8 +90,8 @@ services:
       AGENT_TOKEN: ${AGENT_TOKEN:-}
       WEBHOOK_BASE_PORT: ${WEBHOOK_BASE_PORT:-8443}
     ports:
-      - "${WEBHOOK_BASE_PORT:-8443}:${WEBHOOK_BASE_PORT:-8443}"
-      - "${WEBHOOK_BASE_PORT_2:-8444}:${WEBHOOK_BASE_PORT_2:-8444}"
+      - "28443:${WEBHOOK_BASE_PORT:-8443}"
+      - "28444:${WEBHOOK_BASE_PORT_2:-8444}"
     volumes:
       - nanobot-data:/root/.nanobot
       - ./skills:/app/skills:ro
