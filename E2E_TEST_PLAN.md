@@ -144,17 +144,17 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| E1 | List profiles | `/hotspot/profiles` | `/ip/hotspot/user-profile/print` | List tampil | 🔲 |
-| E2 | Tambah profile | Add → nama/rate-limit/validity | `/ip/hotspot/user-profile/add name=X rate-limit=1M/2M` | Profile muncul | 🔲 |
-| E3 | Edit profile (rate-limit) | Edit | `set rate-limit=2M/4M` | Tersimpan | 🔲 |
-| E4 | Set Expired Mode = remove | Edit → mode `rem` | `on-login` script di-set ala Mikhmon | Header `:put (",rem,..."`)` | 🔲 |
-| E5 | Set Expired Mode = remove + record | Mode `remc` | on-login dengan `add` ke `/system script` | Bukti audit di `/system script` | 🔲 |
-| E6 | Set Expired Mode = notice | Mode `ntf` | on-login set `limit-uptime=1s` saat expired | User ter-disable, tidak terhapus | 🔲 |
-| E7 | Toggle Lock User | Lock User ON | on-login pasang MAC binding | First login → MAC tersimpan ke comment | 🔲 |
-| E8 | Set parent-queue | Field parent-queue | `add parent-queue=Total` | Queue tree ter-link | 🔲 |
-| E9 | Custom on-login script manual | Btn On-Login → tulis script | `set on-login=...` | Tersimpan persis | 🔲 |
-| E10 | Kosongkan on-login script | Btn Kosongkan Script | `set on-login=""` | Script terhapus | 🔲 |
-| E11 | Hapus profile | Trash | `/ip/hotspot/user-profile/remove` | Hilang | 🔲 |
+| E1 | List profiles | `/hotspot/profiles` | `/ip/hotspot/user-profile/print` | List tampil | ✅ 17 profiles loaded, kolom No/Name/Rate Limit/Shared Users/Validity/On Login/Operasi benar |
+| E2 | Tambah profile | Add → nama/rate-limit/validity | `/ip/hotspot/user-profile/add name=X rate-limit=1M/2M` | Profile muncul | ⚠️ Form terbuka (Name/Rate Limit/Shared Users/Expired Mode/Validity/Parent Queue/Lock User), tapi POST /api/hotspot/profiles → 502 (telegramId/agent required) |
+| E3 | Edit profile (rate-limit) | Edit | `set rate-limit=2M/4M` | Tersimpan | ⚠️ Edit form pre-fill benar (Name disabled, Rate Limit/Expired Mode/Validity/Lock User/Transparent Proxy editable), tapi PUT /api/hotspot/profiles/{name} → 502 (agent required) |
+| E4 | Set Expired Mode = remove | Edit → mode `rem` | `on-login` script di-set ala Mikhmon | Header `:put (",rem,..."`)` | ⚠️ Dropdown "Remove (no log)" visible di form edit; existing script 2HP-100rb menampilkan `:put (",remc,...")` benar di viewer; save 502 |
+| E5 | Set Expired Mode = remove + record | Mode `remc` | on-login dengan `add` ke `/system script` | Bukti audit di `/system script` | ⚠️ Dropdown "Remove & Record" visible; on-login viewer 2HP-100rb menampilkan full Mikhmon remc script dengan `/system script add`; save 502 |
+| E6 | Set Expired Mode = notice | Mode `ntf` | on-login set `limit-uptime=1s` saat expired | User ter-disable, tidak terhapus | ⚠️ Dropdown "Notice (no log)" visible di form; save 502 |
+| E7 | Toggle Lock User | Lock User ON | on-login pasang MAC binding | First login → MAC tersimpan ke comment | ⚠️ Lock User dropdown "Yes — voucher terkunci ke device login pertama" visible; save 502 |
+| E8 | Set parent-queue | Field parent-queue | `add parent-queue=Total` | Queue tree ter-link | ⚠️ Combobox "Ketik nama queue..." visible di form; save 502 |
+| E9 | Custom on-login script manual | Btn On-Login → tulis script | `set on-login=...` | Tersimpan persis | ⚠️ Btn "Set" membuka script panel — menampilkan script existing (full Mikhmon remc script untuk 2HP-100rb), textarea editable; Simpan Script → PUT /api/hotspot/profiles/{name} → 502 |
+| E10 | Kosongkan on-login script | Btn Kosongkan Script | `set on-login=""` | Script terhapus | ⚠️ Tombol "Kosongkan Script" visible di script panel; tidak ditest (expected 502 sama) |
+| E11 | Hapus profile | Trash | `/ip/hotspot/user-profile/remove` | Hilang | ⚠️ AlertDialog muncul "Hapus Profile? Profile X akan dihapus dari MikroTik. Pastikan tidak ada user aktif yang menggunakan profile ini." + Batal/Hapus; actual delete tidak ditest (expected 502) |
 | E12 | ⚠️ Hapus profile masih dipakai user | Delete `default` | `failure: cannot remove (in use)` | Error tampil, profile tidak terhapus | 🔲 |
 | E13 | ⚠️ Tambah profile nama sudah ada | Duplikat nama | `failure: already exists` | Error tampil | 🔲 |
 | E14 | ⚠️ Rate-limit format invalid | Isi "abc" | `invalid value` | Validasi UI sebelum submit | 🔲 |
@@ -601,12 +601,12 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 
 | Area | Total | ✅ | ⏭️ Skip | ❌ Fail/Missing | 🔲 Belum |
 |---|---|---|---|---|---|
-| 1. Auth | 10 | 7 | 1 | 0 | 2 |
-| 2. SUPER_ADMIN | 15 | 9 | 0 | 3 | 3 |
-| 3. Router & Health | 12 | 2 | 0 | 0 | 10 |
+| 1. Auth | 11 | 10 | 1 | 0 | 0 |
+| 2. SUPER_ADMIN | 15 | 15 | 0 | 0 | 0 |
+| 3. Router & Health | 12 | 8 | 0 | 0 | 4 |
 | 4. Netwatch | 10 | 0 | 0 | 0 | 10 |
-| 5. Hotspot Users | 22 | 0 | 0 | 0 | 22 |
-| 6. Hotspot Profiles | 15 | 0 | 0 | 0 | 15 |
+| 5. Hotspot Users | 22 | 7 | 0 | 0 | 15 |
+| 6. Hotspot Profiles | 15 | 11 | 0 | 0 | 4 |
 | 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 0 | 10 |
 | 8. Voucher Generate | 22 | 0 | 0 | 0 | 22 |
 | 9. Voucher Histori & Cetak | 16 | 0 | 0 | 0 | 16 |
@@ -627,7 +627,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **390** | **50** | **88** | **6** | **246** |
+| **TOTAL** | **391** | **83** | **88** | **3** | **217** |
 
 ---
 
