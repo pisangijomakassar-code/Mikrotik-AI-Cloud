@@ -681,9 +681,10 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | BUG-07 | Security Headers | Semua security header missing: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy | 🔴 High | 🟢 Fixed — ditambah ke `next.config.ts` headers() |
 | BUG-08 | Rate Limiting | Tidak ada rate limiting di login endpoint — 12× bad password semua return 200, tidak ada 429 | 🔴 High | 🔴 Open — perlu middleware rate limiter (Upstash/Redis atau edge middleware) |
 | BUG-09 | Router API Timeout | `/api/hotspot/users` dan endpoint router lain timeout 15s saat router unreachable — tidak ada feedback ke user | 🟡 Minor | 🔴 Open — perlu add AbortController timeout (misal 8s) di proxy handler |
-| BUG-10 | Tambah Router — Terminal | Menu "Tambah Router" → tab Terminal / jalankan script: script tidak bisa dieksekusi | 🔴 High | 🔴 Open |
-| BUG-11 | Tambah Router — Copy Button | Tombol copy (salin script/perintah) di form tambah router tidak berfungsi | 🟡 Minor | 🔴 Open |
-| BUG-12 | Tambah Router — Winbox & API | Akses router via Winbox dan API (port 8728/8729) dari form tambah router tidak berhasil / tidak terkoneksi | 🔴 High | 🔴 Open |
+| BUG-10 | Tambah Router — Terminal | ~~Script di terminal tidak bisa dieksekusi~~ | — | 🟢 Not a bug — router sudah konek, bukan masalah eksekusi script |
+| BUG-11 | Tambah Router — Copy Button | Tombol copy (salin script/perintah) di form tambah router tidak berfungsi — router sudah konek tapi tidak bisa copy teks | 🟡 Minor | 🔴 Open |
+| BUG-12 | Tambah Router — Winbox & API | ~~Koneksi via Winbox dan API gagal~~ | — | 🟢 Not a bug — koneksi berhasil, masalahnya hanya tombol copy |
+| BUG-13 | Router Management — Status Hijau | Setelah router berhasil ditambah dan konek, status router management di halaman router tidak berubah hijau (tetap offline/abu-abu) | 🔴 High | 🔴 Open |
 | INFO-01 | Router Tests | Semua test yang butuh koneksi RouterOS di-skip (C3–C12, D, E, F, G, dsb.) | — | ⏭️ Skipped |
 | INFO-02 | Telegram Bot Tests | Semua test Reseller Bot dan Owner Bot di-skip (perlu token + chat_id aktif) | — | ⏭️ Skipped |
 | INFO-03 | Midtrans Tests | N4–N7 di-skip (perlu Sandbox key nyata, bukan dummy) | — | ⏭️ Skipped |
