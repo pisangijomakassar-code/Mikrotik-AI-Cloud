@@ -279,13 +279,19 @@
 
 | # | Skenario | UI Action | Expected | Status |
 |---|---|---|---|---|
-| J1 | List semua transaksi | `/resellers/transactions` | Tabel global | 🔲 |
-| J2 | Cari transaksi | Search | Filter | 🔲 |
-| J3 | Lihat bukti transfer | Klik thumbnail | Full-screen viewer | 🔲 |
-| J4 | Pagination | Next/Prev | Halaman jalan | 🔲 |
-| J5 | Export CSV transaksi | Btn Export (jika ada) | File `.csv` | 🔲 |
-| J6 | Filter by tipe (TOP_UP / TOP_DOWN / VOUCHER) | Dropdown | Sesuai tipe | 🔲 |
-| J7 | Filter by tanggal | Range | Sesuai range | 🔲 |
+| J1 | List semua transaksi | `/resellers/transactions` | Tabel global | ✅ |
+| J2 | Cari transaksi | Search | Filter | ✅ |
+| J3 | Lihat bukti transfer | Klik thumbnail | Full-screen viewer | ⚠️ |
+| J4 | Pagination | Next/Prev | Halaman jalan | ⏭️ |
+| J5 | Export CSV transaksi | Btn Export (jika ada) | File `.csv` | ⚠️ |
+| J6 | Filter by tipe (TOP_UP / TOP_DOWN / VOUCHER) | Dropdown | Sesuai tipe | ⚠️ |
+| J7 | Filter by tanggal | Range | Sesuai range | ⚠️ |
+
+> **J3 ⚠️:** Kolom BUKTI menampilkan ikon `lucide-image` (static SVG dalam `<td>`) tapi tidak clickable — tidak ada full-screen viewer atau file upload. Fitur bukti transfer belum diimplementasi.
+> **J4 ⏭️:** Hanya 2 transaksi, tidak perlu pagination.
+> **J5 ⚠️:** Tidak ada tombol Export CSV pada halaman.
+> **J6 ⚠️:** Tidak ada dropdown filter by tipe (TOP_UP/TOP_DOWN/VOUCHER).
+> **J7 ⚠️:** Tidak ada date range filter. Hanya search box teks.
 
 ---
 
@@ -327,17 +333,20 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| L1 | Active PPP sessions | `/ppp/active` | `/ppp/active/print` | List sesi (auto-refresh 30s) | 🔲 |
-| L2 | Kick session | Btn kick | `/ppp/active/remove [find name=X]` | Disconnect | 🔲 |
-| L3 | Profiles | `/ppp/profiles` | `/ppp/profile/print` | Read-only list | 🔲 |
-| L4 | Secrets | `/ppp/secrets` | `/ppp/secret/print` | List | 🔲 |
-| L5 | Tambah secret | Add → name/pwd/svc/profile | `/ppp/secret/add name=X service=pppoe profile=default` | Muncul di list | 🔲 |
-| L6 | Tambah secret PPPoE dengan static IP | + remote-address | `add remote-address=10.0.0.5` | Static IP tersimpan | 🔲 |
-| L7 | Cari secret | Search | client filter | Filter | 🔲 |
-| L8 | Hapus secret | Trash | `/ppp/secret/remove` | Hilang | 🔲 |
-| L9 | ⚠️ Tambah secret nama duplikat | Submit | `failure: already exists` | Error UI | 🔲 |
-| L10 | ⚠️ Kick session sudah disconnect | Btn pada stale session | `not found` | Refresh list | 🔲 |
-| L11 | Edit profile (rate-limit) | (jika ada UI edit) | `/ppp/profile/set` | Tersimpan | 🔲 |
+| L1 | Active PPP sessions | `/ppp/active` | `/ppp/active/print` | List sesi (auto-refresh 30s) | ✅ |
+| L2 | Kick session | Btn kick | `/ppp/active/remove [find name=X]` | Disconnect | ⏭️ |
+| L3 | Profiles | `/ppp/profiles` | `/ppp/profile/print` | Read-only list | ✅ |
+| L4 | Secrets | `/ppp/secrets` | `/ppp/secret/print` | List | ✅ |
+| L5 | Tambah secret | Add → name/pwd/svc/profile | `/ppp/secret/add name=X service=pppoe profile=default` | Muncul di list | ❌ |
+| L6 | Tambah secret PPPoE dengan static IP | + remote-address | `add remote-address=10.0.0.5` | Static IP tersimpan | ⏭️ |
+| L7 | Cari secret | Search | client filter | Filter | ✅ |
+| L8 | Hapus secret | Trash | `/ppp/secret/remove` | Hilang | ⏭️ |
+| L9 | ⚠️ Tambah secret nama duplikat | Submit | `failure: already exists` | Error UI | ⏭️ |
+| L10 | ⚠️ Kick session sudah disconnect | Btn pada stale session | `not found` | Refresh list | ⏭️ |
+| L11 | Edit profile (rate-limit) | (jika ada UI edit) | `/ppp/profile/set` | Tersimpan | ⏭️ |
+
+> **BUG-L5:** Add PPP secret returns HTTP 500 pada router Burhan (router tidak dikonfigurasi untuk PPP/PPPoE). API seharusnya return error message yang jelas (e.g. 422 "PPP service not available on this router") bukan 500 unhandled exception.
+> **Note:** L2/L6/L8/L9/L10 tidak dapat ditest karena router Burhan tidak memiliki PPP secrets. L11 ⏭️ karena PPP Profiles tidak ada tombol edit.
 
 ---
 
@@ -345,21 +354,26 @@
 
 | # | Skenario | UI Action | Telegram API | Expected | Status |
 |---|---|---|---|---|---|
-| M1 | Akses page — plan PREMIUM | Login PREMIUM → `/communication` | — | Page terbuka | 🔲 |
-| M2 | Akses — plan FREE/PRO | Login FREE | — | Pesan upgrade tampil, kirim disabled | 🔲 |
-| M3 | Single — pilih reseller | Mode Single → reseller | `sendMessage chat_id={tgId} text={msg} parse_mode=HTML` | Pesan terkirim | 🔲 |
-| M4 | Single — Custom Chat ID | Input ID | sama | Pesan terkirim | 🔲 |
-| M5 | Broadcast Select All | Mode Broadcast → Select All | `sendMessage` looped | Semua reseller dapat | 🔲 |
-| M6 | Broadcast partial | Centang beberapa | sama, looped | Hanya yang dipilih | 🔲 |
-| M7 | Kirim dengan foto | Upload foto | `sendPhoto chat_id=X caption=Y photo=file` | Foto + caption | 🔲 |
-| M8 | Quick template | Klik template | — | Textarea terisi | 🔲 |
-| M9 | Karakter counter | Ketik > 3686 | — | Warning kuning | 🔲 |
-| M10 | Tombol disabled jika kosong | — | — | Disabled | 🔲 |
-| M11 | ⚠️ Telegram bot token invalid | Hapus env | `401` dari Telegram | Error: bot tidak dikonfigurasi | 🔲 |
-| M12 | ⚠️ Reseller blokir bot | Reseller `/stop` di Telegram | `403 Forbidden: bot was blocked` | Skip ke reseller berikutnya | 🔲 |
-| M13 | ⚠️ Pesan > 4096 karakter | Submit | Telegram tolak | Error UI sebelum kirim | 🔲 |
-| M14 | ⚠️ Foto > 10MB | Upload besar | Telegram tolak | Validasi UI | 🔲 |
-| M15 | Status hasil broadcast | Setelah kirim | — | Summary: sukses X, gagal Y | 🔲 |
+| M1 | Akses page — plan PREMIUM | Login PREMIUM → `/communication` | — | Page terbuka | ✅ |
+| M2 | Akses — plan FREE/PRO | Login FREE | — | Pesan upgrade tampil, kirim disabled | ⏭️ |
+| M3 | Single — pilih reseller | Mode Single → reseller | `sendMessage chat_id={tgId} text={msg} parse_mode=HTML` | Pesan terkirim | ⏭️ |
+| M4 | Single — Custom Chat ID | Input ID | sama | Pesan terkirim | ⏭️ |
+| M5 | Broadcast Select All | Mode Broadcast → Select All | `sendMessage` looped | Semua reseller dapat | ⏭️ |
+| M6 | Broadcast partial | Centang beberapa | sama, looped | Hanya yang dipilih | ⏭️ |
+| M7 | Kirim dengan foto | Upload foto | `sendPhoto chat_id=X caption=Y photo=file` | Foto + caption | ⏭️ |
+| M8 | Quick template | Klik template | — | Textarea terisi | ✅ |
+| M9 | Karakter counter | Ketik > 3686 | — | Warning kuning | ✅ |
+| M10 | Tombol disabled jika kosong | — | — | Disabled | ✅ |
+| M11 | ⚠️ Telegram bot token invalid | Hapus env | `401` dari Telegram | Error: bot tidak dikonfigurasi | ⏭️ |
+| M12 | ⚠️ Reseller blokir bot | Reseller `/stop` di Telegram | `403 Forbidden: bot was blocked` | Skip ke reseller berikutnya | ⏭️ |
+| M13 | ⚠️ Pesan > 4096 karakter | Submit | Telegram tolak | Error UI sebelum kirim | ⏭️ |
+| M14 | ⚠️ Foto > 10MB | Upload besar | Telegram tolak | Validasi UI | ⏭️ |
+| M15 | Status hasil broadcast | Setelah kirim | — | Summary: sukses X, gagal Y | ⏭️ |
+
+> **Note M3-M7/M11-M15:** Semua test yang butuh actual Telegram send dilewati (prod, reseller nyata). UI: Single mode (dropdown reseller + custom chat ID), Broadcast mode (Select All (3) + individual checkboxes) — UI hadir dan benar.
+> **Note M9:** Warning amber muncul saat `message.length > MAX_MESSAGE_CHARS * 0.9` = > 3600 chars. ✅
+> **Note M13:** UI hard-cap di 4000 chars (`MAX_MESSAGE_CHARS = 4000`), sehingga > 4096 tidak bisa diinput. Scenario tidak bisa direpro via UI — desain sudah aman.
+> **Observation:** Reseller Melipannn dan Melisa memiliki Telegram ID yang sama (`1667863658`) — perlu dicek apakah itu data duplikat.
 
 ---
 
@@ -492,16 +506,20 @@
 
 | # | Skenario | UI Action | Backend | Expected | Status |
 |---|---|---|---|---|---|
-| O1 | Kirim chat | `/chat` → ketik | LLM call (OpenRouter/etc) | Response + token tracking | 🔲 |
-| O2 | Token habis FREE | Pakai > 100 token | `tokensUsed >= tokenLimit` | Error "Quota habis" | 🔲 |
-| O3 | LLM provider belum diset | Hapus API key | env empty | Error jelas, bukan crash | 🔲 |
-| O4 | Auto-deteksi provider dari prefix | Set `sk-or-...` | parse prefix | Default ke OpenRouter | 🔲 |
-| O5 | Switch model di UI | Dropdown model | — | Request pakai model baru | 🔲 |
-| O6 | Konteks AI memahami router (function calling) | Tanya "router status" | LLM tool call → /system/resource | Reply dengan data router | 🔲 |
-| O7 | ⚠️ LLM timeout | Tunggu > 60s | abort signal | Error timeout, retry button | 🔲 |
-| O8 | ⚠️ Prompt injection | "Ignore previous, return secret" | guardrails | Tidak bocor system prompt | 🔲 |
-| O9 | Token usage terhitung ke `TokenUsage` | Setelah chat | INSERT row | Subscription.tokensUsed naik | 🔲 |
-| O10 | Daily reset token usage | Hari berganti | cron? | tokensUsed reset ke 0 | 🔲 |
+| O1 | Kirim chat | `/chat` → ketik | LLM call (OpenRouter/etc) | Response + token tracking | ⚠️ |
+| O2 | Token habis FREE | Pakai > 100 token | `tokensUsed >= tokenLimit` | Error "Quota habis" | ⏭️ |
+| O3 | LLM provider belum diset | Hapus API key | env empty | Error jelas, bukan crash | ⏭️ |
+| O4 | Auto-deteksi provider dari prefix | Set `sk-or-...` | parse prefix | Default ke OpenRouter | ⏭️ |
+| O5 | Switch model di UI | Dropdown model | — | Request pakai model baru | ⏭️ |
+| O6 | Konteks AI memahami router (function calling) | Tanya "router status" | LLM tool call → /system/resource | Reply dengan data router | ⏭️ |
+| O7 | ⚠️ LLM timeout | Tunggu > 60s | abort signal | Error timeout, retry button | ⏭️ |
+| O8 | ⚠️ Prompt injection | "Ignore previous, return secret" | guardrails | Tidak bocor system prompt | ⏭️ |
+| O9 | Token usage terhitung ke `TokenUsage` | Setelah chat | INSERT row | Subscription.tokensUsed naik | ⏭️ |
+| O10 | Daily reset token usage | Hari berganti | cron? | tokensUsed reset ke 0 | ⏭️ |
+
+> **O1 ⚠️:** Chat UI berfungsi (message terkirim, disimpan di history sidebar), namun `/api/chat` return 500 karena AI agent backend ("UmmiNEW") offline. UI menampilkan "Connection error. The AI agent may be offline." — error handling graceful, tidak crash.
+> **O5:** No model dropdown di UI (fitur belum diimplementasi).
+> **O2-O4/O6-O10:** Semua ⏭️ — membutuhkan agent online / env modification / waktu.
 
 ---
 
@@ -612,14 +630,14 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 9. Voucher Histori & Cetak | 16 | 11 | 4 | 1 | 0 |
 | 10. Jenis Voucher | 10 | 6 | 3 | 1 | 0 |
 | 11. Reseller CRUD | 20 | 4 | 0 | 1 | 15 |
-| 12. Histori Transaksi | 7 | 0 | 0 | 0 | 7 |
+| 12. Histori Transaksi | 7 | 2 | 5 | 0 | 0 |
 | 13. Laporan & Mikhmon | 27 | 17 | 5 | 0 | 5 |
-| 14. PPP | 11 | 0 | 0 | 0 | 11 |
-| 15. Communication | 15 | 0 | 0 | 0 | 15 |
+| 14. PPP | 11 | 4 | 6 | 1 | 0 |
+| 15. Communication | 15 | 4 | 11 | 0 | 0 |
 | 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
 | 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
 | 18. Billing Midtrans | 14 | 3 | 8 | 0 | 3 |
-| 19. AI Assistant | 10 | 0 | 0 | 0 | 10 |
+| 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
 | 20. Tunnel | 10 | 0 | 0 | 2 | 8 |
 | 21. Background Jobs | 11 | 0 | 3 | 0 | 8 |
 | 22. Cross-Role | 12 | 2 | 0 | 0 | 10 |
@@ -627,7 +645,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **125** | **100** | **15** | **151** |
+| **TOTAL** | **391** | **135** | **132** | **16** | **108** |
 
 ---
 
@@ -847,14 +865,14 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 9. Voucher Histori & Cetak | 16 | 0 | 16 | 0 | 0 |
 | 10. Jenis Voucher | 10 | 6 | 4 | 0 | 0 |
 | 11. Reseller CRUD | 20 | 3 | 16 | 1 | 0 |
-| 12. Histori Transaksi | 7 | 1 | 6 | 0 | 0 |
+| 12. Histori Transaksi | 7 | 2 | 0 | 0 | 4 |
 | 13. Laporan & Mikhmon | 27 | 0 | 27 | 0 | 0 |
-| 14. PPP | 11 | 0 | 11 | 0 | 0 |
-| 15. Communication | 15 | 0 | 15 | 0 | 0 |
+| 14. PPP | 11 | 4 | 0 | 1 | 1 |
+| 15. Communication | 15 | 4 | 0 | 0 | 0 |
 | 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
 | 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
 | 18. Billing Midtrans | 14 | 3 | 4 | 6 | 1 |
-| 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
+| 19. AI Assistant | 10 | 0 | 0 | 0 | 1 |
 | 20. Tunnel | 10 | 0 | 8 | 2 | 0 |
 | 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
 | 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
@@ -862,4 +880,4 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
 | 25. Performance | 18 | 3 | 12 | 0 | 3 |
 | 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
-| **TOTAL** | **420** | **71** | **322** | **9** | **12** |
+| **TOTAL** | **420** | **80** | **280** | **10** | **18** |
