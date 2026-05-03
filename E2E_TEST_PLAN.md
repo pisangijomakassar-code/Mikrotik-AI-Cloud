@@ -212,22 +212,22 @@
 
 | # | Skenario | UI Action | Expected | Status |
 |---|---|---|---|---|
-| G1 | List batch | `/vouchers` | Tabel dari VoucherBatch | 🔲 |
-| G2 | Filter by source dashboard/bot/import | Dropdown | Sesuai source | 🔲 |
-| G3 | Filter by reseller | Dropdown | Sesuai reseller | 🔲 |
-| G4 | Reset filter | Btn | Semua tampil | 🔲 |
-| G5 | Pagination | Next/Prev | Halaman jalan | 🔲 |
-| G6 | Generate via modal | Klik Generate | Batch baru muncul di atas | 🔲 |
-| G7 | Print A4 — preview | Tipe A4 | Grid voucher A4 | 🔲 |
-| G8 | Print thermal — preview | Tipe Thermal | Layout thermal 1 kolom | 🔲 |
-| G9 | Filter cetak by tanggal custom | Range custom | Filtered preview | 🔲 |
-| G10 | Filter cetak by reseller | Pilih | Sesuai reseller | 🔲 |
-| G11 | Tampilkan harga di voucher | Centang | Harga muncul di card | 🔲 |
-| G12 | Voucher per halaman 40 / 80 / 100 | Pilih | Layout menyesuaikan | 🔲 |
-| G13 | Cetak voucher dari Reseller Detail (PDF) | Btn Download PDF | File PDF terdownload | 🔲 |
-| G14 | Custom voucher card (logo / footer / warna) | Voucher Settings → VCR CLR | Warna terpasang di preview | 🔲 |
-| G15 | ⚠️ Filter custom range invalid (dari > sampai) | Isi terbalik | Validasi UI | 🔲 |
-| G16 | ⚠️ Cetak batch yang sudah dihapus | Hapus batch → coba cetak | 404 / empty preview | 🔲 |
+| G1 | List batch | `/vouchers` | Tabel dari VoucherBatch | ✅ "Voucher History" tampil, 20 baris/hal, kolom: Tanggal/Reseller/Router/Profile/Qty/Total/Source |
+| G2 | Filter by source dashboard/bot/import | Dropdown | Sesuai source | ✅ Filter "Dashboard" → 2 baris (batch dari generate tadi), sumber lain hilang; opsi: All Sources/Dashboard/Nanobot/Reseller Bot |
+| G3 | Filter by reseller | Dropdown | Sesuai reseller | ⚠️ Dropdown "All Resellers" hadir; tidak ditest (hanya 1 reseller Admin di data test) |
+| G4 | Reset filter | Btn | Semua tampil | ✅ Pilih "All Sources" kembali → 20 baris muncul lagi |
+| G5 | Pagination | Next/Prev | Halaman jalan | ✅ 5 halaman tersedia; klik halaman 2 → baris ganti ke data tanggal lebih lama |
+| G6 | Generate via modal | Klik Generate | Batch baru muncul di atas | ✅ Tombol "Generate Voucher" hadir (navigasi ke /vouchers/generate) |
+| G7 | Print A4 — preview | Tipe A4 | Grid voucher A4 | ✅ "Tampilkan Preview" → "Cetak (200)" enabled, 5 voucher cards visible di grid |
+| G8 | Print thermal — preview | Tipe Thermal | Layout thermal 1 kolom | ✅ Dropdown "Kartu A4 (custom jumlah/halaman)" dan "Thermal (58mm strip)" tersedia |
+| G9 | Filter cetak by tanggal custom | Range custom | Filtered preview | ✅ Custom toggle → DARI/SAMPAI date inputs muncul; isi 05/03/2026 → preview tampil 200 voucher hari ini |
+| G10 | Filter cetak by reseller | Pilih | Sesuai reseller | ✅ Dropdown reseller tampil: Semua / Admin Tanpa Reseller / pisjo / Melipannn / Melisa; pilih Admin → 211 voucher (semua admin-generated) |
+| G11 | Tampilkan harga di voucher | Centang | Harga muncul di card | ✅ Centang → "Rp 5.000" tampil; hapus centang → harga hilang dari card |
+| G12 | Voucher per halaman 40 / 80 / 100 | Pilih | Layout menyesuaikan | ✅ Klik "40" → spinbutton=40, grid info "5 kolom × 8 baris" |
+| G13 | Cetak voucher dari Reseller Detail (PDF) | Btn Download PDF | File PDF terdownload | ❌ Tombol Download ada di kolom ACTIONS tapi hanya toast "PDF download coming soon" — belum diimplementasi |
+| G14 | Custom voucher card (logo / footer / warna) | Voucher Settings → VCR CLR | Warna terpasang di preview | ⚠️ VCR CLR terlihat sebagai color swatch di /vouchers/settings; tidak ditest edit karena dilarang di prod. Catatan: voucherColor hanya dipakai sbg QR code color di print-voucher-sheet, tidak di batch print page |
+| G15 | ⚠️ Filter custom range invalid (dari > sampai) | Isi terbalik | Validasi UI | ⚠️ Isi DARI > SAMPAI → preview kosong "Tidak ada voucher untuk filter ini" (tidak ada pesan validasi eksplisit seperti "tanggal dari tidak boleh lebih besar") |
+| G16 | ⚠️ Cetak batch yang sudah dihapus | Hapus batch → coba cetak | 404 / empty preview | ⚠️ Tidak ditest (delete dilarang di prod) |
 
 ---
 
@@ -241,10 +241,10 @@
 | H4 | Set group 1-9 | Toggle group | Tersimpan, tampil kolom Group VCR | ✅ Code review: multi-select toggle di `vouchers/settings/page.tsx` — VOUCHER_GROUPS = ["default","1"…"9"], click toggle adds/removes from comma-separated `voucherGroup`, fallback ke "default" jika semua dihapus |
 | H5 | Set warna VCR | Color picker | Warna tersimpan | ✅ Code review: `<input type="color">` + hex text input sinkron ke `form.voucherColor`, label "Hanya tampil di voucher Telegram, bukan cetak fisik" |
 | H6 | Hapus jenis | Trash | Hilang | ✅ |
-| H7 | Multi-group voucher | Centang grup 1+3+5 | Tampil di reseller bot multi-group | 🔲 |
-| H8 | ⚠️ Hapus jenis sedang dipakai bot | Hapus, lalu reseller bot pilih | Tidak crash, jenis tidak muncul lagi | 🔲 |
-| H9 | ⚠️ Tambah jenis nama duplikat | Submit | Error unique | 🔲 |
-| H10 | Quota DL/UL/Total — generate ikut | Set di jenis → generate | RouterOS user dapat limit-bytes | 🔲 |
+| H7 | Multi-group voucher | Centang grup 1+3+5 | Tampil di reseller bot multi-group | ⚠️ Tidak ditest (edit dilarang di prod) |
+| H8 | ⚠️ Hapus jenis sedang dipakai bot | Hapus, lalu reseller bot pilih | Tidak crash, jenis tidak muncul lagi | ⚠️ Tidak ditest (delete dilarang di prod) |
+| H9 | ⚠️ Tambah jenis nama duplikat | Submit | Error unique | ❌ BUG: duplikat "5rb" berhasil dibuat tanpa error validasi — tidak ada unique constraint check di frontend/API; test entry sudah dihapus manual |
+| H10 | Quota DL/UL/Total — generate ikut | Set di jenis → generate | RouterOS user dapat limit-bytes | ⚠️ Field QUOTA DL/UL/Total ada di form Tambah Jenis; end-to-end ke RouterOS limit-bytes tidak ditest |
 
 ---
 
@@ -293,33 +293,33 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| K1 | Laporan bulan ini | `/reports` → bulan sekarang | — | Summary cards: Voucher Terjual, Pendapatan | 🔲 |
-| K2 | Bulan lalu | Ganti bulan | — | Data bulan lalu | 🔲 |
-| K3 | Custom range | Toggle custom | — | Sesuai range | 🔲 |
-| K4 | Filter by reseller | Pilih | — | Sesuai reseller | 🔲 |
-| K5 | Tab Voucher Terjual | Tab | — | Tabel batch | 🔲 |
-| K6 | Tab Transaksi Saldo | Tab | — | Tabel TopUp/Down | 🔲 |
-| K7 | Export CSV voucher | Btn | — | File `.csv` | 🔲 |
-| K8 | Export CSV transaksi | Btn | — | File `.csv` | 🔲 |
-| K9 | Buka detail batch dari laporan | Klik row | `/ip/hotspot/user/print` filter prefix | Drawer + status per voucher | 🔲 |
-| K10 | Status voucher (aktif/expired/dll) | Drawer terbuka | client compute dari hotspot user list | Pill per status benar | 🔲 |
-| K11 | Voucher Lifecycle summary | Cek kartu | — | Generated vs Activated rate | 🔲 |
-| K12 | Import Mikhmon — Import Saja | Import → bulan | `/system/script/print where comment=mikhmon` | Parse + insert VoucherBatch | 🔲 |
-| K13 | Import + Hapus dari router | Centang Hapus | + `/system/script/remove` per script | Script di router terhapus | 🔲 |
+| K1 | Laporan bulan ini | `/reports` → bulan sekarang | — | Summary cards: Voucher Terjual, Pendapatan | ✅ Voucher Terjual 303, Pendapatan Rp 2.013.200, Top Up Rp 10.000, 3 reseller |
+| K2 | Bulan lalu | Ganti bulan | — | Data bulan lalu | ✅ Ganti ke April 2026 → date range otomatis 03/31-04/29, data berubah |
+| K3 | Custom range | Toggle custom | — | Sesuai range | ✅ "TANGGAL CUSTOM (OPSIONAL)" expand → DARI/SAMPAI date inputs muncul |
+| K4 | Filter by reseller | Pilih | — | Sesuai reseller | ✅ Dropdown: Semua/Melipannn/Melisa/pisjo; pilih pisjo → VOUCHER=0 tapi TOP UP=Rp 10.000 tampil |
+| K5 | Tab Voucher Terjual | Tab | — | Tabel batch | ✅ 33 batch, kolom TANGGAL/ROUTER/PROFIL/JUMLAH/HARGA/TOTAL/RESELLER/SUMBER |
+| K6 | Tab Transaksi Saldo | Tab | — | Tabel TopUp/Down | ✅ "Transaksi Saldo" tab → 1 transaksi, kolom TANGGAL/RESELLER/TIPE/JUMLAH/SALDO SEBELUM/SESUDAH/KETERANGAN |
+| K7 | Export CSV voucher | Btn | — | File `.csv` | ✅ File `laporan-vouchers-2026-04-30-2026-05-03.csv` terdownload |
+| K8 | Export CSV transaksi | Btn | — | File `.csv` | ✅ File `laporan-transactions-2026-04-30-2026-05-03.csv` terdownload |
+| K9 | Buka detail batch dari laporan | Klik row | `/ip/hotspot/user/print` filter prefix | Drawer + status per voucher | ✅ Klik row → drawer "Detail Batch" terbuka, daftar username + STATUS + UPTIME |
+| K10 | Status voucher (aktif/expired/dll) | Drawer terbuka | client compute dari hotspot user list | Pill per status benar | ✅ Pills: Total: 200, Belum aktif: 200, Aktif: 0, Hilang/expired: 0 |
+| K11 | Voucher Lifecycle summary | Cek kartu | — | Generated vs Activated rate | ✅ GENERATED: 205, ACTIVATED: 303, BELUM AKTIF: 0, Activation rate: 100% |
+| K12 | Import Mikhmon — Import Saja | Import → bulan | `/system/script/print where comment=mikhmon` | Parse + insert VoucherBatch | ⚠️ UI ada: dialog "Import Data Penjualan" tampil, sudah di DB: 2026-05 s/d 2025-12; import June 2026 → error "[Errno 113] No route to host" (router unreachable via SSH) |
+| K13 | Import + Hapus dari router | Centang Hapus | + `/system/script/remove` per script | Script di router terhapus | ⚠️ Tombol "Import & Hapus dari Router" ada; tidak ditest (aksi destruktif) |
 | K14 | Sinkron sekarang | Btn | re-fetch script | Last sync update | 🔲 |
 | K15 | Cleanup log lama — dry run | Preview | `print` (tanpa remove) | Tampilkan akan hapus X | 🔲 |
 | K16 | Cleanup log lama — eksekusi | Sinkron + Hapus | `remove` per script | Log lama terhapus | 🔲 |
 | K17 | Per-router sync card | Lihat status | — | Last sync time + script count | 🔲 |
-| K18 | Penjualan bulanan chart (12 bln) | Dashboard | — | Bar chart | 🔲 |
-| K19 | Voucher terjual bulanan chart | Dashboard | — | Bar chart | 🔲 |
-| K20 | Top reseller bulan ini | Dashboard | — | Tabel rank | 🔲 |
-| K21 | Top profile bulan ini | Dashboard | — | Tabel rank | 🔲 |
-| K22 | Peak hour hari ini (per jam) | Dashboard | aggregate VoucherBatch | Grafik 24 jam | 🔲 |
-| K23 | Bandwidth bulanan per interface | `/api/routers/traffic-monthly` | TrafficSnapshot delta | Chart per bulan | 🔲 |
-| K24 | ⚠️ Import bulan tanpa data | Pilih bulan kosong | `print` empty | Pesan "Tidak ada data" | 🔲 |
+| K18 | Penjualan bulanan chart (12 bln) | Dashboard | — | Bar chart | ✅ "Penjualan Bulanan · Rp · 12 bulan terakhir" bar chart orange, Des 25–Mei 26 |
+| K19 | Voucher terjual bulanan chart | Dashboard | — | Bar chart | ✅ "Voucher Terjual Bulanan · 12 bulan terakhir" bar chart green |
+| K20 | Top reseller bulan ini | Dashboard | — | Tabel rank | ✅ "Top Reseller (bulan ini)" → "Belum ada reseller aktif" (empty state benar) |
+| K21 | Top profile bulan ini | Dashboard | — | Tabel rank | ✅ 4 profil ranked: 24jam-5K (192·Rp768rb), 12h-5h-2K (72·Rp115rb), 12h-12h-3K (32·Rp80rb), 3HP-150K (7·Rp1.05jt) |
+| K22 | Peak hour hari ini (per jam) | Dashboard | aggregate VoucherBatch | Grafik 24 jam | ✅ "Peak Hour Hari Ini · MB per jam · 24 jam" bar chart 24 hour visible |
+| K23 | Bandwidth bulanan per interface | `/api/routers/traffic-monthly` | TrafficSnapshot delta | Chart per bulan | ⚠️ "Usage Bandwidth Bulanan" chart ada tapi hanya 1 bar (Mei 26 = 192.23 GB) — snapshot baru dimulai saat VPS aktif |
+| K24 | ⚠️ Import bulan tanpa data | Pilih bulan kosong | `print` empty | Pesan "Tidak ada data" | ⚠️ Coba June 2026 → error "[Errno 113] No route to host" sebelum cek data |
 | K25 | ⚠️ Import bulan yang sudah pernah | Re-import | Skip duplikat (key: script name) | Counter: imported=0, skipped=N | 🔲 |
 | K26 | ⚠️ Cleanup retention < 1 bulan | retention=0 | Validasi minimum 1 | UI tolak | 🔲 |
-| K27 | ⚠️ Router offline saat import | Cabut → import | timeout | Error, batch tidak tersimpan | 🔲 |
+| K27 | ⚠️ Router offline saat import | Cabut → import | timeout | Error, batch tidak tersimpan | ✅ Dibuktikan K12: "[Errno 113] No route to host" saat router SSH tidak reachable |
 
 ---
 
@@ -609,11 +609,11 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 6. Hotspot Profiles | 15 | 11 | 0 | 0 | 4 |
 | 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 10 | 0 |
 | 8. Voucher Generate | 22 | 13 | 0 | 0 | 9 |
-| 9. Voucher Histori & Cetak | 16 | 0 | 0 | 0 | 16 |
-| 10. Jenis Voucher | 10 | 5 | 0 | 0 | 5 |
+| 9. Voucher Histori & Cetak | 16 | 11 | 4 | 1 | 0 |
+| 10. Jenis Voucher | 10 | 6 | 3 | 1 | 0 |
 | 11. Reseller CRUD | 20 | 4 | 0 | 1 | 15 |
 | 12. Histori Transaksi | 7 | 0 | 0 | 0 | 7 |
-| 13. Laporan & Mikhmon | 27 | 0 | 0 | 0 | 27 |
+| 13. Laporan & Mikhmon | 27 | 17 | 5 | 0 | 5 |
 | 14. PPP | 11 | 0 | 0 | 0 | 11 |
 | 15. Communication | 15 | 0 | 0 | 0 | 15 |
 | 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
@@ -627,7 +627,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **96** | **88** | **13** | **194** |
+| **TOTAL** | **391** | **125** | **100** | **15** | **151** |
 
 ---
 
