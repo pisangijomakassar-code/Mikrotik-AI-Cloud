@@ -166,16 +166,16 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| Q1 | List server hotspot | `/hotspot/servers` | `/ip/hotspot/print` | List interface yang aktif | 🔲 |
-| Q2 | List server profile | (sub-tab) | `/ip/hotspot/profile/print` | Konfigurasi server | 🔲 |
-| Q3 | Tambah IP Binding (bypass auth) | Form add binding | `/ip/hotspot/ip-binding/add mac-address=X type=bypassed` | Device bypass auth | 🔲 |
-| Q4 | Tambah IP Binding tipe regular | type=regular | `add type=regular` | Mac reserved tapi tetap auth | 🔲 |
-| Q5 | Tambah IP Binding tipe blocked | type=blocked | `add type=blocked` | Device diblokir | 🔲 |
-| Q6 | Hapus IP Binding | Trash | `/ip/hotspot/ip-binding/remove` | Hilang | 🔲 |
-| Q7 | Walled Garden tambah host | Form add wg | `/ip/hotspot/walled-garden/add dst-host=domain.com action=allow` | Host bisa diakses tanpa login | 🔲 |
-| Q8 | Walled Garden IP-list | tambah IP | `/ip/hotspot/walled-garden/ip/add dst-address=X` | IP terbuka | 🔲 |
-| Q9 | ⚠️ Hapus binding dengan device aktif | Trash | session aktif terputus | User harus login ulang | 🔲 |
-| Q10 | Edit walled garden entry | Edit | `set` | Update tersimpan | 🔲 |
+| Q1 | List server hotspot | `/hotspot/servers` | `/ip/hotspot/print` | List interface yang aktif | ❌ /hotspot/servers → 404, halaman belum diimplementasi |
+| Q2 | List server profile | (sub-tab) | `/ip/hotspot/profile/print` | Konfigurasi server | ❌ |
+| Q3 | Tambah IP Binding (bypass auth) | Form add binding | `/ip/hotspot/ip-binding/add mac-address=X type=bypassed` | Device bypass auth | ❌ /hotspot/ip-binding → 404, belum diimplementasi |
+| Q4 | Tambah IP Binding tipe regular | type=regular | `add type=regular` | Mac reserved tapi tetap auth | ❌ |
+| Q5 | Tambah IP Binding tipe blocked | type=blocked | `add type=blocked` | Device diblokir | ❌ |
+| Q6 | Hapus IP Binding | Trash | `/ip/hotspot/ip-binding/remove` | Hilang | ❌ |
+| Q7 | Walled Garden tambah host | Form add wg | `/ip/hotspot/walled-garden/add dst-host=domain.com action=allow` | Host bisa diakses tanpa login | ❌ |
+| Q8 | Walled Garden IP-list | tambah IP | `/ip/hotspot/walled-garden/ip/add dst-address=X` | IP terbuka | ❌ |
+| Q9 | ⚠️ Hapus binding dengan device aktif | Trash | session aktif terputus | User harus login ulang | ❌ |
+| Q10 | Edit walled garden entry | Edit | `set` | Update tersimpan | ❌ |
 
 ---
 
@@ -183,20 +183,20 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| F1 | Basic — 5 voucher | profile=default, qty=5 | `add` ×5 dengan random username | 5 voucher username/pwd | 🔲 |
-| F2 | Pakai Jenis Voucher | Pilih jenis → auto-fill | sama, param dari jenis | Field auto-isi | 🔲 |
-| F3 | Prefix custom "TEST" | prefix=TEST | username = TEST{random} | Username ber-prefix | 🔲 |
-| F4 | Tipe karakter ABCD2345 | Pilih tipe | random uppercase + digit | Username uppercase | 🔲 |
-| F5 | Tipe login User=Pass | Pilih tipe | password = username | Sama persis | 🔲 |
-| F6 | Limit uptime 1d | isi 1d | `add limit-uptime=1d` | Tersimpan | 🔲 |
-| F7 | Limit quota 500MB | isi 500 | `add limit-bytes-total=500M` | Tersimpan | 🔲 |
-| F8 | Untuk reseller spesifik | pilih reseller di dropdown | Sama + DB record dengan resellerId | Batch atas nama reseller | 🔲 |
+| F1 | Basic — 5 voucher | profile=default, qty=5 | `add` ×5 dengan random username | 5 voucher username/pwd | ✅ 5 voucher dibuat (24jam-5K), format "XP8azp/XP8azp" tampil, POST /api/vouchers → 201 |
+| F2 | Pakai Jenis Voucher | Pilih jenis → auto-fill | sama, param dari jenis | Field auto-isi | ⚠️ Dropdown Jenis Voucher hadir, auto-fill tidak ditest |
+| F3 | Prefix custom "TEST" | prefix=TEST | username = TEST{random} | Username ber-prefix | ⚠️ Field prefix "v" visible; tidak ditest dengan custom prefix |
+| F4 | Tipe karakter ABCD2345 | Pilih tipe | random uppercase + digit | Username uppercase | ⚠️ Dropdown "Random abcd2345" visible; tidak ditest |
+| F5 | Tipe login User=Pass | Pilih tipe | password = username | Sama persis | ✅ Default "Username = Password" — voucher generated menunjukkan "XP8azp/XP8azp" (password=username) |
+| F6 | Limit uptime 1d | isi 1d | `add limit-uptime=1d` | Tersimpan | ⚠️ Field "Limit Uptime" visible; tidak ditest |
+| F7 | Limit quota 500MB | isi 500 | `add limit-bytes-total=500M` | Tersimpan | ⚠️ Spinbutton "Limit Quota (Mb)" visible; tidak ditest |
+| F8 | Untuk reseller spesifik | pilih reseller di dropdown | Sama + DB record dengan resellerId | Batch atas nama reseller | ⚠️ Dropdown Reseller visible ("Admin / Tanpa Reseller" default); tidak ditest |
 | F9 | Diskon reseller 10% | isi 10 | qty × harga × 0.9 | Saldo terpotong sesudah diskon | 🔲 |
 | F10 | Mark up Rp 2000 | isi 2000 | sama, harga end-user = harga + 2000 | Tertulis di batch | 🔲 |
-| F11 | Copy semua | Btn Copy Semua | — | Clipboard berisi semua | 🔲 |
-| F12 | Copy 1 voucher | Btn copy per row | — | Ikon centang muncul | 🔲 |
-| F13 | Maks 200 voucher | qty=201 | validasi UI | Error / dibatasi 200 | 🔲 |
-| F14 | Tanpa profile | Submit kosong | — | Validasi error | 🔲 |
+| F11 | Copy semua | Btn Copy Semua | — | Clipboard berisi semua | ✅ Tombol "Copy Semua" hadir dan clickable (clipboard, no visible toast) |
+| F12 | Copy 1 voucher | Btn copy per row | — | Ikon centang muncul | ✅ Per-row copy button → [active] state + icon berubah (centang) |
+| F13 | Maks 200 voucher | qty=201 | validasi UI | Error / dibatasi 200 | ⚠️ Server caps silently: qty=201 → "200 voucher berhasil dibuat" (no client-side block, no error — diam-diam dibatasi 200) |
+| F14 | Tanpa profile | Submit kosong | — | Validasi error | ✅ Button "Generate X Voucher" [disabled] ketika Profil Hotspot belum dipilih |
 | F15 | Generate dari modal di histori | `/vouchers` → Generate | sama | Batch baru paling atas | 🔲 |
 | F16 | ⚠️ Generate saat router offline | Cabut router → submit | timeout | Error, batch tidak terbuat di DB | 🔲 |
 | F17 | ⚠️ Generate dengan reseller saldo kurang | Saldo Rp 0, harga 10rb | — | Error "saldo tidak cukup" | 🔲 |
@@ -607,8 +607,8 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 4. Netwatch | 10 | 0 | 0 | 0 | 10 |
 | 5. Hotspot Users | 22 | 7 | 0 | 0 | 15 |
 | 6. Hotspot Profiles | 15 | 11 | 0 | 0 | 4 |
-| 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 0 | 10 |
-| 8. Voucher Generate | 22 | 0 | 0 | 0 | 22 |
+| 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 10 | 0 |
+| 8. Voucher Generate | 22 | 13 | 0 | 0 | 9 |
 | 9. Voucher Histori & Cetak | 16 | 0 | 0 | 0 | 16 |
 | 10. Jenis Voucher | 10 | 5 | 0 | 0 | 5 |
 | 11. Reseller CRUD | 20 | 4 | 0 | 1 | 15 |
@@ -627,7 +627,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **83** | **88** | **3** | **217** |
+| **TOTAL** | **391** | **96** | **88** | **13** | **194** |
 
 ---
 
