@@ -61,8 +61,8 @@ export function TunnelManageDialog({
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl bg-[#0e1525] border-white/10 text-foreground p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
+      <DialogContent className="max-w-2xl bg-[#0e1525] border-white/10 text-foreground p-0 overflow-hidden flex flex-col max-h-[88vh]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div>
               <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
@@ -83,8 +83,9 @@ export function TunnelManageDialog({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="ports" className="flex flex-col">
-          <TabsList className="mx-6 mt-4 mb-0 bg-surface-low border border-border/20 self-start">
+        {/* default ke "setup" kalau tunnel belum pernah konek, supaya user langsung lihat instruksi */}
+        <Tabs defaultValue={tunnelStatus === "CONNECTED" ? "ports" : "setup"} className="flex flex-col flex-1 min-h-0">
+          <TabsList className="mx-6 mt-4 mb-0 bg-surface-low border border-border/20 self-start shrink-0">
             <TabsTrigger
               value="ports"
               className="text-[11px] data-[state=active]:bg-muted data-[state=active]:text-primary"
@@ -98,11 +99,22 @@ export function TunnelManageDialog({
             >
               <BookOpen className="h-3.5 w-3.5 mr-1.5" />
               Instruksi Setup
+              {tunnelStatus !== "CONNECTED" && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-400 leading-none">
+                  BACA DULU
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           {/* Tab: Port Management */}
-          <TabsContent value="ports" className="px-6 py-4 mt-0">
+          <TabsContent value="ports" className="mt-0 flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            {tunnelStatus !== "CONNECTED" && (
+              <div className="mb-4 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-400">
+                <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                Router belum terhubung — pastikan sudah jalankan script dari tab <strong>Instruksi Setup</strong>.
+              </div>
+            )}
             {isLoading ? (
               <TableSkeleton rows={3} columns={4} />
             ) : tunnel ? (
@@ -113,7 +125,7 @@ export function TunnelManageDialog({
           </TabsContent>
 
           {/* Tab: Setup Instructions */}
-          <TabsContent value="setup" className="mt-0">
+          <TabsContent value="setup" className="mt-0 flex-1 min-h-0 overflow-y-auto">
             <TunnelSetupWizard
               routerId={routerId}
               method={tunnelMethod}
@@ -124,7 +136,7 @@ export function TunnelManageDialog({
         </Tabs>
 
         {/* Delete section */}
-        <div className="px-6 py-4 border-t border-border/20 mt-2">
+        <div className="px-6 py-4 border-t border-border/20 shrink-0">
           {!confirmDelete ? (
             <button
               type="button"

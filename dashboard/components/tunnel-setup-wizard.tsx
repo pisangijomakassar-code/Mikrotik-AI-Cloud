@@ -458,7 +458,7 @@ export function TunnelSetupWizard({
 
   // Shared body content (tabs with setup instructions)
   const bodyContent = (
-    <div className={cn("overflow-y-auto", embedded ? "p-4 pb-2" : "flex-1 p-6")}>
+    <div className={cn(embedded ? "p-4 pb-2" : "flex-1 overflow-y-auto p-6")}>
       {setupQuery.isLoading ? (
         <div className="flex items-center justify-center py-12 gap-3 text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin" />
