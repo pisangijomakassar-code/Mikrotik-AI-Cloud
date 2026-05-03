@@ -601,26 +601,26 @@
 
 | # | Skenario | Setup | Expected | Status |
 |---|---|---|---|---|
-| Z1 | RouterOS API timeout di hotspot operation | Mock delay > 15s | Error message + retry button | 🔲 |
-| Z2 | Database connection lost | Stop postgres | App return 502 dengan jelas | 🔲 |
-| Z3 | Telegram API down | Mock 5xx | Broadcast/notif retry, tampil status | 🔲 |
-| Z4 | Concurrent edit profile (race) | 2 admin sama-sama edit | Last-write-wins (atau optimistic lock) | 🔲 |
-| Z5 | Generate voucher saat saldo race | 2× klik cepat | Hanya 1 yang sukses, saldo benar | 🔲 |
-| Z6 | XSS di field comment user | Input `<script>alert(1)</script>` | Escaped di display | 🔲 |
-| Z7 | CSRF protection | Submit POST dari domain lain | Tolak | 🔲 |
-| Z8 | API rate limit | Spam POST /api/vouchers 100×/sec | Throttle / 429 | 🔲 |
-| Z9 | Disk full saat upload bukti transfer | Mock | Error message bukan crash | 🔲 |
-| Z10 | RouterOS session expired (token rotated) | Refresh credentials | Re-auth otomatis | 🔲 |
-| Z11 | Hotspot user count > 5000 | Stress test | Pagination + virtualization OK | 🔲 |
+| Z1 | RouterOS API timeout di hotspot operation | Mock delay > 15s | Error message + retry button | ⏭️ |
+| Z2 | Database connection lost | Stop postgres | App return 502 dengan jelas | ⏭️ |
+| Z3 | Telegram API down | Mock 5xx | Broadcast/notif retry, tampil status | ⏭️ |
+| Z4 | Concurrent edit profile (race) | 2 admin sama-sama edit | Last-write-wins (atau optimistic lock) | ⏭️ |
+| Z5 | Generate voucher saat saldo race | 2× klik cepat | Hanya 1 yang sukses, saldo benar | ⏭️ |
+| Z6 | XSS di field comment user | Input `<script>alert(1)</script>` | Escaped di display | ⏭️ |
+| Z7 | CSRF protection | Submit POST dari domain lain | Tolak | ⏭️ |
+| Z8 | API rate limit | Spam POST /api/vouchers 100×/sec | Throttle / 429 | ⏭️ |
+| Z9 | Disk full saat upload bukti transfer | Mock | Error message bukan crash | ⏭️ |
+| Z10 | RouterOS session expired (token rotated) | Refresh credentials | Re-auth otomatis | ⏭️ |
+| Z11 | Hotspot user count > 5000 | Stress test | Pagination + virtualization OK | ⏭️ |
 | Z12 | Dashboard di-resize ke mobile | Buka di 375px | Layout responsive, sidebar collapse | ✅ Viewport 375×812px: hamburger (☰) visible, sidebar collapsed (overlay mode), 2-col card grid, mainWidth=370px, no horizontal overflow (scrollWidth=370) |
-| Z13 | Browser back-forward setelah generate | Browser back → forward | State konsisten | 🔲 |
-| Z14 | Prisma migration breaking | Apply migration baru | Existing data tidak corrupt | 🔲 |
-| Z15 | Token JWT expired mid-request | Tunggu lewat exp | Auto refresh atau redirect login | 🔲 |
-| Z16 | RouterOS reboot saat operasi | Reboot pas tengah generate | Partial result, jelas di UI | 🔲 |
-| Z17 | Webhook Midtrans dengan body kosong | Mock | 400 + log | 🔲 |
-| Z18 | Bot menerima command sangat panjang | 5000 chars | Trim atau reject | 🔲 |
-| Z19 | Reseller spam command (flood) | 100 cmd/sec | Bot rate limit | 🔲 |
-| Z20 | Multi-router same tenant simultaneous CRUD | Operasi paralel | Tidak konflik (per-router lock) | 🔲 |
+| Z13 | Browser back-forward setelah generate | Browser back → forward | State konsisten | ⏭️ |
+| Z14 | Prisma migration breaking | Apply migration baru | Existing data tidak corrupt | ⏭️ |
+| Z15 | Token JWT expired mid-request | Tunggu lewat exp | Auto refresh atau redirect login | ⏭️ |
+| Z16 | RouterOS reboot saat operasi | Reboot pas tengah generate | Partial result, jelas di UI | ⏭️ |
+| Z17 | Webhook Midtrans dengan body kosong | Mock | 400 + log | ⏭️ |
+| Z18 | Bot menerima command sangat panjang | 5000 chars | Trim atau reject | ⏭️ |
+| Z19 | Reseller spam command (flood) | 100 cmd/sec | Bot rate limit | ⏭️ |
+| Z20 | Multi-router same tenant simultaneous CRUD | Operasi paralel | Tidak konflik (per-router lock) | ⏭️ |
 
 ---
 
@@ -661,11 +661,11 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 20. Tunnel | 10 | 1 | 9 | 0 | 0 |
 | 21. Background Jobs | 11 | 2 | 6 | 3 | 0 |
 | 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
-| 23. Negative & Resilience | 20 | 0 | 0 | 0 | 20 |
+| 23. Negative & Resilience | 20 | 1 | 19 | 0 | 0 |
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **143** | **161** | **20** | **67** |
+| **TOTAL** | **391** | **144** | **180** | **20** | **47** |
 
 ---
 
