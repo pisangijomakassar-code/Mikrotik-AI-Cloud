@@ -20,6 +20,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const db = await getTenantDb()
+
+    if (!body.namaVoucher?.trim()) {
+      return Response.json({ error: "Nama voucher wajib diisi" }, { status: 400 })
+    }
+    const duplicate = await db.voucherType.findFirst({ where: { namaVoucher: body.namaVoucher.trim() } })
+    if (duplicate) {
+      return Response.json({ error: "Nama jenis voucher sudah ada" }, { status: 400 })
+    }
+
     const vt = await db.voucherType.create({
       data: {
         id: crypto.randomUUID(),

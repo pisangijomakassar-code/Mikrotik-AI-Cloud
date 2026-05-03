@@ -166,16 +166,16 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| Q1 | List server hotspot | `/hotspot/servers` | `/ip/hotspot/print` | List interface yang aktif | ❌ /hotspot/servers → 404, halaman belum diimplementasi |
-| Q2 | List server profile | (sub-tab) | `/ip/hotspot/profile/print` | Konfigurasi server | ❌ |
-| Q3 | Tambah IP Binding (bypass auth) | Form add binding | `/ip/hotspot/ip-binding/add mac-address=X type=bypassed` | Device bypass auth | ❌ /hotspot/ip-binding → 404, belum diimplementasi |
-| Q4 | Tambah IP Binding tipe regular | type=regular | `add type=regular` | Mac reserved tapi tetap auth | ❌ |
-| Q5 | Tambah IP Binding tipe blocked | type=blocked | `add type=blocked` | Device diblokir | ❌ |
-| Q6 | Hapus IP Binding | Trash | `/ip/hotspot/ip-binding/remove` | Hilang | ❌ |
-| Q7 | Walled Garden tambah host | Form add wg | `/ip/hotspot/walled-garden/add dst-host=domain.com action=allow` | Host bisa diakses tanpa login | ❌ |
-| Q8 | Walled Garden IP-list | tambah IP | `/ip/hotspot/walled-garden/ip/add dst-address=X` | IP terbuka | ❌ |
-| Q9 | ⚠️ Hapus binding dengan device aktif | Trash | session aktif terputus | User harus login ulang | ❌ |
-| Q10 | Edit walled garden entry | Edit | `set` | Update tersimpan | ❌ |
+| Q1 | List server hotspot | `/hotspot/servers` | `/ip/hotspot/print` | List interface yang aktif | ⏭️ (tidak perlu) |
+| Q2 | List server profile | (sub-tab) | `/ip/hotspot/profile/print` | Konfigurasi server | ⏭️ (tidak perlu) |
+| Q3 | Tambah IP Binding (bypass auth) | Form add binding | `/ip/hotspot/ip-binding/add mac-address=X type=bypassed` | Device bypass auth | ⏭️ (tidak perlu) |
+| Q4 | Tambah IP Binding tipe regular | type=regular | `add type=regular` | Mac reserved tapi tetap auth | ⏭️ (tidak perlu) |
+| Q5 | Tambah IP Binding tipe blocked | type=blocked | `add type=blocked` | Device diblokir | ⏭️ (tidak perlu) |
+| Q6 | Hapus IP Binding | Trash | `/ip/hotspot/ip-binding/remove` | Hilang | ⏭️ (tidak perlu) |
+| Q7 | Walled Garden tambah host | Form add wg | `/ip/hotspot/walled-garden/add dst-host=domain.com action=allow` | Host bisa diakses tanpa login | ⏭️ (tidak perlu) |
+| Q8 | Walled Garden IP-list | tambah IP | `/ip/hotspot/walled-garden/ip/add dst-address=X` | IP terbuka | ⏭️ (tidak perlu) |
+| Q9 | ⚠️ Hapus binding dengan device aktif | Trash | session aktif terputus | User harus login ulang | ⏭️ (tidak perlu) |
+| Q10 | Edit walled garden entry | Edit | `set` | Update tersimpan | ⏭️ (tidak perlu) |
 
 ---
 
@@ -243,7 +243,7 @@
 | H6 | Hapus jenis | Trash | Hilang | ✅ |
 | H7 | Multi-group voucher | Centang grup 1+3+5 | Tampil di reseller bot multi-group | ⚠️ Tidak ditest (edit dilarang di prod) |
 | H8 | ⚠️ Hapus jenis sedang dipakai bot | Hapus, lalu reseller bot pilih | Tidak crash, jenis tidak muncul lagi | ⚠️ Tidak ditest (delete dilarang di prod) |
-| H9 | ⚠️ Tambah jenis nama duplikat | Submit | Error unique | ❌ BUG: duplikat "5rb" berhasil dibuat tanpa error validasi — tidak ada unique constraint check di frontend/API; test entry sudah dihapus manual |
+| H9 | ⚠️ Tambah jenis nama duplikat | Submit | Error unique | ✅ Fixed — unique check di API POST+PUT
 | H10 | Quota DL/UL/Total — generate ikut | Set di jenis → generate | RouterOS user dapat limit-bytes | ⚠️ Field QUOTA DL/UL/Total ada di form Tambah Jenis; end-to-end ke RouterOS limit-bytes tidak ditest |
 
 ---
@@ -269,9 +269,9 @@
 | I15 | ⚠️ Top Down saldo > yang ada | Down 100rb dari saldo 50rb | — | Validasi: tidak boleh negatif | ✅ |
 | I16 | ⚠️ Hapus reseller dengan saldo aktif | Trash | — | Konfirmasi double, transaksi histori tetap | ⏭️ |
 | I17 | ⚠️ Top Up nominal 0 | Submit 0 | — | Validasi UI | ✅ |
-| I18 | ⚠️ Telegram ID invalid (bukan angka) | Form input "abc" | — | Validasi UI | ❌ |
-| I19 | ⚠️ Telegram ID sudah dipakai | Duplikat | — | Error unique | ❌ |
-| I20 | Bulk top up via CSV | Upload CSV (jika fitur ada) | DM batch | Saldo semua reseller terupdate | ❌ |
+| I18 | ⚠️ Telegram ID invalid (bukan angka) | Form input "abc" | — | Validasi UI | ✅ Fixed — Zod schema + API validasi format angka |
+| I19 | ⚠️ Telegram ID sudah dipakai | Duplikat | — | Error unique | ✅ Fixed — API POST+PATCH cek uniqueness telegramId |
+| I20 | Bulk top up via CSV | Upload CSV (jika fitur ada) | DM batch | Saldo semua reseller terupdate | ⏭️ (tidak perlu) |
 
 > **BUG-I18 ❌:** Tidak ada validasi format Telegram ID — form menerima teks non-numerik seperti "abc" tanpa error; data tersimpan di DB. Idealnya validasi hanya integer positif (atau mulai dengan `-` untuk group chat).
 > **BUG-I19 ❌:** Tidak ada validasi uniqueness Telegram ID — duplikat ID diterima tanpa error; dapat menyebabkan bot mengirim pesan ke reseller yang salah.
@@ -645,11 +645,11 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
 | 5. Hotspot Users | 22 | 7 | 15 | 0 | 0 |
 | 6. Hotspot Profiles | 15 | 11 | 4 | 0 | 0 |
-| 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 10 | 0 |
+| 7. Server/Binding/Walled Garden | 10 | 0 | 10 | 0 | 0 |
 | 8. Voucher Generate | 22 | 13 | 9 | 0 | 0 |
 | 9. Voucher Histori & Cetak | 16 | 11 | 4 | 1 | 0 |
-| 10. Jenis Voucher | 10 | 6 | 3 | 1 | 0 |
-| 11. Reseller CRUD | 20 | 9 | 7 | 4 | 0 |
+| 10. Jenis Voucher | 10 | 7 | 3 | 0 | 0 |
+| 11. Reseller CRUD | 20 | 11 | 8 | 1 | 0 |
 | 12. Histori Transaksi | 7 | 2 | 5 | 0 | 0 |
 | 13. Laporan & Mikhmon | 27 | 17 | 10 | 0 | 0 |
 | 14. PPP | 11 | 4 | 6 | 1 | 0 |
@@ -665,7 +665,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 22 | 15 | 7 | 0 | 0 |
 | 25. Performance | 18 | 3 | 15 | 0 | 0 |
 | 26. Compatibility | 17 | 10 | 7 | 0 | 0 |
-| **TOTAL** | **411** | **153** | **233** | **25** | **0** |
+| **TOTAL** | **411** | **156** | **244** | **11** | **0** |
 
 ---
 

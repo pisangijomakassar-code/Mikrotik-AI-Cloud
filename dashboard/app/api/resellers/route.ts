@@ -4,6 +4,10 @@ import { getTenantDb } from "@/lib/db-tenant"
 import { listResellers, createReseller } from "@/lib/services/reseller.service"
 import type { CreateResellerInput } from "@/lib/types"
 
+function isValidTelegramId(v: string) {
+  return /^\-?\d+$/.test(v)
+}
+
 // Resolve router name (from query / body) to routerId, scoped to current tenant.
 // Falls back to tenant's default router (or oldest) if no name provided.
 async function resolveRouterId(routerName: string | null): Promise<string | null> {
@@ -55,6 +59,18 @@ export async function POST(request: NextRequest) {
 
     if (!body.name) {
       return Response.json({ error: "Name is required" }, { status: 400 })
+    }
+
+    const tgId = body.telegramId?.trim() ?? ""
+    if (tgId && !isValidTelegramId(tgId)) {
+      return Response.json({ error: "Telegram ID harus berupa angka" }, { status: 400 })
+    }
+    if (tgId) {
+      const db = await getTenantDb()
+      const tgDup = await db.reseller.findFirst({ where: { telegramId: tgId } })
+      if (tgDup) {
+        return Response.json({ error: "Telegram ID sudah dipakai oleh reseller lain" }, { status: 400 })
+      }
     }
 
     const routerId = await resolveRouterId(body.routerName ?? null)

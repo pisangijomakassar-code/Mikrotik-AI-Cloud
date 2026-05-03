@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
+import { getTenantDb } from "@/lib/db-tenant"
 import {
   getReseller,
   updateReseller,
@@ -46,6 +47,19 @@ export async function PATCH(
 
   try {
     const body = (await request.json()) as UpdateResellerInput
+
+    const tgId = body.telegramId?.trim() ?? ""
+    if (tgId) {
+      if (!/^\-?\d+$/.test(tgId)) {
+        return Response.json({ error: "Telegram ID harus berupa angka" }, { status: 400 })
+      }
+      const db = await getTenantDb()
+      const tgDup = await db.reseller.findFirst({ where: { telegramId: tgId, NOT: { id } } })
+      if (tgDup) {
+        return Response.json({ error: "Telegram ID sudah dipakai oleh reseller lain" }, { status: 400 })
+      }
+    }
+
     const reseller = await updateReseller(id, body)
     if (!reseller) {
       return Response.json({ error: "Reseller not found" }, { status: 404 })

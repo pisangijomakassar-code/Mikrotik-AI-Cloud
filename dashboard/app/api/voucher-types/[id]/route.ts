@@ -10,6 +10,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const body = await request.json()
     const db = await getTenantDb()
+
+    if (body.namaVoucher !== undefined) {
+      const duplicate = await db.voucherType.findFirst({
+        where: { namaVoucher: body.namaVoucher.trim(), NOT: { id } },
+      })
+      if (duplicate) {
+        return Response.json({ error: "Nama jenis voucher sudah ada" }, { status: 400 })
+      }
+    }
+
     const vt = await db.voucherType.update({
       where: { id },
       data: {

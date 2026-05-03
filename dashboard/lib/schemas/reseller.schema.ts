@@ -1,9 +1,14 @@
 import { z } from "zod"
 
+const telegramIdField = z.string().trim()
+  .refine((v) => !v || /^\-?\d+$/.test(v), { message: "Telegram ID harus berupa angka" })
+  .optional()
+  .or(z.literal(""))
+
 export const addResellerSchema = z.object({
   name: z.string().min(1, "Name is required").trim(),
   phone: z.string().trim().optional().or(z.literal("")),
-  telegramId: z.string().trim().optional().or(z.literal("")),
+  telegramId: telegramIdField,
   balance: z.string().optional().or(z.literal("")),
   discount: z.string().optional().or(z.literal("")),
   voucherGroup: z.string().trim().optional().or(z.literal("")),
@@ -15,7 +20,7 @@ export type AddResellerFormData = z.infer<typeof addResellerSchema>
 export const editResellerSchema = z.object({
   name: z.string().trim().optional().or(z.literal("")),
   phone: z.string().trim().optional().or(z.literal("")),
-  telegramId: z.string().trim().optional().or(z.literal("")),
+  telegramId: telegramIdField,
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
   discount: z.string().optional().or(z.literal("")),
   voucherGroup: z.string().trim().optional().or(z.literal("")),
