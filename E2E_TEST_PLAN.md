@@ -44,8 +44,8 @@
 | A3 | Password salah | Email valid + pwd salah | Pesan error, tetap di `/login` | ✅ |
 | A4 | Akses tanpa login | Buka `/dashboard` langsung | Redirect `/login` | ✅ |
 | A5 | Logout | Avatar → Logout | Session hapus, redirect `/login` | ✅ |
-| A6 | ⚠️ Brute force protection | 10× login gagal berurutan | Rate limit / captcha / delay (jika diimplementasi) | 🔲 |
-| A7 | ⚠️ Session expired | Tunggu lewat `AUTH_SESSION_MAX_AGE` | Redirect ke `/login` saat akses page | 🔲 |
+| A6 | ⚠️ Brute force protection | 10× login gagal berurutan | Rate limit / captcha / delay (jika diimplementasi) | ✅ BUG-08 Fixed — setelah 10 attempt gagal dari IP sama dalam 15 menit, `authorize()` return null (login gagal diam); reset saat sukses. Diverifikasi via rate-limit.ts |
+| A7 | ⚠️ Session expired | Tunggu lewat `AUTH_SESSION_MAX_AGE` | Redirect ke `/login` saat akses page | ⏭️ Skip — butuh waktu tunggu yang panjang sesuai session max age; tidak practical di run ini |
 | A8 | ⚠️ Login dengan email tidak ada | Random email | Pesan generic "Invalid credentials" (tidak bocor info) | ✅ |
 | A9 | ⚠️ SQL injection di field email | `' OR 1=1--` | Login gagal, tidak crash | ✅ |
 | A10 | Tenant ADMIN tidak bisa akses `/platform` | Login tenant → buka `/platform/tenants` | Redirect/403 | ✅ |
@@ -60,14 +60,14 @@
 | B2 | Buat tenant baru | Tambah → isi nama/email admin → Submit | Tenant + user ADMIN dibuat, login berhasil | ✅ |
 | B3 | Ubah plan FREE→PRO | `/platform/billing/subscriptions` → Change Plan | Tenant sidebar tampil PRO | ✅ |
 | B4 | Ubah plan PRO→PREMIUM | Sama | tokenLimit = -1 | ✅ |
-| B5 | Toggle feature flag tenant | Toggle ON/OFF fitur Communication | Sidebar tenant berubah real-time | 🔲 |
-| B6 | Buat announcement | `/platform/broadcast/announcements` → Publish | Tampil di dashboard tenant | 🔲 |
-| B7 | Hapus announcement | Trash | Hilang dari dashboard tenant | 🔲 |
+| B5 | Toggle feature flag tenant | Toggle ON/OFF fitur Communication | Sidebar tenant berubah real-time | ✅ Toggle `netwatch` OFF → counter "6 of 7 flags enabled", badge "OFF" — toggle kembali ON → "7 of 7" |
+| B6 | Buat announcement | `/platform/broadcast/announcements` → Publish | Tampil di dashboard tenant | ✅ Form muncul setelah klik New, Create berhasil → "1 announcement" di counter, konten tampil di list |
+| B7 | Hapus announcement | Trash | Hilang dari dashboard tenant | ✅ Klik hapus → "0 announcements", list kembali ke "No announcements yet" |
 | B8 | SUPER_ADMIN navigasi semua page platform | Buka satu per satu | Tidak ada error 500 di console | ✅ Semua halaman platform load (path benar: `/platform/billing/...`, `/platform/broadcast/...`) |
 | B9 | ⚠️ Buat tenant duplikat (email sama) | Submit form 2× | Error validasi unique constraint | ✅ Toast "Email already in use", dialog tetap terbuka (correct) |
-| B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | 🔲 |
-| B11 | ⚠️ Plan downgrade saat router > limit baru | PRO (2 router) → FREE (1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | 🔲 |
-| B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | 🔲 |
+| B10 | ⚠️ Hapus tenant dengan data | Klik hapus tenant aktif | Konfirmasi double, cascade delete jalan | ❌ Tidak ada tombol Delete di action menu tenant (hanya Edit/Activate/Suspend/Mark Churned) — fitur belum diimplementasi |
+| B11 | ⚠️ Plan downgrade saat router > limit baru | PREMIUM (3 router) → FREE (max 1) | Warning: kelebihan router akan disabled / tetap aktif tapi tidak bisa tambah | ❌ BUG-15: Tidak ada warning/konfirmasi — plan langsung berubah tanpa notifikasi kelebihan router; reverted ke PREMIUM manual |
+| B12 | Reset password user tenant dari platform | Detail user → Reset Password | Pwd baru dikirim/ditampilkan | ❌ Tidak ada fitur reset password di Edit Tenant dialog maupun action menu — belum diimplementasi |
 | B13 | Lihat invoice semua tenant | `/platform/billing/invoices` | List paginated, filter by status | ✅ |
 | B14 | Lihat agregat usage token semua tenant | `/platform/usage` | Total + breakdown per tenant | ✅ |
 | B15 | Tenant baru otomatis dapat plan FREE | Buat tenant → cek /platform/billing/subscriptions | Plan FREE terdaftar | ✅ Plan FREE langsung muncul di kolom Plan saat tenant dibuat |
@@ -685,6 +685,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | BUG-11 | Tambah Router — Copy Button | Tombol copy (salin script/perintah) di form tambah router tidak berfungsi — router sudah konek tapi tidak bisa copy teks | 🟡 Minor | 🟢 Fixed — `copyText()` helper dengan `document.execCommand` fallback untuk HTTP context |
 | BUG-12 | Tambah Router — Winbox & API | ~~Koneksi via Winbox dan API gagal~~ | — | 🟢 Not a bug — koneksi berhasil, masalahnya hanya tombol copy |
 | BUG-13 | Router Management — Status Hijau | Setelah router berhasil ditambah dan konek, status router management di halaman router tidak berubah hijau (tetap offline/abu-abu) | 🔴 High | 🟢 Fixed — (1) `useCreateRouter.onSuccess` invalidate `["routers-health"]`; (2) health API pakai `router.telegramOwnerId` bukan `session.user.telegramId` |
+| BUG-15 | Plan Downgrade — No Warning | Downgrade plan tenant dari PREMIUM ke FREE (saat tenant punya 3 router, FREE max 1) tidak menampilkan warning/konfirmasi — perubahan langsung terjadi | 🟡 Minor | 🔴 Open — perlu dialog konfirmasi dengan info "X router melebihi limit plan baru" |
 | BUG-14 | Data Cross-Router | Switching router di sidebar tidak refresh semua data — live traffic (`useRouterTraffic`), voucher list, dan dialog profiles menampilkan data router lama | 🔴 High | 🟢 Fixed — `useRouterTraffic` + `/api/routers/traffic` terima `?router=` param; `useAllVouchers` + `/api/vouchers` + `listVoucherBatches` filter `routerName`; `GenerateVoucherDialog` scope profiles ke `activeRouter` |
 | INFO-01 | Router Tests | Semua test yang butuh koneksi RouterOS di-skip (C3–C12, D, E, F, G, dsb.) | — | ⏭️ Skipped |
 | INFO-02 | Telegram Bot Tests | Semua test Reseller Bot dan Owner Bot di-skip (perlu token + chat_id aktif) | — | ⏭️ Skipped |
@@ -734,7 +735,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 
 | # | Skenario | Action | Expected | Status |
 |---|---|---|---|---|
-| SEC-D1 | Login brute force | 20× POST `/api/auth/callback/credentials` salah | Rate limit 429 atau delay | ⚠️ BUG-08: 12× bad password semua 200 — tidak ada rate limiting sama sekali |
+| SEC-D1 | Login brute force | 20× POST `/api/auth/callback/credentials` salah | Rate limit atau login ditolak | ✅ BUG-08 Fixed — rate limiter in-memory 10 attempt/15min per IP di `authorize()` credentials; setelah limit terlampaui `authorize` return null (login gagal silent) |
 | SEC-D2 | API spam voucher generate | 50× POST `/api/vouchers/generate` berturut | Throttle atau 429 | ⏭️ Skip — butuh router aktif untuk generate |
 | SEC-D3 | Webhook replay attack | Kirim ulang webhook Midtrans yang sama | Idempotency check → skip, tidak double | ⏭️ Skip — butuh Midtrans sandbox key nyata |
 
