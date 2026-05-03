@@ -23,6 +23,9 @@ import { agentFetch } from "@/lib/agent-fetch"
 const AGENT_URL = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
 const VPS_HOST  = process.env.VPS_HOST          || "localhost"
 const WG_SERVER_PUBKEY = process.env.WG_SERVER_PUBKEY || ""
+// WG_ENDPOINT: raw VPS IP for WireGuard UDP endpoint.
+// Must NOT be a domain proxied through Cloudflare — WireGuard UDP won't work through CDN proxies.
+const WG_ENDPOINT = process.env.WG_ENDPOINT || VPS_HOST
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -267,7 +270,8 @@ export function generateWireguardScript(params: {
   clientPrivKey: string  // plaintext for display
   winboxPort: number
 }): string {
-  const host = params.vpsHost || VPS_HOST
+  // Always use WG_ENDPOINT (raw IP) — never the CDN-proxied domain
+  const host = WG_ENDPOINT || params.vpsHost || VPS_HOST
   const { vpnIp, serverPubKey, clientPrivKey, winboxPort } = params
 
   return [
