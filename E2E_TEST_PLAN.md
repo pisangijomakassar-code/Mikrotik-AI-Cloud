@@ -559,17 +559,22 @@
 
 | # | Skenario | Trigger | Aksi | Expected | Status |
 |---|---|---|---|---|---|
-| BG1 | Health check router (5 min) | Interval | `/system/resource/print` per router | Health card update | 🔲 |
-| BG2 | Traffic snapshot interface | Interval | `/interface/print` (tx/rx-byte) | Insert TrafficSnapshot row | 🔲 |
-| BG3 | Mikhmon bgservice scheduler | Per profile, 1 menit | RouterOS scheduler (bukan dashboard) | User expired ter-disable/remove | 🔲 |
-| BG4 | Daily cleanup expired user | Daily cron | Loop semua router → `remove_expired` | User expired di-cleanup | 🔲 |
+| BG1 | Health check router (5 min) | Interval | `/system/resource/print` per router | Health card update | ✅ |
+| BG2 | Traffic snapshot interface | Interval | `/interface/print` (tx/rx-byte) | Insert TrafficSnapshot row | ✅ |
+| BG3 | Mikhmon bgservice scheduler | Per profile, 1 menit | RouterOS scheduler (bukan dashboard) | User expired ter-disable/remove | ⏭️ |
+| BG4 | Daily cleanup expired user | Daily cron | Loop semua router → `remove_expired` | User expired di-cleanup | ⏭️ |
 | BG5 | Auto-import Mikhmon bulanan | Monthly cron | `/system/script/print where comment=mikhmon owner=jan2025` | VoucherBatch terisi otomatis | ❌ |
 | BG6 | Reset daily token usage | Cron 00:00 UTC | `UPDATE Subscription SET tokensUsed=0` | Quota refresh | ❌ |
 | BG7 | Auto-renewal subscription | Cron daily | Cek billingCycleEnd lewat → buat invoice baru | Status PAST_DUE / new invoice | ❌ |
-| BG8 | Quickstats cache invalidate | Setelah CRUD router | — | Topbar refresh < 25s | 🔲 |
-| BG9 | ⚠️ Bg job error tidak crash app | Mock error | try/catch | App tetap up, error logged | 🔲 |
-| BG10 | ⚠️ Bg job reentrancy | 2 instance jalan | Lock | Tidak double-execute | 🔲 |
-| BG11 | Counter reset detection (rebooted router) | tx-byte mendadak < snapshot lalu | logic guard | Snapshot baru jadi baseline, tidak negative delta | 🔲 |
+| BG8 | Quickstats cache invalidate | Setelah CRUD router | — | Topbar refresh < 25s | ⚠️ |
+| BG9 | ⚠️ Bg job error tidak crash app | Mock error | try/catch | App tetap up, error logged | ⏭️ |
+| BG10 | ⚠️ Bg job reentrancy | 2 instance jalan | Lock | Tidak double-execute | ⏭️ |
+| BG11 | Counter reset detection (rebooted router) | tx-byte mendadak < snapshot lalu | logic guard | Snapshot baru jadi baseline, tidak negative delta | ⏭️ |
+
+> **BG1 ✅:** CPU/RAM/HDD di topbar terupdate aktif selama sesi test (CPU berubah 0%→7%→8%→16%; router health polling berjalan).
+> **BG2 ✅:** Bandwidth chart K23 menampilkan 192.23 GB untuk Mei 2026 — TrafficSnapshot berhasil diinsert dari `/interface/print`.
+> **BG8 ⚠️:** "Active session" dan "Total user voucher" di topbar terupdate (37→38, 1017→1018) selama sesi — polling quickstats berjalan. Invalidasi spesifik setelah CRUD router tidak ditest.
+> **BG3/BG4/BG9-BG11 ⏭️:** Skip — membutuhkan RouterOS scheduler verification, waktu tunggu, atau mock server.
 
 ---
 
@@ -654,13 +659,13 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 18. Billing Midtrans | 14 | 3 | 8 | 0 | 3 |
 | 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
 | 20. Tunnel | 10 | 1 | 9 | 0 | 0 |
-| 21. Background Jobs | 11 | 0 | 3 | 0 | 8 |
+| 21. Background Jobs | 11 | 2 | 6 | 3 | 0 |
 | 22. Cross-Role | 12 | 2 | 0 | 0 | 10 |
 | 23. Negative & Resilience | 20 | 0 | 0 | 0 | 20 |
 | 24. Security | 20 | 12 | 5 | 0 | 3 |
 | 25. Performance | 17 | 4 | 13 | 0 | 0 |
 | 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
-| **TOTAL** | **391** | **141** | **148** | **17** | **85** |
+| **TOTAL** | **391** | **143** | **151** | **20** | **77** |
 
 ---
 
@@ -889,7 +894,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 18. Billing Midtrans | 14 | 3 | 4 | 6 | 1 |
 | 19. AI Assistant | 10 | 0 | 0 | 0 | 1 |
 | 20. Tunnel | 10 | 1 | 4 | 0 | 5 |
-| 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
+| 21. Background Jobs | 11 | 2 | 5 | 3 | 1 |
 | 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
 | 23. Negative & Resilience | 20 | 1 | 19 | 0 | 0 |
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
