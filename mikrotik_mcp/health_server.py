@@ -2495,9 +2495,17 @@ class HealthHandler(BaseHTTPRequestHandler):
             _send_json(self, {"error": f"unknown action: {action!r}"}, 400)
 
     def _handle_wg_peer(self, user_id):
-        """Manage WireGuard peers: add or delete."""
+        """Manage WireGuard peers: add or delete.
+
+        On add: registers peer on WireGuard server and sets up iptables DNAT
+        inside mikrotik-openvpn for winboxPort → vpnIp:8291, persisted to
+        /config/forwards.txt.  Also ensures route 10.8.0.0/16 exists in the
+        openvpn container so WireGuard VPN IPs are reachable.
+
+        On delete: removes peer from WireGuard and cleans up DNAT + forwards.txt.
+        """
         try:
-            import subprocess, json
+            import subprocess, json, re
             docker = shutil.which("docker")
             if not docker:
                 _send_json(self, {"error": "docker CLI not found — ensure /var/run/docker.sock is mounted and docker binary is in PATH"}, 500)
@@ -2507,11 +2515,88 @@ class HealthHandler(BaseHTTPRequestHandler):
             action = body.get("action", "add")
             pub_key = body.get("pubKey", "")
             vpn_ip = body.get("vpnIp", "")
+            winbox_port = body.get("winboxPort")
+
+            IPV4_RE = re.compile(
+                r"^(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)"
+                r"(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$"
+            )
+
+            def _exec_in_ovpn(*args):
+                return subprocess.run(
+                    [docker, "exec", "mikrotik-openvpn"] + list(args),
+                    capture_output=True
+                )
+
+            def _add_wg_forward(pub_port, dest_port):
+                """Add iptables DNAT in openvpn container + persist to forwards.txt."""
+                pub = str(pub_port); dest = str(dest_port)
+                # Ensure route to WireGuard subnet exists in openvpn container
+                _exec_in_ovpn("ip", "route", "add", "10.8.0.0/16", "via", "10.11.0.4")
+                # PREROUTING DNAT
+                check = _exec_in_ovpn(
+                    "iptables", "-t", "nat", "-C", "PREROUTING",
+                    "-p", "tcp", "--dport", pub,
+                    "-j", "DNAT", "--to-destination", f"{vpn_ip}:{dest}"
+                )
+                if check.returncode != 0:
+                    _exec_in_ovpn(
+                        "iptables", "-t", "nat", "-A", "PREROUTING",
+                        "-p", "tcp", "--dport", pub,
+                        "-j", "DNAT", "--to-destination", f"{vpn_ip}:{dest}"
+                    )
+                # FORWARD ACCEPT
+                check2 = _exec_in_ovpn(
+                    "iptables", "-C", "FORWARD",
+                    "-p", "tcp", "-d", vpn_ip, "--dport", dest, "-j", "ACCEPT"
+                )
+                if check2.returncode != 0:
+                    _exec_in_ovpn(
+                        "iptables", "-A", "FORWARD",
+                        "-p", "tcp", "-d", vpn_ip, "--dport", dest, "-j", "ACCEPT"
+                    )
+                # Persist — append only if not already present
+                line = f"{pub}:{vpn_ip}:{dest}"
+                grep = _exec_in_ovpn("grep", "-qF", line, "/config/forwards.txt")
+                if grep.returncode != 0:
+                    _exec_in_ovpn("sh", "-c", f"echo '{line}' >> /config/forwards.txt")
+
+            def _del_wg_forward(pub_port):
+                """Remove DNAT rule for pub_port from openvpn iptables + forwards.txt."""
+                pub = str(pub_port)
+                save = _exec_in_ovpn("iptables-save", "-t", "nat")
+                if save.returncode == 0:
+                    for line in save.stdout.decode("utf-8", "replace").splitlines():
+                        if re.search(rf"\s--dport\s{pub}\b", line) and re.search(
+                            rf"--to-destination\s{re.escape(vpn_ip)}:", line
+                        ) and line.startswith("-A "):
+                            del_line = "-D " + line[3:]
+                            args = __import__("shlex").split(del_line)
+                            _exec_in_ovpn("iptables", "-t", "nat", *args)
+                # FORWARD rule
+                save2 = _exec_in_ovpn("iptables-save")
+                if save2.returncode == 0:
+                    for line in save2.stdout.decode("utf-8", "replace").splitlines():
+                        if line.startswith("-A FORWARD") and re.search(rf"-d\s{re.escape(vpn_ip)}\b", line):
+                            del_line = "-D " + line[3:]
+                            args = __import__("shlex").split(del_line)
+                            _exec_in_ovpn("iptables", *args)
+                # Remove from forwards.txt
+                _exec_in_ovpn("sed", "-i", f"/^{pub}:{re.escape(vpn_ip)}:/d", "/config/forwards.txt")
 
             if action == "add":
                 if not pub_key or not vpn_ip:
                     _send_json(self, {"error": "pubKey and vpnIp required"}, 400)
                     return
+                if vpn_ip and not IPV4_RE.match(vpn_ip):
+                    _send_json(self, {"error": "invalid vpnIp format"}, 400); return
+                if winbox_port is not None:
+                    try:
+                        winbox_port = int(winbox_port)
+                        if not (1 <= winbox_port <= 65535): raise ValueError()
+                    except (TypeError, ValueError):
+                        _send_json(self, {"error": "invalid winboxPort"}, 400); return
+
                 subprocess.run(
                     [docker, "exec", "mikrotik-wireguard", "wg", "set", "wg0",
                      "peer", pub_key, "allowed-ips", f"{vpn_ip}/32",
@@ -2522,6 +2607,8 @@ class HealthHandler(BaseHTTPRequestHandler):
                     [docker, "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
                     capture_output=True
                 )
+                if vpn_ip and winbox_port:
+                    _add_wg_forward(winbox_port, 8291)
                 _send_json(self, {"ok": True, "action": "added", "peer": pub_key})
 
             elif action == "delete":
@@ -2537,6 +2624,12 @@ class HealthHandler(BaseHTTPRequestHandler):
                     [docker, "exec", "mikrotik-wireguard", "wg-quick", "save", "wg0"],
                     capture_output=True
                 )
+                if vpn_ip and winbox_port:
+                    try:
+                        winbox_port = int(winbox_port)
+                        _del_wg_forward(winbox_port)
+                    except (TypeError, ValueError):
+                        pass
                 _send_json(self, {"ok": True, "action": "deleted", "peer": pub_key})
             else:
                 _send_json(self, {"error": "action must be add or delete"}, 400)
@@ -2820,8 +2913,8 @@ class HealthHandler(BaseHTTPRequestHandler):
                 _send_json(self, {"error": "vpnIp required"}, 400)
                 return
             result = subprocess.run(
-                [docker, "exec", "mikrotik-openvpn", "nc", "-z", "-w", "2", vpn_ip, str(port)],
-                capture_output=True, timeout=5
+                [docker, "exec", "mikrotik-openvpn", "nc", "-z", "-w", "10", vpn_ip, str(port)],
+                capture_output=True, timeout=15
             )
             _send_json(self, {"reachable": result.returncode == 0})
         except Exception as e:

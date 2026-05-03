@@ -13,6 +13,7 @@ Start via:
 """
 
 import asyncio
+import io
 import logging
 import json
 import os
@@ -23,6 +24,14 @@ import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional, Callable
+
+# QR + PIL (already in requirements: qrcode[pil])
+try:
+    import qrcode
+    from PIL import Image, ImageDraw, ImageFont
+    _QR_AVAILABLE = True
+except ImportError:
+    _QR_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +86,57 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 def format_rp(amount: int) -> str:
     """Format integer as Indonesian Rupiah string."""
     return f"Rp {amount:,.0f}".replace(",", ".")
+
+
+def _make_voucher_card(voucher_name: str, username: str, password: str, hex_color: str = "#3b82f6") -> "io.BytesIO":
+    """Buat gambar kartu voucher PNG dengan QR code dan warna sesuai setting jenis voucher."""
+    try:
+        hx = hex_color.lstrip("#")
+        bg = (int(hx[0:2], 16), int(hx[2:4], 16), int(hx[4:6], 16))
+    except Exception:
+        bg = (59, 130, 246)
+
+    brightness = (bg[0] * 299 + bg[1] * 587 + bg[2] * 114) / 1000
+    fg = (255, 255, 255) if brightness < 140 else (30, 30, 30)
+
+    qr = qrcode.QRCode(box_size=8, border=3)
+    qr.add_data(f"{username}/{password}")
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color=(30, 30, 30), back_color=(255, 255, 255)).convert("RGB")
+    qr_w, qr_h = qr_img.size
+
+    try:
+        font_title = ImageFont.load_default(size=20)
+        font_body = ImageFont.load_default(size=15)
+    except TypeError:
+        font_title = ImageFont.load_default()
+        font_body = ImageFont.load_default()
+
+    pad = 28
+    title_h = 48
+    cred_h = 60
+    card_w = max(300, qr_w + pad * 2)
+    card_h = title_h + qr_h + cred_h + pad
+
+    card = Image.new("RGB", (card_w, card_h), bg)
+    draw = ImageDraw.Draw(card)
+
+    def center_text(text, y, font):
+        bb = draw.textbbox((0, 0), text, font=font)
+        x = (card_w - (bb[2] - bb[0])) // 2
+        draw.text((x, y), text, fill=fg, font=font)
+
+    center_text(voucher_name, (title_h - 20) // 2 + 4, font_title)
+    qr_x = (card_w - qr_w) // 2
+    card.paste(qr_img, (qr_x, title_h))
+    y0 = title_h + qr_h + 8
+    center_text(f"User : {username}", y0, font_body)
+    center_text(f"Pass : {password}", y0 + 22, font_body)
+
+    buf = io.BytesIO()
+    card.save(buf, "PNG")
+    buf.seek(0)
+    return buf
 
 
 BOT_TEXT_DEFAULTS = {
@@ -521,10 +581,13 @@ class ResellerBot:
     def _calc_reseller_price(voucher_type: dict, reseller_discount_pct: int) -> int:
         """Compute price the reseller pays.
 
-        Rule: harga jual ke reseller = harga - (harga × discount%).
-        Mark-up only applies for the end-user-facing price; bot purchase uses harga.
+        Jika markUp > 0: reseller bayar harga - markUp (diskon % diabaikan).
+        Jika markUp = 0: reseller bayar harga - floor(harga × disc%).
         """
         harga = int(voucher_type.get("harga") or 0)
+        mark_up = int(voucher_type.get("markUp") or 0)
+        if mark_up > 0:
+            return max(0, harga - mark_up)
         disc = max(0, min(100, int(reseller_discount_pct or 0)))
         return max(0, harga - (harga * disc // 100))
 
@@ -818,6 +881,8 @@ class ResellerBot:
         except Exception as exc:
             logger.warning("Failed to persist batch: %s", exc)
 
+        voucher_color = vt.get("voucherColor") or "#3b82f6"
+
         # Format response — kalau >5 voucher, kirim sebagai code-block compact
         if actual_qty <= 5:
             voucher_lines = "\n".join(
@@ -836,6 +901,17 @@ class ResellerBot:
             parse_mode="Markdown",
             reply_markup=self._back_button(),
         )
+
+        if _QR_AVAILABLE and actual_qty <= 5:
+            # Kirim QR card per voucher sebagai pesan baru — tersimpan di histori
+            for v in created_vouchers:
+                buf = _make_voucher_card(vt["namaVoucher"], v["username"], v["password"], voucher_color)
+                caption = (
+                    f"🎫 *{vt['namaVoucher']}*\n"
+                    f"👤 `{v['username']}`\n"
+                    f"🔑 `{v['password']}`"
+                )
+                await query.message.reply_photo(photo=buf, caption=caption, parse_mode="Markdown")
 
     # ── Deposit: amount selection ─────────────────────────────
 
