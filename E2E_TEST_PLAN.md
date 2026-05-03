@@ -45,6 +45,7 @@
 | A4 | Akses tanpa login | Buka `/dashboard` langsung | Redirect `/login` | ✅ |
 | A5 | Logout | Avatar → Logout | Session hapus, redirect `/login` | ✅ |
 | A6 | ⚠️ Brute force protection | 10× login gagal berurutan | Rate limit / captcha / delay (jika diimplementasi) | ✅ BUG-08 Fixed — setelah 10 attempt gagal dari IP sama dalam 15 menit, `authorize()` return null (login gagal diam); reset saat sukses. Diverifikasi via rate-limit.ts |
+| A6b | ⚠️ Google OAuth email tidak terdaftar | Login Google dengan email tidak ada di DB | Redirect ke `/login?error=not_registered` + toast error | ✅ Navigasi ke `/login?error=not_registered` → Sonner toast: "Email tidak terdaftar. Hubungi administrator untuk mendapatkan akses." + tombol "Lanjutkan dengan Google" tetap tampil |
 | A7 | ⚠️ Session expired | Tunggu lewat `AUTH_SESSION_MAX_AGE` | Redirect ke `/login` saat akses page | ⏭️ Skip — butuh waktu tunggu yang panjang sesuai session max age; tidak practical di run ini |
 | A8 | ⚠️ Login dengan email tidak ada | Random email | Pesan generic "Invalid credentials" (tidak bocor info) | ✅ |
 | A9 | ⚠️ SQL injection di field email | `' OR 1=1--` | Login gagal, tidak crash | ✅ |
@@ -88,7 +89,7 @@
 | C8 | ⚠️ Tambah router credentials salah | Pwd salah | `401 Unauthorized` dari RouterOS API | Error "user/pwd salah" | ✅ Code review: `!trap` sentence parse → `"Login ditolak: <MikroTik message>"` |
 | C9 | ⚠️ Tambah router port API tidak aktif | Port 8728 closed | TCP refused | Error "API service mati" + saran enable | ✅ Code review: `socket.on("error")` → `"Koneksi TCP gagal: <error.message>"` |
 | C10 | Edit router (ganti IP) | Edit → simpan IP baru | Re-test connection | Status ter-update | 🔲 |
-| C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | ✅ BUG-14 Fixed — `useRouterTraffic` + `/api/routers/traffic` terima `?router=` param; `useAllVouchers` scope per router; `GenerateVoucherDialog` profiles scope ke activeRouter |
+| C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | ✅ BUG-14 Fixed + Live verified — switch `active-router` localStorage `toko.net`→`Burhan`: `/api/vouchers?router=toko.net` kemudian `/api/vouchers?router=Burhan`; React Query cache key per-router bekerja benar |
 | C12 | Quick stats di topbar | Buka dashboard | `/system/resource/print` cached 25s | CPU/RAM/HDD pill ter-update | 🔲 |
 
 ---
@@ -543,7 +544,7 @@
 
 | # | Skenario | Steps | Expected | Status |
 |---|---|---|---|---|
-| P1 | SUPER_ADMIN buat tenant → tenant login | B2 → A2 dengan kredensial baru | Login OK, dashboard kosong tapi fungsional | 🔲 |
+| P1 | SUPER_ADMIN buat tenant → tenant login | B2 → A2 dengan kredensial baru | Login OK, dashboard kosong tapi fungsional | ✅ Reset password `admin@e2etest.local` via B12 → login → redirect `/dashboard` tenant, sidebar Indonesian, FREE plan "Tokens: 0/100", "Tambah Router" prompt — fungsional |
 | P2 | SUPER_ADMIN ubah plan → sidebar tenant | B3 → tenant refresh | Sidebar plan baru | ✅ |
 | P3 | Reseller bot beli voucher → tampil di Reports | RB14 → K1 | Batch source=reseller_bot tampil | 🔲 |
 | P4 | Reseller bot beli → reseller detail histori | RB14 → I12 | Transaksi tercatat | 🔲 |
@@ -573,7 +574,7 @@
 | Z9 | Disk full saat upload bukti transfer | Mock | Error message bukan crash | 🔲 |
 | Z10 | RouterOS session expired (token rotated) | Refresh credentials | Re-auth otomatis | 🔲 |
 | Z11 | Hotspot user count > 5000 | Stress test | Pagination + virtualization OK | 🔲 |
-| Z12 | Dashboard di-resize ke mobile | Buka di 375px | Layout responsive, sidebar collapse | 🔲 |
+| Z12 | Dashboard di-resize ke mobile | Buka di 375px | Layout responsive, sidebar collapse | ✅ Viewport 375×812px: hamburger (☰) visible, sidebar collapsed (overlay mode), 2-col card grid, mainWidth=370px, no horizontal overflow (scrollWidth=370) |
 | Z13 | Browser back-forward setelah generate | Browser back → forward | State konsisten | 🔲 |
 | Z14 | Prisma migration breaking | Apply migration baru | Existing data tidak corrupt | 🔲 |
 | Z15 | Token JWT expired mid-request | Tunggu lewat exp | Auto refresh atau redirect login | 🔲 |
@@ -835,7 +836,7 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 
 | Area | Total | ✅ | 🔲 | ❌ | ⚠️ Bug |
 |---|---|---|---|---|---|
-| 1. Auth | 10 | 8 | 2 | 0 | 0 |
+| 1. Auth | 11 | 9 | 2 | 0 | 0 |
 | 2. SUPER_ADMIN | 15 | 10 | 3 | 0 | 2 |
 | 3. Router & Health | 12 | 6 | 6 | 0 | 0 |
 | 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
@@ -856,8 +857,8 @@ test('F8: Generate voucher untuk reseller spesifik', async ({ page, mockRouter, 
 | 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
 | 20. Tunnel | 10 | 0 | 8 | 2 | 0 |
 | 21. Background Jobs | 11 | 0 | 8 | 3 | 0 |
-| 22. Cross-Role | 12 | 1 | 11 | 0 | 0 |
-| 23. Negative & Resilience | 20 | 0 | 20 | 0 | 0 |
+| 22. Cross-Role | 12 | 2 | 10 | 0 | 0 |
+| 23. Negative & Resilience | 20 | 1 | 19 | 0 | 0 |
 | 24. Security | 22 | 14 | 7 | 0 | 1 |
 | 25. Performance | 18 | 3 | 12 | 0 | 3 |
 | 26. Compatibility | 17 | 10 | 6 | 0 | 1 |
