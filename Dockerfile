@@ -4,7 +4,7 @@ WORKDIR /app
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl gettext-base inotify-tools && \
+    git curl gettext-base inotify-tools iproute2 && \
     rm -rf /var/lib/apt/lists/*
 
 # Docker CLI static binary (docker.io package tidak include binary di Debian 13)

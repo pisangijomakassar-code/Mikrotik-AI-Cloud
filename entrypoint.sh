@@ -17,6 +17,13 @@ fi
 cp /app/config/SOUL.md /root/.nanobot/workspace/SOUL.md 2>/dev/null || true
 cp /app/config/HEARTBEAT.md /root/.nanobot/workspace/HEARTBEAT.md 2>/dev/null || true
 
+# Add route to WireGuard VPN subnet so agent can connect to WireGuard-tunneled routers.
+# WireGuard container is reachable by hostname "wireguard" on the shared vpn bridge.
+WG_GW=$(python3 -c "import socket; print(socket.gethostbyname('wireguard'))" 2>/dev/null || true)
+if [ -n "$WG_GW" ]; then
+    ip route add 10.8.0.0/16 via "$WG_GW" 2>/dev/null || true
+fi
+
 # Start health API server in background (port 8080, for dashboard to query router data)
 # NOTE: health_server juga otomatis start reseller bots di same process
 # supaya hot-reload via /reseller-bot/restart endpoint berbagi _BOT_REGISTRY.
