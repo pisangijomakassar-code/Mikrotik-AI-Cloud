@@ -182,6 +182,7 @@ export async function listVoucherBatches(filter?: VoucherFilter) {
   const pageSize = filter?.pageSize ?? 20
 
   const where: Record<string, unknown> = {}
+  if (filter?.routerName) where.routerName = filter.routerName
   if (filter?.resellerId) where.resellerId = filter.resellerId
   if (filter?.source) where.source = filter.source
   if (filter?.from || filter?.to) {

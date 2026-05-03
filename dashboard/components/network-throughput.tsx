@@ -20,7 +20,7 @@ export function NetworkThroughput() {
   const { activeRouter } = useActiveRouter()
 
   // Live counter sejak reboot router (raw /interface).
-  const live = useRouterTraffic()
+  const live = useRouterTraffic(activeRouter || undefined)
 
   // Hitung rentang 30 hari terakhir untuk tab "30 Hari".
   const range30d = useMemo(() => {

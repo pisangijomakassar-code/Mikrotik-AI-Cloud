@@ -136,6 +136,7 @@ export interface VoucherBatchResult {
 }
 
 export interface VoucherFilter {
+  routerName?: string;
   resellerId?: string;
   source?: string;
   from?: Date;

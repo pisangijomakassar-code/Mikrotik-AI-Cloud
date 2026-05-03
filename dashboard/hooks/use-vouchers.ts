@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/api-client"
 
 interface VoucherFilter {
+  router?: string
   source?: string
   resellerId?: string
   page?: number
@@ -12,6 +13,7 @@ interface VoucherFilter {
 
 async function fetchAllVouchers(filter?: VoucherFilter) {
   const params = new URLSearchParams()
+  if (filter?.router) params.set("router", filter.router)
   if (filter?.source) params.set("source", filter.source)
   if (filter?.resellerId) params.set("resellerId", filter.resellerId)
   if (filter?.page) params.set("page", String(filter.page))

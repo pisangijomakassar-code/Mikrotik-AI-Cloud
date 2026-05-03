@@ -48,6 +48,8 @@ services:
       AGENT_HEALTH_URL: http://mikrotik-agent:8080
       AGENT_TOKEN: ${AGENT_TOKEN:-}
       WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     volumes:
       - ./config:/app/config
       - ./docs:/app/docs:ro

@@ -45,7 +45,8 @@ interface GeneratedVoucher { username: string; password: string }
 
 function GenerateVoucherDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
-  const { data: profiles, isLoading: profilesLoading } = useHotspotProfiles()
+  const { activeRouter } = useActiveRouter()
+  const { data: profiles, isLoading: profilesLoading } = useHotspotProfiles(activeRouter || undefined)
   const [profile, setProfile] = useState("")
   const [count, setCount] = useState(1)
   const [prefix, setPrefix] = useState("")
@@ -167,6 +168,7 @@ export default function VoucherHistoryPage() {
   const { activeRouter } = useActiveRouter()
   const { data: resellers } = useResellers(activeRouter || undefined)
   const { data: vouchersData, isLoading } = useAllVouchers({
+    router: activeRouter || undefined,
     source: sourceFilter || undefined,
     resellerId: resellerFilter || undefined,
     page,

@@ -14,11 +14,13 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
 
     const filter: VoucherFilter = {}
+    const routerName = searchParams.get("router")
     const source = searchParams.get("source")
     const resellerId = searchParams.get("resellerId")
     const page = searchParams.get("page")
     const pageSize = searchParams.get("pageSize")
 
+    if (routerName) filter.routerName = routerName
     if (source) filter.source = source
     if (resellerId) filter.resellerId = resellerId
     if (page) filter.page = parseInt(page, 10)

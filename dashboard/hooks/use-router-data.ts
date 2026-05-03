@@ -19,12 +19,13 @@ interface TrafficData {
   interfaces: InterfaceTraffic[]
 }
 
-export function useRouterTraffic() {
+export function useRouterTraffic(router?: string) {
   return useQuery<TrafficData>({
-    queryKey: ["router-traffic"],
+    queryKey: ["router-traffic", router ?? ""],
     queryFn: async () => {
+      const qs = router ? `?router=${encodeURIComponent(router)}` : ""
       try {
-        return await apiClient.get<TrafficData>("/api/routers/traffic")
+        return await apiClient.get<TrafficData>(`/api/routers/traffic${qs}`)
       } catch {
         return { router: "", interfaces: [] }
       }

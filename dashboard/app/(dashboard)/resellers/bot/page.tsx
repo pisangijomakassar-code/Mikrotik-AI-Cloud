@@ -52,14 +52,6 @@ export default function ResellerBotPage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // Suggested webhook URL — pakai WEBHOOK_BASE_URL dari server jika ada (HTTPS),
-  // fallback ke window.location.origin (bisa HTTP, hanya untuk dev/lokal).
-  const webhookBase = configQuery.data?.webhookBaseUrl ||
-    (typeof window !== "undefined" ? window.location.origin : "")
-  const suggestedWebhookUrl = webhookBase
-    ? `${webhookBase}/api/telegram/webhook/${routerId || ""}`
-    : ""
-
   // Fetch bot config (token, username) per router
   const configQuery = useQuery<BotConfig>({
     queryKey: ["bot-config", routerId],
@@ -67,6 +59,14 @@ export default function ResellerBotPage() {
     enabled: !!routerId,
     retry: false,
   })
+
+  // Suggested webhook URL — pakai WEBHOOK_BASE_URL dari server jika ada (HTTPS),
+  // fallback ke window.location.origin (bisa HTTP, hanya untuk dev/lokal).
+  const webhookBase = configQuery.data?.webhookBaseUrl ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+  const suggestedWebhookUrl = webhookBase
+    ? `${webhookBase}/api/telegram/webhook/${routerId || ""}`
+    : ""
 
   // Fetch live bot info (getMe + getWebhookInfo) — only when token is set
   const infoQuery = useQuery<BotInfo>({
