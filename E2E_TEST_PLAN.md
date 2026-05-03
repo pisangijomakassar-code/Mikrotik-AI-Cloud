@@ -598,32 +598,35 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 
 ## Ringkasan Status
 
-| Area | Total | ✅ | 🔲 | ❌ |
-|---|---|---|---|---|
-| 1. Auth | 10 | 5 | 5 | 0 |
-| 2. SUPER_ADMIN | 14 | 3 | 11 | 0 |
-| 3. Router & Health | 12 | 1 | 11 | 0 |
-| 4. Netwatch | 10 | 0 | 10 | 0 |
-| 5. Hotspot Users | 22 | 0 | 22 | 0 |
-| 6. Hotspot Profiles | 15 | 0 | 15 | 0 |
-| 7. Server/Binding/Walled Garden | 10 | 0 | 10 | 0 |
-| 8. Voucher Generate | 22 | 0 | 22 | 0 |
-| 9. Voucher Histori & Cetak | 16 | 0 | 16 | 0 |
-| 10. Jenis Voucher | 10 | 0 | 10 | 0 |
-| 11. Reseller CRUD | 20 | 0 | 19 | 1 |
-| 12. Histori Transaksi | 7 | 0 | 7 | 0 |
-| 13. Laporan & Mikhmon | 27 | 0 | 27 | 0 |
-| 14. PPP | 11 | 0 | 11 | 0 |
-| 15. Communication | 15 | 0 | 15 | 0 |
-| 16. Reseller Bot | 41 | 0 | 41 | 0 |
-| 17. Owner Bot | 13 | 0 | 13 | 0 |
-| 18. Billing Midtrans | 14 | 3 | 5 | 6 |
-| 19. AI Assistant | 10 | 0 | 10 | 0 |
-| 20. Tunnel | 10 | 0 | 8 | 2 |
-| 21. Background Jobs | 11 | 0 | 8 | 3 |
-| 22. Cross-Role | 12 | 1 | 11 | 0 |
-| 23. Negative & Resilience | 20 | 0 | 20 | 0 |
-| **TOTAL** | **352** | **13** | **327** | **12** |
+| Area | Total | ✅ | ⏭️ Skip | ❌ Fail/Missing | 🔲 Belum |
+|---|---|---|---|---|---|
+| 1. Auth | 10 | 7 | 1 | 0 | 2 |
+| 2. SUPER_ADMIN | 15 | 9 | 0 | 3 | 3 |
+| 3. Router & Health | 12 | 2 | 0 | 0 | 10 |
+| 4. Netwatch | 10 | 0 | 0 | 0 | 10 |
+| 5. Hotspot Users | 22 | 0 | 0 | 0 | 22 |
+| 6. Hotspot Profiles | 15 | 0 | 0 | 0 | 15 |
+| 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 0 | 10 |
+| 8. Voucher Generate | 22 | 0 | 0 | 0 | 22 |
+| 9. Voucher Histori & Cetak | 16 | 0 | 0 | 0 | 16 |
+| 10. Jenis Voucher | 10 | 5 | 0 | 0 | 5 |
+| 11. Reseller CRUD | 20 | 4 | 0 | 1 | 15 |
+| 12. Histori Transaksi | 7 | 0 | 0 | 0 | 7 |
+| 13. Laporan & Mikhmon | 27 | 0 | 0 | 0 | 27 |
+| 14. PPP | 11 | 0 | 0 | 0 | 11 |
+| 15. Communication | 15 | 0 | 0 | 0 | 15 |
+| 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
+| 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
+| 18. Billing Midtrans | 14 | 3 | 8 | 0 | 3 |
+| 19. AI Assistant | 10 | 0 | 0 | 0 | 10 |
+| 20. Tunnel | 10 | 0 | 0 | 2 | 8 |
+| 21. Background Jobs | 11 | 0 | 3 | 0 | 8 |
+| 22. Cross-Role | 12 | 2 | 0 | 0 | 10 |
+| 23. Negative & Resilience | 20 | 0 | 0 | 0 | 20 |
+| 24. Security | 20 | 12 | 5 | 0 | 3 |
+| 25. Performance | 17 | 4 | 13 | 0 | 0 |
+| 26. Compatibility | 5 | 2 | 3 | 0 | 0 |
+| **TOTAL** | **390** | **50** | **88** | **6** | **246** |
 
 ---
 
