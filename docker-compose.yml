@@ -47,6 +47,7 @@ services:
       OVPN_SERVER_HOST: ${VPS_HOST:-localhost}
       AGENT_HEALTH_URL: http://mikrotik-agent:8080
       AGENT_TOKEN: ${AGENT_TOKEN:-}
+      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}
     volumes:
       - ./config:/app/config
       - ./docs:/app/docs:ro

@@ -21,6 +21,7 @@ interface BotConfig {
   telegramOwnerUsername: string
   telegramOwnerId: string
   active: boolean
+  webhookBaseUrl?: string
 }
 
 interface BotInfo {
@@ -51,9 +52,12 @@ export default function ResellerBotPage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // Suggested webhook URL (pakai origin browser)
-  const suggestedWebhookUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/telegram/webhook/${routerId || ""}`
+  // Suggested webhook URL — pakai WEBHOOK_BASE_URL dari server jika ada (HTTPS),
+  // fallback ke window.location.origin (bisa HTTP, hanya untuk dev/lokal).
+  const webhookBase = configQuery.data?.webhookBaseUrl ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+  const suggestedWebhookUrl = webhookBase
+    ? `${webhookBase}/api/telegram/webhook/${routerId || ""}`
     : ""
 
   // Fetch bot config (token, username) per router
@@ -183,10 +187,22 @@ export default function ResellerBotPage() {
   }
 
   function copyUrl() {
-    if (!suggestedWebhookUrl) return
-    navigator.clipboard.writeText(suggestedWebhookUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    const url = urlInput || suggestedWebhookUrl
+    if (!url) return
+    const write = navigator.clipboard
+      ? navigator.clipboard.writeText(url).catch(() => fallbackCopy(url))
+      : Promise.resolve(fallbackCopy(url))
+    write.then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
+  }
+
+  function fallbackCopy(text: string) {
+    const el = document.createElement("textarea")
+    el.value = text
+    el.style.cssText = "position:fixed;opacity:0;pointer-events:none"
+    document.body.appendChild(el)
+    el.select()
+    document.execCommand("copy")
+    document.body.removeChild(el)
   }
 
   function maskToken(t: string): string {

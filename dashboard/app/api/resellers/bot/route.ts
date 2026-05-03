@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
     telegramOwnerUsername: router.telegramOwnerUsername || "",
     telegramOwnerId: router.telegramOwnerId || "",
     active: !!router.botToken,
+    webhookBaseUrl: process.env.WEBHOOK_BASE_URL || "",
   })
 }
 
