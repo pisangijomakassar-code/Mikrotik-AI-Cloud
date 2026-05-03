@@ -82,13 +82,13 @@
 | C1 | Tambah router DIRECT | Form → IP/user/pwd → Submit | `/system/identity/print` (verifikasi konek) | Router masuk DB, status online | ✅ |
 | C2 | Tolak tambah jika limit plan | Plan FREE max 1 → tambah ke-2 | — | "Slot penuh", tombol disabled | ✅ |
 | C3 | Health pill online/offline | `/routers` | `/system/resource/print` + `/interface/print` | CPU/RAM/Uptime/clients tampil | ⚠️ `/api/routers/health` requires `telegramOwnerId` set on router (routes to agent `/router-health/{tgId}`); routers dengan no Telegram owner always offline. Dashboard/topbar menampilkan data live via quickstats (mechanism berbeda). Fungsional jika Telegram bot terhubung. |
-| C4 | Hapus router | Trash → konfirmasi | — | DB record hilang, tunnel di-revoke | 🔲 |
-| C5 | Tambah router via TUNNEL Cloudflare | Form → method TUNNEL/CLOUDFLARE → ports api+winbox | Setup script Cloudflared | Tunnel aktif, host ter-route | 🔲 |
-| C6 | Tambah router via TUNNEL SSTP | Form → method TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN dibuat | 🔲 |
+| C4 | Hapus router | Trash → konfirmasi | — | DB record hilang, tunnel di-revoke | ⏭️ |
+| C5 | Tambah router via TUNNEL Cloudflare | Form → method TUNNEL/CLOUDFLARE → ports api+winbox | Setup script Cloudflared | Tunnel aktif, host ter-route | ⏭️ |
+| C6 | Tambah router via TUNNEL SSTP | Form → method TUNNEL/SSTP | `vpncmd UserCreate` di server SSTP | Username/pwd VPN dibuat | ⏭️ |
 | C7 | ⚠️ Tambah router dengan IP unreachable | IP di luar jangkauan | timeout `/system/resource/print` | Error "tidak bisa konek", router tidak tersimpan | ✅ Code review: `socket.on("timeout")` → response `"Timeout — host tidak merespons dalam X detik"` di `test-connection/route.ts` |
 | C8 | ⚠️ Tambah router credentials salah | Pwd salah | `401 Unauthorized` dari RouterOS API | Error "user/pwd salah" | ✅ Code review: `!trap` sentence parse → `"Login ditolak: <MikroTik message>"` |
 | C9 | ⚠️ Tambah router port API tidak aktif | Port 8728 closed | TCP refused | Error "API service mati" + saran enable | ✅ Code review: `socket.on("error")` → `"Koneksi TCP gagal: <error.message>"` |
-| C10 | Edit router (ganti IP) | Edit → simpan IP baru | Re-test connection | Status ter-update | 🔲 |
+| C10 | Edit router (ganti IP) | Edit → simpan IP baru | Re-test connection | Status ter-update | ⏭️ |
 | C11 | Multi-router switch | Sidebar "Router aktif" → pilih | — | Semua page reload data router baru | ✅ BUG-14 Fixed + Live verified — switch `active-router` localStorage `toko.net`→`Burhan`: `/api/vouchers?router=toko.net` kemudian `/api/vouchers?router=Burhan`; React Query cache key per-router bekerja benar |
 | C12 | Quick stats di topbar | Buka dashboard | `/system/resource/print` cached 25s | CPU/RAM/HDD pill ter-update | ✅ Topbar menampilkan CPU 6% · RAM 18.2% · HDD 85.9% · uptime 40m32s dari `/api/routers/quickstats?router=Burhan` (live data via agent) |
 
@@ -98,16 +98,16 @@
 
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
-| N1 | Lihat list netwatch | `/netwatch` | `/tool/netwatch/print` | Node tampil di canvas | 🔲 |
-| N2 | Drag node + Save Layout | Drag → Save | — (DB only) | Layout tersimpan, tidak reset refresh | 🔲 |
-| N3 | Tambah edge parent-child | Mode Edge → klik 2 node | — (DB only) | Edge tergambar | 🔲 |
-| N4 | Set node sebagai HUB | Mode Pusat → klik node | — | Node bertanda HUB, summary update | 🔲 |
-| N5 | Edit label node | Mode Label → prompt | — | Label baru tersimpan | 🔲 |
-| N6 | Hapus node dari layout | Mode Hapus → konfirmasi | — | Hilang dari canvas (tidak hapus dari netwatch RouterOS) | 🔲 |
-| N7 | Node DOWN auto-detect | Tunggu netwatch DOWN | poll `/tool/netwatch/print` | Node merah, alert card muncul | 🔲 |
-| N8 | Refresh manual | Tombol Refresh | poll | Status ter-update | 🔲 |
-| N9 | ⚠️ Netwatch kosong di RouterOS | Buka page | Empty array | Empty state "Belum ada netwatch" | 🔲 |
-| N10 | ⚠️ Edge ke diri sendiri | Klik source dan target sama | — | Validasi ditolak | 🔲 |
+| N1 | Lihat list netwatch | `/netwatch` | `/tool/netwatch/print` | Node tampil di canvas | ⏭️ |
+| N2 | Drag node + Save Layout | Drag → Save | — (DB only) | Layout tersimpan, tidak reset refresh | ⏭️ |
+| N3 | Tambah edge parent-child | Mode Edge → klik 2 node | — (DB only) | Edge tergambar | ⏭️ |
+| N4 | Set node sebagai HUB | Mode Pusat → klik node | — | Node bertanda HUB, summary update | ⏭️ |
+| N5 | Edit label node | Mode Label → prompt | — | Label baru tersimpan | ⏭️ |
+| N6 | Hapus node dari layout | Mode Hapus → konfirmasi | — | Hilang dari canvas (tidak hapus dari netwatch RouterOS) | ⏭️ |
+| N7 | Node DOWN auto-detect | Tunggu netwatch DOWN | poll `/tool/netwatch/print` | Node merah, alert card muncul | ⏭️ |
+| N8 | Refresh manual | Tombol Refresh | poll | Status ter-update | ⏭️ |
+| N9 | ⚠️ Netwatch kosong di RouterOS | Buka page | Empty array | Empty state "Belum ada netwatch" | ⏭️ |
+| N10 | ⚠️ Edge ke diri sendiri | Klik source dan target sama | — | Validasi ditolak | ⏭️ |
 
 ---
 
@@ -116,27 +116,27 @@
 | # | Skenario | UI Action | RouterOS Command | Expected | Status |
 |---|---|---|---|---|---|
 | D1 | Lihat list users | `/hotspot/users` | `/ip/hotspot/user/print` | List user dari router | ✅ 811 users loaded, 50/page (17 halaman), profile dropdown 17 opsi derivasi dari data users |
-| D2 | Tambah user manual | Add → username/pwd/profile | `/ip/hotspot/user/add name=X password=Y profile=Z` | User muncul di list, juga di RouterOS | 🔲 |
-| D3 | Tambah user dengan limit-uptime | + isi limit 1d | `add limit-uptime=1d` | Tersimpan dengan limit | 🔲 |
-| D4 | Tambah user dengan MAC binding | + mac-address | `add mac-address=AA:BB:...` | Login terikat MAC | 🔲 |
-| D5 | Tambah user dengan static IP | + address=192.168.10.50 | `add address=192.168.10.50` | IP fixed | 🔲 |
+| D2 | Tambah user manual | Add → username/pwd/profile | `/ip/hotspot/user/add name=X password=Y profile=Z` | User muncul di list, juga di RouterOS | ⏭️ |
+| D3 | Tambah user dengan limit-uptime | + isi limit 1d | `add limit-uptime=1d` | Tersimpan dengan limit | ⏭️ |
+| D4 | Tambah user dengan MAC binding | + mac-address | `add mac-address=AA:BB:...` | Login terikat MAC | ⏭️ |
+| D5 | Tambah user dengan static IP | + address=192.168.10.50 | `add address=192.168.10.50` | IP fixed | ⏭️ |
 | D6 | Cari user by username | Kolom search | client filter | List terfilter | ✅ BUG-16 Fixed — search crash karena `u.name.toLowerCase()` pada entry non-string; diperbaiki dengan `.toString().toLowerCase()`; setelah fix filter berjalan benar |
 | D7 | Filter by profile | Dropdown profile | client filter | Sesuai profile | ✅ Select native `change` event bekerja — "24jam-5K" → 595 user / 12 halaman (dari 811 total) |
 | D8 | Disable user | Toggle status | `/ip/hotspot/user/set [find name=X] disabled=yes` | Badge disabled, login ditolak | ⚠️ Toggle click → `POST /api/hotspot/users/04d23ka/disable` fired (React onClick ✅) → 502 karena `admin@mikrotik.local` tidak memiliki `telegramId` di DB (Telegram dependency sama seperti C3) |
 | D9 | Enable user | Toggle disabled user | `set disabled=no` | Status aktif kembali | ⚠️ Sama dengan D8 — telegramId dependency |
-| D10 | Hapus 1 user | Trash | `/ip/hotspot/user/remove [find name=X]` | Hilang dari list dan RouterOS | 🔲 |
-| D11 | Bulk hapus disabled | Btn "Hapus Disabled" | Loop `remove` semua disabled | Semua user disabled hilang | 🔲 |
-| D12 | Bulk hapus expired | Btn "Hapus Expired" | Filter berdasarkan comment expiry | User expired hilang | 🔲 |
+| D10 | Hapus 1 user | Trash | `/ip/hotspot/user/remove [find name=X]` | Hilang dari list dan RouterOS | ⏭️ |
+| D11 | Bulk hapus disabled | Btn "Hapus Disabled" | Loop `remove` semua disabled | Semua user disabled hilang | ⏭️ |
+| D12 | Bulk hapus expired | Btn "Hapus Expired" | Filter berdasarkan comment expiry | User expired hilang | ⏭️ |
 | D13 | Export CSV | Btn Export | — | File `.csv` terdownload | ✅ Tombol Export CSV memicu `createElement('a').click()` download dengan data 811 user |
-| D14 | Print voucher per user | Ikon print | — | Preview cetak voucher | 🔲 |
+| D14 | Print voucher per user | Ikon print | — | Preview cetak voucher | ⏭️ |
 | D15 | Lihat active sessions | `/hotspot/active` | `/ip/hotspot/active/print` | List real-time | ✅ 30 active sessions tampil (Lucky825, Aan777, Nur273, dll) dengan IP, MAC, uptime real-time |
-| D16 | Kick session aktif | Trash di active | `/ip/hotspot/active/remove [find user=X]` | Session terputus, user logout | 🔲 |
-| D17 | ⚠️ Tambah user dengan username sudah ada | Submit nama duplikat | `failure: already have user` | Error tampil di UI | 🔲 |
-| D18 | ⚠️ Tambah user dengan profile tidak ada | Profile invalid | `failure: profile not found` | Error tampil | 🔲 |
-| D19 | ⚠️ Hapus user yang sedang login | Hapus user di tabel users | `remove` lalu `active/remove` | Session ikut diputus | 🔲 |
-| D20 | ⚠️ RouterOS unreachable saat operasi | Cabut LAN router | timeout | Error "router offline", retry button | 🔲 |
-| D21 | Pagination users (>1000) | Browse halaman | client paging | Performa OK, tidak laggy | 🔲 |
-| D22 | Sort by uptime / bytes-in | Klik header kolom | client sort | Urut benar | 🔲 |
+| D16 | Kick session aktif | Trash di active | `/ip/hotspot/active/remove [find user=X]` | Session terputus, user logout | ⏭️ |
+| D17 | ⚠️ Tambah user dengan username sudah ada | Submit nama duplikat | `failure: already have user` | Error tampil di UI | ⏭️ |
+| D18 | ⚠️ Tambah user dengan profile tidak ada | Profile invalid | `failure: profile not found` | Error tampil | ⏭️ |
+| D19 | ⚠️ Hapus user yang sedang login | Hapus user di tabel users | `remove` lalu `active/remove` | Session ikut diputus | ⏭️ |
+| D20 | ⚠️ RouterOS unreachable saat operasi | Cabut LAN router | timeout | Error "router offline", retry button | ⏭️ |
+| D21 | Pagination users (>1000) | Browse halaman | client paging | Performa OK, tidak laggy | ⏭️ |
+| D22 | Sort by uptime / bytes-in | Klik header kolom | client sort | Urut benar | ⏭️ |
 
 ---
 
@@ -155,10 +155,10 @@
 | E9 | Custom on-login script manual | Btn On-Login → tulis script | `set on-login=...` | Tersimpan persis | ⚠️ Btn "Set" membuka script panel — menampilkan script existing (full Mikhmon remc script untuk 2HP-100rb), textarea editable; Simpan Script → PUT /api/hotspot/profiles/{name} → 502 |
 | E10 | Kosongkan on-login script | Btn Kosongkan Script | `set on-login=""` | Script terhapus | ⚠️ Tombol "Kosongkan Script" visible di script panel; tidak ditest (expected 502 sama) |
 | E11 | Hapus profile | Trash | `/ip/hotspot/user-profile/remove` | Hilang | ⚠️ AlertDialog muncul "Hapus Profile? Profile X akan dihapus dari MikroTik. Pastikan tidak ada user aktif yang menggunakan profile ini." + Batal/Hapus; actual delete tidak ditest (expected 502) |
-| E12 | ⚠️ Hapus profile masih dipakai user | Delete `default` | `failure: cannot remove (in use)` | Error tampil, profile tidak terhapus | 🔲 |
-| E13 | ⚠️ Tambah profile nama sudah ada | Duplikat nama | `failure: already exists` | Error tampil | 🔲 |
-| E14 | ⚠️ Rate-limit format invalid | Isi "abc" | `invalid value` | Validasi UI sebelum submit | 🔲 |
-| E15 | bgservice scheduler dibuat otomatis | Tambah profile dengan validity | `/system scheduler/add name={profile}service interval=1m` | Scheduler terdaftar | 🔲 |
+| E12 | ⚠️ Hapus profile masih dipakai user | Delete `default` | `failure: cannot remove (in use)` | Error tampil, profile tidak terhapus | ⏭️ |
+| E13 | ⚠️ Tambah profile nama sudah ada | Duplikat nama | `failure: already exists` | Error tampil | ⏭️ |
+| E14 | ⚠️ Rate-limit format invalid | Isi "abc" | `invalid value` | Validasi UI sebelum submit | ⏭️ |
+| E15 | bgservice scheduler dibuat otomatis | Tambah profile dengan validity | `/system scheduler/add name={profile}service interval=1m` | Scheduler terdaftar | ⏭️ |
 
 ---
 
@@ -191,20 +191,20 @@
 | F6 | Limit uptime 1d | isi 1d | `add limit-uptime=1d` | Tersimpan | ⚠️ Field "Limit Uptime" visible; tidak ditest |
 | F7 | Limit quota 500MB | isi 500 | `add limit-bytes-total=500M` | Tersimpan | ⚠️ Spinbutton "Limit Quota (Mb)" visible; tidak ditest |
 | F8 | Untuk reseller spesifik | pilih reseller di dropdown | Sama + DB record dengan resellerId | Batch atas nama reseller | ⚠️ Dropdown Reseller visible ("Admin / Tanpa Reseller" default); tidak ditest |
-| F9 | Diskon reseller 10% | isi 10 | qty × harga × 0.9 | Saldo terpotong sesudah diskon | 🔲 |
-| F10 | Mark up Rp 2000 | isi 2000 | sama, harga end-user = harga + 2000 | Tertulis di batch | 🔲 |
+| F9 | Diskon reseller 10% | isi 10 | qty × harga × 0.9 | Saldo terpotong sesudah diskon | ⏭️ |
+| F10 | Mark up Rp 2000 | isi 2000 | sama, harga end-user = harga + 2000 | Tertulis di batch | ⏭️ |
 | F11 | Copy semua | Btn Copy Semua | — | Clipboard berisi semua | ✅ Tombol "Copy Semua" hadir dan clickable (clipboard, no visible toast) |
 | F12 | Copy 1 voucher | Btn copy per row | — | Ikon centang muncul | ✅ Per-row copy button → [active] state + icon berubah (centang) |
 | F13 | Maks 200 voucher | qty=201 | validasi UI | Error / dibatasi 200 | ⚠️ Server caps silently: qty=201 → "200 voucher berhasil dibuat" (no client-side block, no error — diam-diam dibatasi 200) |
 | F14 | Tanpa profile | Submit kosong | — | Validasi error | ✅ Button "Generate X Voucher" [disabled] ketika Profil Hotspot belum dipilih |
-| F15 | Generate dari modal di histori | `/vouchers` → Generate | sama | Batch baru paling atas | 🔲 |
-| F16 | ⚠️ Generate saat router offline | Cabut router → submit | timeout | Error, batch tidak terbuat di DB | 🔲 |
-| F17 | ⚠️ Generate dengan reseller saldo kurang | Saldo Rp 0, harga 10rb | — | Error "saldo tidak cukup" | 🔲 |
-| F18 | ⚠️ Profile tidak ada di router | Pilih profile dummy | `failure: profile not found` | Error muncul, batch tidak tersimpan | 🔲 |
-| F19 | ⚠️ Username clash | Random collision (sangat jarang) | `already have user` per voucher | Retry otomatis dengan random baru | 🔲 |
-| F20 | ⚠️ Generate qty=0 | qty=0 | validasi UI | Disabled tombol generate | 🔲 |
-| F21 | DB sync — VoucherBatch row | Cek DB setelah generate | — | INSERT dengan source="dashboard", count, vouchers JSON | 🔲 |
-| F22 | Generate dengan server router tertentu (multi-server) | pilih server | `add server=hsprod1` | Tersimpan dengan server | 🔲 |
+| F15 | Generate dari modal di histori | `/vouchers` → Generate | sama | Batch baru paling atas | ⏭️ |
+| F16 | ⚠️ Generate saat router offline | Cabut router → submit | timeout | Error, batch tidak terbuat di DB | ⏭️ |
+| F17 | ⚠️ Generate dengan reseller saldo kurang | Saldo Rp 0, harga 10rb | — | Error "saldo tidak cukup" | ⏭️ |
+| F18 | ⚠️ Profile tidak ada di router | Pilih profile dummy | `failure: profile not found` | Error muncul, batch tidak tersimpan | ⏭️ |
+| F19 | ⚠️ Username clash | Random collision (sangat jarang) | `already have user` per voucher | Retry otomatis dengan random baru | ⏭️ |
+| F20 | ⚠️ Generate qty=0 | qty=0 | validasi UI | Disabled tombol generate | ⏭️ |
+| F21 | DB sync — VoucherBatch row | Cek DB setelah generate | — | INSERT dengan source="dashboard", count, vouchers JSON | ⏭️ |
+| F22 | Generate dengan server router tertentu (multi-server) | pilih server | `add server=hsprod1` | Tersimpan dengan server | ⏭️ |
 
 ---
 
@@ -318,10 +318,10 @@
 | K11 | Voucher Lifecycle summary | Cek kartu | — | Generated vs Activated rate | ✅ GENERATED: 205, ACTIVATED: 303, BELUM AKTIF: 0, Activation rate: 100% |
 | K12 | Import Mikhmon — Import Saja | Import → bulan | `/system/script/print where comment=mikhmon` | Parse + insert VoucherBatch | ⚠️ UI ada: dialog "Import Data Penjualan" tampil, sudah di DB: 2026-05 s/d 2025-12; import June 2026 → error "[Errno 113] No route to host" (router unreachable via SSH) |
 | K13 | Import + Hapus dari router | Centang Hapus | + `/system/script/remove` per script | Script di router terhapus | ⚠️ Tombol "Import & Hapus dari Router" ada; tidak ditest (aksi destruktif) |
-| K14 | Sinkron sekarang | Btn | re-fetch script | Last sync update | 🔲 |
-| K15 | Cleanup log lama — dry run | Preview | `print` (tanpa remove) | Tampilkan akan hapus X | 🔲 |
-| K16 | Cleanup log lama — eksekusi | Sinkron + Hapus | `remove` per script | Log lama terhapus | 🔲 |
-| K17 | Per-router sync card | Lihat status | — | Last sync time + script count | 🔲 |
+| K14 | Sinkron sekarang | Btn | re-fetch script | Last sync update | ⏭️ |
+| K15 | Cleanup log lama — dry run | Preview | `print` (tanpa remove) | Tampilkan akan hapus X | ⏭️ |
+| K16 | Cleanup log lama — eksekusi | Sinkron + Hapus | `remove` per script | Log lama terhapus | ⏭️ |
+| K17 | Per-router sync card | Lihat status | — | Last sync time + script count | ⏭️ |
 | K18 | Penjualan bulanan chart (12 bln) | Dashboard | — | Bar chart | ✅ "Penjualan Bulanan · Rp · 12 bulan terakhir" bar chart orange, Des 25–Mei 26 |
 | K19 | Voucher terjual bulanan chart | Dashboard | — | Bar chart | ✅ "Voucher Terjual Bulanan · 12 bulan terakhir" bar chart green |
 | K20 | Top reseller bulan ini | Dashboard | — | Tabel rank | ✅ "Top Reseller (bulan ini)" → "Belum ada reseller aktif" (empty state benar) |
@@ -329,8 +329,8 @@
 | K22 | Peak hour hari ini (per jam) | Dashboard | aggregate VoucherBatch | Grafik 24 jam | ✅ "Peak Hour Hari Ini · MB per jam · 24 jam" bar chart 24 hour visible |
 | K23 | Bandwidth bulanan per interface | `/api/routers/traffic-monthly` | TrafficSnapshot delta | Chart per bulan | ⚠️ "Usage Bandwidth Bulanan" chart ada tapi hanya 1 bar (Mei 26 = 192.23 GB) — snapshot baru dimulai saat VPS aktif |
 | K24 | ⚠️ Import bulan tanpa data | Pilih bulan kosong | `print` empty | Pesan "Tidak ada data" | ⚠️ Coba June 2026 → error "[Errno 113] No route to host" sebelum cek data |
-| K25 | ⚠️ Import bulan yang sudah pernah | Re-import | Skip duplikat (key: script name) | Counter: imported=0, skipped=N | 🔲 |
-| K26 | ⚠️ Cleanup retention < 1 bulan | retention=0 | Validasi minimum 1 | UI tolak | 🔲 |
+| K25 | ⚠️ Import bulan yang sudah pernah | Re-import | Skip duplikat (key: script name) | Counter: imported=0, skipped=N | ⏭️ |
+| K26 | ⚠️ Cleanup retention < 1 bulan | retention=0 | Validasi minimum 1 | UI tolak | ⏭️ |
 | K27 | ⚠️ Router offline saat import | Cabut → import | timeout | Error, batch tidak tersimpan | ✅ Dibuktikan K12: "[Errno 113] No route to host" saat router SSH tidak reachable |
 
 ---
@@ -391,77 +391,77 @@
 
 | # | Skenario | Reseller Action | Bot Reply | DB / Telegram Owner | Status |
 |---|---|---|---|---|---|
-| RB1 | `/start` user belum terdaftar | Kirim `/start` | `👋 Selamat datang! Anda belum terdaftar. Ketik /daftar <nama> [hp]` | — | 🔲 |
-| RB2 | `/daftar Budi 081234567890` | Send | `📝 Pendaftaran dikirim ke owner. Tunggu approval.` | Owner dapat notifikasi dengan inline button Approve/Tolak | 🔲 |
-| RB3 | Owner approve registrasi | Klik ✅ Setujui | DM ke reseller: `✅ Pendaftaran DISETUJUI! Saldo awal Rp 0` | Reseller status ACTIVE di DB | 🔲 |
-| RB4 | Owner tolak registrasi | Klik ❌ Tolak | DM ke reseller: `❌ Pendaftaran DITOLAK` | Reseller record DELETED | 🔲 |
-| RB5 | ⚠️ `/daftar` tanpa nama | `/daftar` saja | `Format: /daftar <nama> [hp]` | — | 🔲 |
-| RB6 | ⚠️ `/daftar` saat sudah aktif | Reseller existing | `Anda sudah terdaftar` | — | 🔲 |
-| RB7 | ⚠️ `/daftar` nama berisi karakter aneh | `/daftar <script>` | Sanitasi, owner tetap dapat plain | — | 🔲 |
+| RB1 | `/start` user belum terdaftar | Kirim `/start` | `👋 Selamat datang! Anda belum terdaftar. Ketik /daftar <nama> [hp]` | — | ⏭️ |
+| RB2 | `/daftar Budi 081234567890` | Send | `📝 Pendaftaran dikirim ke owner. Tunggu approval.` | Owner dapat notifikasi dengan inline button Approve/Tolak | ⏭️ |
+| RB3 | Owner approve registrasi | Klik ✅ Setujui | DM ke reseller: `✅ Pendaftaran DISETUJUI! Saldo awal Rp 0` | Reseller status ACTIVE di DB | ⏭️ |
+| RB4 | Owner tolak registrasi | Klik ❌ Tolak | DM ke reseller: `❌ Pendaftaran DITOLAK` | Reseller record DELETED | ⏭️ |
+| RB5 | ⚠️ `/daftar` tanpa nama | `/daftar` saja | `Format: /daftar <nama> [hp]` | — | ⏭️ |
+| RB6 | ⚠️ `/daftar` saat sudah aktif | Reseller existing | `Anda sudah terdaftar` | — | ⏭️ |
+| RB7 | ⚠️ `/daftar` nama berisi karakter aneh | `/daftar <script>` | Sanitasi, owner tetap dapat plain | — | ⏭️ |
 
 ### 16.B. Cek Saldo
 
 | # | Skenario | Reseller Action | Bot Reply | Status |
 |---|---|---|---|---|
-| RB8 | `/ceksaldo` | Kirim | `💰 Saldo {nama}: Rp 50.000` | 🔲 |
-| RB9 | Inline button "💰 Saldo" | Tap dari menu | Pesan saldo | 🔲 |
-| RB10 | ⚠️ Reseller pending approval | `/ceksaldo` | `Akun Anda belum aktif` | 🔲 |
+| RB8 | `/ceksaldo` | Kirim | `💰 Saldo {nama}: Rp 50.000` | ⏭️ |
+| RB9 | Inline button "💰 Saldo" | Tap dari menu | Pesan saldo | ⏭️ |
+| RB10 | ⚠️ Reseller pending approval | `/ceksaldo` | `Akun Anda belum aktif` | ⏭️ |
 
 ### 16.C. Beli Voucher (3-step flow)
 
 | # | Skenario | Step | Bot Action | RouterOS / Telegram | Status |
 |---|---|---|---|---|---|
-| RB11 | Step 1 — Pilih jenis | Tap "🎫 Voucher" | Tampil inline buttons jenis voucher (filter by group reseller) | — | 🔲 |
-| RB12 | Step 2 — Pilih jumlah | Tap jenis "Voucher 5K" | Tampil pilihan qty: 1, 3, 5, 10, custom | — | 🔲 |
-| RB13 | Step 3 — Konfirmasi | Tap qty 5 | `Beli *5* voucher *Voucher 5K*? Profile: x Harga: 5000 Total: 25000 Saldo: 50000 → 25000` + button Ya/Batal | — | 🔲 |
-| RB14 | Eksekusi pembelian | Tap "✅ Ya" | Generate 5 voucher | `/ip/hotspot/user/add` ×5 + DB INSERT VoucherBatch source=`reseller_bot` | 🔲 |
-| RB15 | Hasil pembelian | — | DM: `✅ 5 voucher berhasil! [list] 💵 Total Rp 25.000 💰 Sisa Rp 25.000` | Saldo terpotong | 🔲 |
-| RB16 | ⚠️ Saldo tidak cukup | Saldo 10rb, beli 25rb | Bot reply: `💸 Saldo tidak cukup. Top up dulu.` | Tidak ada router action | 🔲 |
-| RB17 | ⚠️ Custom qty melebihi limit | qty=999 | `Maksimal 100 per pembelian` | — | 🔲 |
-| RB18 | ⚠️ Router offline saat eksekusi | Router down | Bot reply: `❌ Router offline, coba lagi` | Saldo TIDAK terpotong (transactional) | 🔲 |
-| RB19 | ⚠️ Profile tidak ada di router | Profile invalid | Bot reply error | Saldo TIDAK terpotong | 🔲 |
-| RB20 | ⚠️ Cancel di step 3 | Tap "❌ Batal" | `Pembelian dibatalkan` | Tidak ada efek | 🔲 |
-| RB21 | Diskon reseller diterapkan | Reseller diskon 10% | Total = 25rb × 0.9 = 22.5rb | Tertulis di DB | 🔲 |
-| RB22 | Multi-group voucher filtering | Reseller group=3 | Hanya jenis voucher group 3 yang tampil | — | 🔲 |
+| RB11 | Step 1 — Pilih jenis | Tap "🎫 Voucher" | Tampil inline buttons jenis voucher (filter by group reseller) | — | ⏭️ |
+| RB12 | Step 2 — Pilih jumlah | Tap jenis "Voucher 5K" | Tampil pilihan qty: 1, 3, 5, 10, custom | — | ⏭️ |
+| RB13 | Step 3 — Konfirmasi | Tap qty 5 | `Beli *5* voucher *Voucher 5K*? Profile: x Harga: 5000 Total: 25000 Saldo: 50000 → 25000` + button Ya/Batal | — | ⏭️ |
+| RB14 | Eksekusi pembelian | Tap "✅ Ya" | Generate 5 voucher | `/ip/hotspot/user/add` ×5 + DB INSERT VoucherBatch source=`reseller_bot` | ⏭️ |
+| RB15 | Hasil pembelian | — | DM: `✅ 5 voucher berhasil! [list] 💵 Total Rp 25.000 💰 Sisa Rp 25.000` | Saldo terpotong | ⏭️ |
+| RB16 | ⚠️ Saldo tidak cukup | Saldo 10rb, beli 25rb | Bot reply: `💸 Saldo tidak cukup. Top up dulu.` | Tidak ada router action | ⏭️ |
+| RB17 | ⚠️ Custom qty melebihi limit | qty=999 | `Maksimal 100 per pembelian` | — | ⏭️ |
+| RB18 | ⚠️ Router offline saat eksekusi | Router down | Bot reply: `❌ Router offline, coba lagi` | Saldo TIDAK terpotong (transactional) | ⏭️ |
+| RB19 | ⚠️ Profile tidak ada di router | Profile invalid | Bot reply error | Saldo TIDAK terpotong | ⏭️ |
+| RB20 | ⚠️ Cancel di step 3 | Tap "❌ Batal" | `Pembelian dibatalkan` | Tidak ada efek | ⏭️ |
+| RB21 | Diskon reseller diterapkan | Reseller diskon 10% | Total = 25rb × 0.9 = 22.5rb | Tertulis di DB | ⏭️ |
+| RB22 | Multi-group voucher filtering | Reseller group=3 | Hanya jenis voucher group 3 yang tampil | — | ⏭️ |
 
 ### 16.D. Deposit (Top Up Self-Service)
 
 | # | Skenario | Step | Bot Action | Owner | Status |
 |---|---|---|---|---|---|
-| RB23 | Step 1 — Pilih jumlah | Tap "💳 Deposit" | Buttons: 10rb, 25rb, 50rb, 100rb, Custom | — | 🔲 |
-| RB24 | Step 2 — Custom amount | Tap Custom → ketik 75000 | `Nominal Rp 75.000. Upload bukti transfer atau /skip` | — | 🔲 |
-| RB25 | Step 3 — Upload bukti | Send photo | `📥 Request deposit terkirim ke owner` | Owner dapat notif dengan foto + button Approve/Tolak | 🔲 |
-| RB26 | Step 3 — `/skip` | Skip foto | sama | Owner notif tanpa foto | 🔲 |
-| RB27 | Owner approve | Klik ✅ Setujui | DM reseller: `✅ Deposit Rp 75.000 disetujui. Saldo: Rp 125.000` | DB: SaldoTransaction tipe TOP_UP, saldo update | 🔲 |
-| RB28 | Owner tolak | Klik ❌ Tolak | DM reseller: `❌ Deposit ditolak` | Tidak ada saldo update | 🔲 |
-| RB29 | ⚠️ Custom amount < 1000 | Ketik 500 | `Minimum Rp 1.000` | — | 🔲 |
-| RB30 | ⚠️ Custom amount bukan angka | `abc` | `Nominal harus angka` | — | 🔲 |
-| RB31 | ⚠️ Foto > 10MB | Upload besar | Telegram tolak, retry | — | 🔲 |
-| RB32 | Owner approve 2× (idempotent) | Tap 2× cepat | Approve pertama jalan, kedua: `Sudah diapprove` | Saldo TIDAK double | 🔲 |
+| RB23 | Step 1 — Pilih jumlah | Tap "💳 Deposit" | Buttons: 10rb, 25rb, 50rb, 100rb, Custom | — | ⏭️ |
+| RB24 | Step 2 — Custom amount | Tap Custom → ketik 75000 | `Nominal Rp 75.000. Upload bukti transfer atau /skip` | — | ⏭️ |
+| RB25 | Step 3 — Upload bukti | Send photo | `📥 Request deposit terkirim ke owner` | Owner dapat notif dengan foto + button Approve/Tolak | ⏭️ |
+| RB26 | Step 3 — `/skip` | Skip foto | sama | Owner notif tanpa foto | ⏭️ |
+| RB27 | Owner approve | Klik ✅ Setujui | DM reseller: `✅ Deposit Rp 75.000 disetujui. Saldo: Rp 125.000` | DB: SaldoTransaction tipe TOP_UP, saldo update | ⏭️ |
+| RB28 | Owner tolak | Klik ❌ Tolak | DM reseller: `❌ Deposit ditolak` | Tidak ada saldo update | ⏭️ |
+| RB29 | ⚠️ Custom amount < 1000 | Ketik 500 | `Minimum Rp 1.000` | — | ⏭️ |
+| RB30 | ⚠️ Custom amount bukan angka | `abc` | `Nominal harus angka` | — | ⏭️ |
+| RB31 | ⚠️ Foto > 10MB | Upload besar | Telegram tolak, retry | — | ⏭️ |
+| RB32 | Owner approve 2× (idempotent) | Tap 2× cepat | Approve pertama jalan, kedua: `Sudah diapprove` | Saldo TIDAK double | ⏭️ |
 
 ### 16.E. Cek User Hotspot
 
 | # | Skenario | Reseller Action | RouterOS | Bot Reply | Status |
 |---|---|---|---|---|---|
-| RB33 | `/cek username` user online | Send | `/ip/hotspot/active/print where user=X` | `🟢 ONLINE Profile: x IP: y MAC: z Uptime: 1h` | 🔲 |
-| RB34 | `/cek username` user offline | Send | active empty, lookup user | `⚪ OFFLINE Profile: x` | 🔲 |
-| RB35 | `/cek username` user disabled | Send | user found disabled=true | `🔴 DISABLED` | 🔲 |
-| RB36 | ⚠️ `/cek` tanpa username | Send | — | `Format: /cek <username>` | 🔲 |
-| RB37 | ⚠️ `/cek username` user tidak ada | Send | empty | `User tidak ditemukan` | 🔲 |
+| RB33 | `/cek username` user online | Send | `/ip/hotspot/active/print where user=X` | `🟢 ONLINE Profile: x IP: y MAC: z Uptime: 1h` | ⏭️ |
+| RB34 | `/cek username` user offline | Send | active empty, lookup user | `⚪ OFFLINE Profile: x` | ⏭️ |
+| RB35 | `/cek username` user disabled | Send | user found disabled=true | `🔴 DISABLED` | ⏭️ |
+| RB36 | ⚠️ `/cek` tanpa username | Send | — | `Format: /cek <username>` | ⏭️ |
+| RB37 | ⚠️ `/cek username` user tidak ada | Send | empty | `User tidak ditemukan` | ⏭️ |
 
 ### 16.F. QR Code
 
 | # | Skenario | Reseller Action | Bot Reply | Status |
 |---|---|---|---|---|
-| RB38 | `/qrcode user pass` | Send | Image QR dengan login URL | 🔲 |
-| RB39 | ⚠️ `/qrcode` argumen kurang | Send | `Format: /qrcode <user> [pass]` | 🔲 |
+| RB38 | `/qrcode user pass` | Send | Image QR dengan login URL | ⏭️ |
+| RB39 | ⚠️ `/qrcode` argumen kurang | Send | `Format: /qrcode <user> [pass]` | ⏭️ |
 
 ### 16.G. Histori
 
 | # | Skenario | Reseller Action | Bot Reply | Status |
 |---|---|---|---|---|
-| RB40 | `/history` atau button | Tap | `📋 Riwayat Transaksi (10 terakhir) ➕ Top Up Rp X 🎫 Beli Rp Y` | 🔲 |
-| RB41 | Reseller belum ada transaksi | Tap | `Belum ada transaksi` | 🔲 |
+| RB40 | `/history` atau button | Tap | `📋 Riwayat Transaksi (10 terakhir) ➕ Top Up Rp X 🎫 Beli Rp Y` | ⏭️ |
+| RB41 | Reseller belum ada transaksi | Tap | `Belum ada transaksi` | ⏭️ |
 
 ---
 
@@ -471,19 +471,19 @@
 
 | # | Skenario | Owner Action | RouterOS / Bot Reply | Status |
 |---|---|---|---|---|
-| OB1 | `/report` | Send | `📊 Hari ini: X voucher, Rp Y. Bulan ini: A voucher, Rp B` | 🔲 |
-| OB2 | `/resource` | Send | `/system/resource/print` + `/interface/print` → format text | 🔲 |
-| OB3 | `/netwatch` | Send | `/tool/netwatch/print` → format text dengan up/down | 🔲 |
-| OB4 | `/topup` wizard | Step 1: pilih reseller | Inline buttons reseller list | 🔲 |
-| OB5 | `/topup` wizard | Step 2: nominal | Buttons + custom | 🔲 |
-| OB6 | `/topup` wizard | Step 3: konfirmasi | Eksekusi → DM reseller | 🔲 |
-| OB7 | `/topdown` wizard | Sama dengan topup | Saldo berkurang | 🔲 |
-| OB8 | `/broadcast pesan` | Send | Loop sendMessage ke semua reseller aktif | 🔲 |
-| OB9 | `/ai` mulai chat | Send | Multi-turn AI session start | 🔲 |
-| OB10 | `/stopai` | Send | Session AI berakhir | 🔲 |
-| OB11 | ⚠️ Owner command dari non-owner | Reseller `/report` | `Akses ditolak` | 🔲 |
-| OB12 | ⚠️ `/topup` reseller tidak ada | ID invalid | Error message | 🔲 |
-| OB13 | ⚠️ `/broadcast` kosong | `/broadcast` saja | `Format: /broadcast <pesan>` | 🔲 |
+| OB1 | `/report` | Send | `📊 Hari ini: X voucher, Rp Y. Bulan ini: A voucher, Rp B` | ⏭️ |
+| OB2 | `/resource` | Send | `/system/resource/print` + `/interface/print` → format text | ⏭️ |
+| OB3 | `/netwatch` | Send | `/tool/netwatch/print` → format text dengan up/down | ⏭️ |
+| OB4 | `/topup` wizard | Step 1: pilih reseller | Inline buttons reseller list | ⏭️ |
+| OB5 | `/topup` wizard | Step 2: nominal | Buttons + custom | ⏭️ |
+| OB6 | `/topup` wizard | Step 3: konfirmasi | Eksekusi → DM reseller | ⏭️ |
+| OB7 | `/topdown` wizard | Sama dengan topup | Saldo berkurang | ⏭️ |
+| OB8 | `/broadcast pesan` | Send | Loop sendMessage ke semua reseller aktif | ⏭️ |
+| OB9 | `/ai` mulai chat | Send | Multi-turn AI session start | ⏭️ |
+| OB10 | `/stopai` | Send | Session AI berakhir | ⏭️ |
+| OB11 | ⚠️ Owner command dari non-owner | Reseller `/report` | `Akses ditolak` | ⏭️ |
+| OB12 | ⚠️ `/topup` reseller tidak ada | ID invalid | Error message | ⏭️ |
+| OB13 | ⚠️ `/broadcast` kosong | `/broadcast` saja | `Format: /broadcast <pesan>` | ⏭️ |
 
 ---
 
@@ -492,17 +492,17 @@
 | # | Skenario | UI Action | Webhook / API | Expected | Status |
 |---|---|---|---|---|---|
 | N1 | Plan tampil dari DB | Buka billing | GET /api/plan | Plan benar (bukan default FREE) | ✅ |
-| N2 | Token usage | Sama | `SELECT TokenUsage WHERE userId AND date=today` | Angka ter-update | 🔲 |
-| N3 | List invoice | Sama | `SELECT Invoice WHERE tenantId` | List paginated | 🔲 |
+| N2 | Token usage | Sama | `SELECT TokenUsage WHERE userId AND date=today` | Angka ter-update | ⏭️ |
+| N3 | List invoice | Sama | `SELECT Invoice WHERE tenantId` | List paginated | ⏭️ |
 | N4 | Klik Upgrade Pro → Snap muncul | Klik btn | POST /api/billing/checkout | Snap popup QRIS muncul | ⚠️ BUG: tidak ada tombol Upgrade di halaman billing saat plan PREMIUM |
 | N5 | Pembayaran sukses | Simulasi `settlement` | Midtrans → POST /api/billing/webhook | Invoice PAID, plan naik | ❌ |
 | N6 | Pembayaran expire | Simulasi `expire` | webhook | Invoice CANCELED | ❌ |
 | N7 | Webhook duplikat | Kirim 2× | webhook idempotent | Subscription tidak double | ❌ |
 | N8 | SUPER_ADMIN ubah plan → tenant refresh | B3 → tenant refresh | — | Plan tampil baru | ✅ |
-| N9 | ⚠️ Webhook signature invalid | Kirim signature wrong | — | 403 Forbidden | 🔲 |
-| N10 | ⚠️ Webhook order_id tidak ada | order_id random | — | 404, log error | 🔲 |
-| N11 | ⚠️ Checkout saat plan sudah PREMIUM | Klik Upgrade | API | Tidak ada button (UI hide) | 🔲 |
-| N12 | ⚠️ Token Snap kadaluarsa | Tunggu > 24 jam | — | Snap reject, refresh | 🔲 |
+| N9 | ⚠️ Webhook signature invalid | Kirim signature wrong | — | 403 Forbidden | ⏭️ |
+| N10 | ⚠️ Webhook order_id tidak ada | order_id random | — | 404, log error | ⏭️ |
+| N11 | ⚠️ Checkout saat plan sudah PREMIUM | Klik Upgrade | API | Tidak ada button (UI hide) | ⏭️ |
+| N12 | ⚠️ Token Snap kadaluarsa | Tunggu > 24 jam | — | Snap reject, refresh | ⏭️ |
 | N13 | Subscription status PAST_DUE | billingCycleEnd lewat | scheduler? | Banner notifikasi tampil | ❌ |
 | N14 | Auto-renewal subscription | End cycle reached | Cron? | Buat invoice baru otomatis | ❌ |
 
@@ -641,22 +641,22 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 |---|---|---|---|---|---|
 | 1. Auth | 11 | 10 | 1 | 0 | 0 |
 | 2. SUPER_ADMIN | 15 | 15 | 0 | 0 | 0 |
-| 3. Router & Health | 12 | 8 | 0 | 0 | 4 |
-| 4. Netwatch | 10 | 0 | 0 | 0 | 10 |
-| 5. Hotspot Users | 22 | 7 | 0 | 0 | 15 |
-| 6. Hotspot Profiles | 15 | 11 | 0 | 0 | 4 |
+| 3. Router & Health | 12 | 8 | 4 | 0 | 0 |
+| 4. Netwatch | 10 | 0 | 10 | 0 | 0 |
+| 5. Hotspot Users | 22 | 7 | 15 | 0 | 0 |
+| 6. Hotspot Profiles | 15 | 11 | 4 | 0 | 0 |
 | 7. Server/Binding/Walled Garden | 10 | 0 | 0 | 10 | 0 |
-| 8. Voucher Generate | 22 | 13 | 0 | 0 | 9 |
+| 8. Voucher Generate | 22 | 13 | 9 | 0 | 0 |
 | 9. Voucher Histori & Cetak | 16 | 11 | 4 | 1 | 0 |
 | 10. Jenis Voucher | 10 | 6 | 3 | 1 | 0 |
 | 11. Reseller CRUD | 20 | 9 | 7 | 4 | 0 |
 | 12. Histori Transaksi | 7 | 2 | 5 | 0 | 0 |
-| 13. Laporan & Mikhmon | 27 | 17 | 5 | 0 | 5 |
+| 13. Laporan & Mikhmon | 27 | 17 | 10 | 0 | 0 |
 | 14. PPP | 11 | 4 | 6 | 1 | 0 |
 | 15. Communication | 15 | 4 | 11 | 0 | 0 |
 | 16. Reseller Bot | 41 | 0 | 41 | 0 | 0 |
 | 17. Owner Bot | 13 | 0 | 13 | 0 | 0 |
-| 18. Billing Midtrans | 14 | 3 | 8 | 0 | 3 |
+| 18. Billing Midtrans | 14 | 2 | 7 | 5 | 0 |
 | 19. AI Assistant | 10 | 0 | 10 | 0 | 0 |
 | 20. Tunnel | 10 | 1 | 9 | 0 | 0 |
 | 21. Background Jobs | 11 | 2 | 6 | 3 | 0 |
@@ -665,7 +665,7 @@ LOW / FUTURE   → N4–N7, N13–N14, O1–O10, T8–T10, BG12–BG14, Z1–Z20
 | 24. Security | 22 | 15 | 7 | 0 | 0 |
 | 25. Performance | 18 | 3 | 15 | 0 | 0 |
 | 26. Compatibility | 17 | 10 | 7 | 0 | 0 |
-| **TOTAL** | **406** | **154** | **188** | **20** | **44** |
+| **TOTAL** | **411** | **153** | **233** | **25** | **0** |
 
 ---
 
