@@ -58,6 +58,7 @@ services:
       - "3000:3000"
     networks:
       - internal
+      - agent_internal
     restart: unless-stopped
     depends_on:
       postgres:
@@ -208,6 +209,9 @@ volumes:
 networks:
   internal:
     driver: bridge
+  agent_internal:
+    name: mikrotik-ai-agent_internal
+    external: true
   vpn:
     driver: bridge
     ipam:
