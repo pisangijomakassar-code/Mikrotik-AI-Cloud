@@ -2139,9 +2139,14 @@ class HealthHandler(BaseHTTPRequestHandler):
                     return dt(y, mo, d, tzinfo=_tz.utc), f"{y:04d}-{mo:02d}"
                 return None, None
 
+            # Skip vouchers whose username is already in DB (idempotent import)
+            already_imported = vdb.get_imported_usernames(user_id, router_display) if vdb else set()
+            new_scripts = [s for s in scripts if s.get("username") not in already_imported]
+            skipped_dedup = len(scripts) - len(new_scripts)
+
             # Group by (month_from_date, profile) for batch saving
             groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
-            for s in scripts:
+            for s in new_scripts:
                 date_str = s.get("date", "unknown")
                 _, month = _parse_mikhmon_date(date_str)
                 if not month:
@@ -2150,7 +2155,7 @@ class HealthHandler(BaseHTTPRequestHandler):
                 groups[(month, profile)].append(s)
 
             imported = 0
-            skipped = 0
+            skipped = skipped_dedup
             for (month, profile), group_scripts in groups.items():
                 vouchers = []
                 for s in group_scripts:
@@ -2175,9 +2180,6 @@ class HealthHandler(BaseHTTPRequestHandler):
                 if vdb and vouchers:
                     try:
                         price_per = vouchers[0]["price"] if vouchers else 0
-                        # Remove any existing batch for this (month, profile, router) before re-inserting
-                        # so the hourly cron (deleteAfterImport=False) doesn't create duplicates.
-                        vdb.delete_mikhmon_batch(user_id, router_display, profile, f"mikhmon_import:{month}")
 
                         # Parse batch date: use earliest date in the group
                         batch_timestamp = None

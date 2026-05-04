@@ -126,23 +126,28 @@ class VoucherDB:
             )
             return batch_id
 
-    def delete_mikhmon_batch(self, user_id: str, router_name: str, profile: str, source: str) -> int:
-        """Delete existing Mikhmon import batch(es) matching (tenantId, routerName, profile, source).
+    def get_imported_usernames(self, user_id: str, router_name: str) -> set:
+        """Return set of voucher usernames already imported from Mikhmon for this router.
 
-        Called before save_batch for Mikhmon imports to prevent duplicate rows from hourly cron.
+        Used to skip duplicates when the cron re-reads scripts that are still on the router.
         """
         if not self._pool:
-            return 0
+            return set()
         with self._conn() as conn:
             cur = conn.cursor()
             tenant_id = self._get_tenant_id(cur, user_id)
             if not tenant_id:
-                return 0
+                return set()
             cur.execute(
-                'DELETE FROM "VoucherBatch" WHERE "tenantId"=%s AND "routerName"=%s AND "profile"=%s AND "source"=%s',
-                (tenant_id, router_name, profile, source),
+                """
+                SELECT DISTINCT v->>'username'
+                FROM "VoucherBatch", jsonb_array_elements(vouchers::jsonb) v
+                WHERE "tenantId" = %s AND "routerName" = %s
+                  AND source LIKE 'mikhmon_import:%%'
+                """,
+                (tenant_id, router_name),
             )
-            return cur.rowcount
+            return {row[0] for row in cur.fetchall() if row[0]}
 
     # ── HotspotUserArchive ──
 
