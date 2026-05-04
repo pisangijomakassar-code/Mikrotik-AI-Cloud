@@ -301,6 +301,7 @@ export default function ResellerDetailPage({
         resellerId={id}
         resellerName={reseller.name}
         currentBalance={reseller.balance ?? 0}
+        routerName={reseller.router?.name}
         open={showVoucherDialog}
         onOpenChange={setShowVoucherDialog}
       />

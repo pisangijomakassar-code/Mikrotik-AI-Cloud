@@ -9,6 +9,7 @@ import { formatRupiah } from "@/lib/formatters"
 import { generateVoucherSchema, type GenerateVoucherFormData, CHAR_TYPES, LOGIN_TYPES } from "@/lib/schemas/voucher.schema"
 import { useGenerateVouchers } from "@/hooks/use-resellers"
 import { useHotspotProfiles } from "@/hooks/use-hotspot"
+import { useActiveRouter } from "@/components/active-router-context"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -16,6 +17,7 @@ interface GenerateVoucherDialogProps {
   resellerId: string
   resellerName: string
   currentBalance: number
+  routerName?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -24,11 +26,14 @@ export function GenerateVoucherDialog({
   resellerId,
   resellerName,
   currentBalance,
+  routerName: routerNameProp,
   open,
   onOpenChange,
 }: GenerateVoucherDialogProps) {
   const generateVouchers = useGenerateVouchers()
-  const { data: profiles } = useHotspotProfiles()
+  const { activeRouter } = useActiveRouter()
+  const routerName = routerNameProp ?? activeRouter ?? undefined
+  const { data: profiles } = useHotspotProfiles(routerName)
 
   const {
     register,
@@ -41,7 +46,7 @@ export function GenerateVoucherDialog({
     resolver: zodResolver(generateVoucherSchema),
     defaultValues: {
       profile: "",
-      routerName: "",
+      routerName: routerName ?? "",
       count: "",
       pricePerUnit: "0",
       prefix: "",
@@ -134,8 +139,13 @@ export function GenerateVoucherDialog({
                 {errors.profile && <p className="text-xs text-destructive ml-1">{errors.profile.message}</p>}
               </div>
               <div className="space-y-2">
-                <label className={labelClass}>Router (default: default)</label>
-                <Input className={inputClass} placeholder="default" {...register("routerName")} />
+                <label className={labelClass}>Router</label>
+                <Input
+                  className={cn(inputClass, routerName ? "opacity-60 cursor-not-allowed" : "")}
+                  placeholder="default"
+                  readOnly={!!routerName}
+                  {...register("routerName")}
+                />
               </div>
             </div>
 

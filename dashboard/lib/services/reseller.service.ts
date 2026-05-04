@@ -34,7 +34,7 @@ export async function getReseller(resellerId: string) {
   const db = await getTenantDb()
   return db.reseller.findFirst({
     where: { id: resellerId },
-    include: { _count: { select: { voucherBatches: true, transactions: true } } },
+    include: { _count: { select: { voucherBatches: true, transactions: true } }, router: { select: { name: true } } },
   })
 }
 

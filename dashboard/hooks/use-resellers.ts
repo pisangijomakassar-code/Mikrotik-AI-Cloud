@@ -22,6 +22,7 @@ export interface ResellerData {
   status: "ACTIVE" | "INACTIVE"
   createdAt: string
   updatedAt: string
+  router?: { name: string }
   _count?: { voucherBatches: number }
 }
 
