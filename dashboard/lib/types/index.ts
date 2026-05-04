@@ -41,6 +41,8 @@ export interface CreateRouterInput {
   label?: string;
   isDefault?: boolean;
   // tenantId di-inject otomatis dari session di service layer (tidak perlu pass)
+  // WAN interface untuk kalkulasi traffic (opsional)
+  wanInterface?: string;
   // MikroTik DNS settings
   dnsHotspot?: string;
   // Hotspot branding (untuk header voucher cetak)

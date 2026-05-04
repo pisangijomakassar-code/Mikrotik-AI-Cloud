@@ -19,11 +19,11 @@ interface DashboardSummary {
     revenueDelta: number | null
     vouchersDelta: number | null
     bandwidthTodayGB: number
-    peakHour: { hour: number; mb: number } | null
+    peakHour: { hour: number; gb: number } | null
   }
   monthly: { month: string; vouchers: number; revenue: number }[]
   bandwidthMonthly: { month: string; gb: number }[]
-  bandwidthHourly: { hour: number; mb: number }[]
+  bandwidthHourly: { hour: number; gb: number }[]
   summary: { monthRevenue: number; monthVouchers: number }
   topProfile: { profile: string; count: number; revenue: number }[]
   topReseller: { resellerId: string; name: string; count: number; revenue: number }[]
@@ -129,11 +129,11 @@ export default function DashboardPage() {
         />
         <BarChartCard
           title="Peak Hour Hari Ini"
-          subtitle="MB per jam · 24 jam"
+          subtitle="GB per jam · 24 jam"
           data={fillHourly(data?.bandwidthHourly ?? []).map((h) => ({
             label: String(h.hour).padStart(2, "0"),
-            value: h.mb,
-            sub: h.mb > 0 ? `${h.mb.toFixed(0)} MB` : "",
+            value: h.gb,
+            sub: h.gb > 0 ? `${h.gb.toFixed(2)} GB` : "",
           }))}
           color="#f97316"
           loading={summaryQuery.isLoading}
@@ -359,7 +359,7 @@ function formatMonth(yyyymm: string): string {
   return `${months[parseInt(m, 10) - 1]} ${y.slice(2)}`
 }
 
-function fillHourly(rows: { hour: number; mb: number }[]): { hour: number; mb: number }[] {
-  const map = new Map(rows.map((r) => [r.hour, r.mb]))
-  return Array.from({ length: 24 }, (_, h) => ({ hour: h, mb: map.get(h) ?? 0 }))
+function fillHourly(rows: { hour: number; gb: number }[]): { hour: number; gb: number }[] {
+  const map = new Map(rows.map((r) => [r.hour, r.gb]))
+  return Array.from({ length: 24 }, (_, h) => ({ hour: h, gb: map.get(h) ?? 0 }))
 }

@@ -75,6 +75,7 @@ export async function createRouter(data: CreateRouterInput) {
       passwordEnc: encryptedPassword,
       label: data.label ?? "",
       isDefault: data.isDefault ?? false,
+      wanInterface: data.wanInterface ?? "",
       dnsHotspot: data.dnsHotspot ?? "",
       hotspotName: data.hotspotName ?? "",
       hotspotLogoUrl: data.hotspotLogoUrl ?? "",
@@ -98,6 +99,7 @@ export async function updateRouter(id: string, data: Partial<CreateRouterInput>)
   if (data.password !== undefined) {
     updateData.passwordEnc = await encryptPassword(data.password)
   }
+  if (data.wanInterface !== undefined) updateData.wanInterface = data.wanInterface
   if (data.dnsHotspot !== undefined) updateData.dnsHotspot = data.dnsHotspot
   if (data.hotspotName !== undefined) updateData.hotspotName = data.hotspotName
   if (data.hotspotLogoUrl !== undefined) updateData.hotspotLogoUrl = data.hotspotLogoUrl

@@ -19,11 +19,12 @@ export async function GET(request: NextRequest) {
   const tenantId = session.user.tenantId
   const routerName = request.nextUrl.searchParams.get("router")
 
-  // Resolve routerId untuk filter reseller
+  // Resolve routerId dan wanInterface untuk filter reseller dan traffic
   const routerRow = routerName
-    ? await prisma.router.findFirst({ where: { tenantId, name: routerName }, select: { id: true } })
+    ? await prisma.router.findFirst({ where: { tenantId, name: routerName }, select: { id: true, wanInterface: true } })
     : null
   const routerId = routerRow?.id ?? null
+  const wanInterface = routerRow?.wanInterface?.trim() || null
 
   // Boundaries pakai timezone WITA (UTC+8) supaya "hari ini" / "bulan ini"
   // sesuai persepsi user, bukan UTC.
@@ -115,6 +116,8 @@ export async function GET(request: NextRequest) {
     .map(([month, v]) => ({ month, ...v }))
 
   // Bandwidth bulanan + hourly hari ini via raw SQL (LAG window function)
+  // Jika wanInterface dikonfigurasi, hanya hitung interface itu (hindari double-count).
+  // Jika kosong, fallback ke semua interface (kurang akurat tapi tetap tampil).
   const bandwidthMonthly = routerName
     ? await prisma.$queryRaw<{ month: string; gb: number }[]>`
         WITH ordered AS (
@@ -124,6 +127,7 @@ export async function GET(request: NextRequest) {
           FROM "TrafficSnapshot"
           WHERE "tenantId" = ${tenantId} AND "routerName" = ${routerName}
             AND "takenAt" >= ${start12mo}
+            AND (${wanInterface}::text IS NULL OR "interfaceName" = ${wanInterface})
         ), deltas AS (
           SELECT "takenAt",
             GREATEST("txBytes" - prev_tx, 0) + GREATEST("rxBytes" - prev_rx, 0) AS bytes_delta
@@ -140,7 +144,7 @@ export async function GET(request: NextRequest) {
   // Prisma DateTime → TIMESTAMP(3) WITHOUT tz (stored as UTC). Convert dgn
   // double AT TIME ZONE: pertama declare 'UTC' (jadi timestamptz), kedua shift ke WITA.
   const bandwidthHourly = routerName
-    ? await prisma.$queryRaw<{ hour: number; mb: number }[]>`
+    ? await prisma.$queryRaw<{ hour: number; gb: number }[]>`
         WITH ordered AS (
           SELECT "interfaceName", "takenAt", "txBytes", "rxBytes",
             LAG("txBytes") OVER (PARTITION BY "interfaceName" ORDER BY "takenAt") AS prev_tx,
@@ -148,22 +152,23 @@ export async function GET(request: NextRequest) {
           FROM "TrafficSnapshot"
           WHERE "tenantId" = ${tenantId} AND "routerName" = ${routerName}
             AND "takenAt" >= ${startToday}
+            AND (${wanInterface}::text IS NULL OR "interfaceName" = ${wanInterface})
         ), deltas AS (
           SELECT "takenAt",
             GREATEST("txBytes" - prev_tx, 0) + GREATEST("rxBytes" - prev_rx, 0) AS bytes_delta
           FROM ordered WHERE prev_tx IS NOT NULL
         )
         SELECT EXTRACT(HOUR FROM ("takenAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Makassar'))::int AS hour,
-               ROUND(SUM(bytes_delta)::numeric / 1024 / 1024, 1)::float AS mb
+               ROUND(SUM(bytes_delta)::numeric / 1024 / 1024 / 1024, 2)::float AS gb
         FROM deltas GROUP BY hour ORDER BY hour
       `
     : []
 
-  const bwToday = bandwidthHourly.reduce((s, x) => s + (x.mb ?? 0), 0)
-  const bwTodayGB = +(bwToday / 1024).toFixed(2)
+  const bwToday = bandwidthHourly.reduce((s, x) => s + (x.gb ?? 0), 0)
+  const bwTodayGB = +bwToday.toFixed(2)
   const peakHour = bandwidthHourly.reduce(
-    (best, x) => (x.mb > (best?.mb ?? -1) ? x : best),
-    null as null | { hour: number; mb: number },
+    (best, x) => (x.gb > (best?.gb ?? -1) ? x : best),
+    null as null | { hour: number; gb: number },
   )
 
   return Response.json({
@@ -173,7 +178,7 @@ export async function GET(request: NextRequest) {
       revenueDelta: delta(today.revenue, yesterday.revenue),
       vouchersDelta: delta(today.count, yesterday.count),
       bandwidthTodayGB: bwTodayGB,
-      peakHour: peakHour ? { hour: peakHour.hour, mb: peakHour.mb } : null,
+      peakHour: peakHour ? { hour: peakHour.hour, gb: peakHour.gb } : null,
     },
     monthly,
     bandwidthMonthly,

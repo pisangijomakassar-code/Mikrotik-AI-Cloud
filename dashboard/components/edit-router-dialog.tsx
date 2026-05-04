@@ -23,6 +23,9 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
   const [label, setLabel] = useState(router.label ?? "")
   const [isDefault, setIsDefault] = useState(router.isDefault)
 
+  // WAN interface untuk kalkulasi traffic
+  const [wanInterface, setWanInterface] = useState(router.wanInterface ?? "")
+
   // MikroTik DNS settings
   const [dnsHotspot, setDnsHotspot] = useState(router.dnsHotspot ?? "")
   const [hotspotName, setHotspotName] = useState(router.hotspotName ?? "")
@@ -61,6 +64,7 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
     setPassword("")
     setLabel(router.label ?? "")
     setIsDefault(router.isDefault)
+    setWanInterface(router.wanInterface ?? "")
     setDnsHotspot(router.dnsHotspot ?? "")
     setHotspotName(router.hotspotName ?? "")
     setHotspotLogoUrl(router.hotspotLogoUrl ?? "")
@@ -119,6 +123,7 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
       username: username.trim(),
       label: label.trim() || "",
       isDefault,
+      wanInterface: wanInterface.trim(),
       dnsHotspot: dnsHotspot.trim(),
       hotspotName: hotspotName.trim(),
       hotspotLogoUrl: hotspotLogoUrl.trim(),
@@ -267,6 +272,18 @@ export function EditRouterDialog({ router, open, onOpenChange }: EditRouterDialo
             {/* ── Hotspot Branding (untuk cetak voucher & QR login) ── */}
             <div className="pt-4 border-t border-border">
               <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-3">Hotspot Branding</h4>
+              <div className="space-y-2 mb-4">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">
+                  WAN Interface <span className="text-muted-foreground/40 normal-case">(untuk kalkulasi traffic, contoh: ether1-INTERNET)</span>
+                </label>
+                <Input
+                  className="w-full bg-muted border-none rounded-lg py-3 px-4 text-sm focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/50 transition-all text-foreground outline-none"
+                  placeholder="e.g. ether1-INTERNET"
+                  type="text"
+                  value={wanInterface}
+                  onChange={(e) => setWanInterface(e.target.value)}
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 ml-1">

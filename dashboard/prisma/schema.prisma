@@ -143,6 +143,9 @@ model Router {
   connectionMethod ConnectionMethod @default(DIRECT)
   tunnel           Tunnel?
 
+  // WAN interface untuk kalkulasi traffic (kosong = hitung semua, rentan double-count)
+  wanInterface    String    @default("")
+
   // MikroTik DNS settings (for hotspot landing)
   dnsHotspot      String    @default("")
 
