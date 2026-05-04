@@ -26,7 +26,7 @@ async function vpnProbe(vpnIp: string, port: number): Promise<boolean> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vpnIp, port }),
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(12_000),
     })
     if (res.ok) {
       const data = (await res.json()) as { reachable?: boolean }
