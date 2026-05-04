@@ -2518,14 +2518,16 @@ class HealthHandler(BaseHTTPRequestHandler):
             if not docker:
                 _send_json(self, {"error": "docker not found"}, 500)
                 return
-            priv = subprocess.run(
+            priv_result = subprocess.run(
                 [docker, "exec", "mikrotik-wireguard", "wg", "genkey"],
                 capture_output=True, check=True
-            ).stdout.decode().strip()
-            pub = subprocess.run(
-                [docker, "exec", "mikrotik-wireguard", "wg", "pubkey"],
-                input=priv.encode(), capture_output=True, check=True
-            ).stdout.decode().strip()
+            )
+            priv = priv_result.stdout.decode().strip()
+            pub_result = subprocess.run(
+                [docker, "exec", "-i", "mikrotik-wireguard", "wg", "pubkey"],
+                input=priv_result.stdout, capture_output=True, check=True
+            )
+            pub = pub_result.stdout.decode().strip()
             _send_json(self, {"privateKey": priv, "publicKey": pub})
         except Exception as e:
             _send_json(self, {"error": str(e)}, 500)
