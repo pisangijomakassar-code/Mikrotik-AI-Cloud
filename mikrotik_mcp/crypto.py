@@ -31,11 +31,19 @@ class CredentialStore:
         Falls back to returning the token as-is when it is not a valid
         Fernet ciphertext (e.g. a password stored in plain-text directly
         in the database by the Next.js dashboard before this fix).
+
+        Raises ValueError when the token looks like Fernet (gAAAAA prefix)
+        but cannot be decrypted — likely encrypted with a different key.
         """
         try:
             return self._fernet.decrypt(token.encode()).decode()
         except Exception:
-            # Not a valid Fernet token — treat as plain-text password
+            if token.startswith("gAAAAA"):
+                raise ValueError(
+                    "Token looks like Fernet ciphertext but could not be decrypted. "
+                    "It may have been encrypted with a different master key."
+                )
+            # Not a Fernet token — treat as plain-text password
             return token
 
     def is_encrypted(self, value) -> bool:
