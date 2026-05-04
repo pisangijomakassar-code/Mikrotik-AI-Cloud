@@ -1,13 +1,14 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { useActiveRouter } from "@/components/active-router-context"
 import { VoucherActivityFeed } from "@/components/voucher-activity-feed"
 import { apiClient } from "@/lib/api-client"
 import { formatRupiah } from "@/lib/formatters"
 import {
   TrendingUp, TrendingDown, Wifi, Activity, Signal, Zap, Printer, Store, BarChart3, Ticket,
-  Network, ArrowUpRight, ArrowDownRight, Clock,
+  Network, ArrowUpRight, ArrowDownRight,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -35,6 +36,14 @@ interface QuickStats {
   memory: { percent: number }
   uptime: string
   hotspot?: { activeSessions: number; totalUsers: number }
+}
+
+interface InterfaceSpeedData {
+  interfaces: string[]
+  interfaceName: string
+  currentTxMbps: number
+  currentRxMbps: number
+  points: { t: number; txMbps: number; rxMbps: number }[]
 }
 
 export default function DashboardPage() {
@@ -74,13 +83,7 @@ export default function DashboardPage() {
           delta={data?.kpi.revenueDelta}
           loading={summaryQuery.isLoading}
         />
-        <KpiCard
-          icon={<Ticket className="h-4 w-4 text-primary" />}
-          label="Voucher Terjual Hari Ini"
-          value={data ? data.kpi.vouchersToday.toLocaleString("id-ID") : "—"}
-          delta={data?.kpi.vouchersDelta}
-          loading={summaryQuery.isLoading}
-        />
+        <InterfaceSpeedCard routerName={activeRouter} />
         <KpiCard
           icon={<Signal className="h-4 w-4 text-blue-400" />}
           label="Active Session"
@@ -108,13 +111,9 @@ export default function DashboardPage() {
           loading={summaryQuery.isLoading}
           empty="Belum ada data penjualan"
         />
-        <BarChartCard
-          title="Voucher Terjual Bulanan"
-          subtitle="jumlah · 12 bulan terakhir"
-          data={data?.monthly.map((m) => ({ label: formatMonth(m.month), value: m.vouchers, sub: m.vouchers.toLocaleString("id-ID") })) ?? []}
-          color="#34d399"
+        <DualLineChartCard
+          data={data?.monthly.map((m) => ({ label: formatMonth(m.month), vouchers: m.vouchers, revenue: m.revenue })) ?? []}
           loading={summaryQuery.isLoading}
-          empty="Belum ada voucher terjual"
         />
       </div>
 
@@ -350,6 +349,176 @@ function QuickAction({ href, icon, title, subtitle }: {
       </div>
       <p className="text-[11px] text-muted-foreground/70">{subtitle}</p>
     </Link>
+  )
+}
+
+function InterfaceSpeedCard({ routerName }: { routerName: string | null }) {
+  const [selectedIface, setSelectedIface] = useState("")
+
+  const query = useQuery({
+    queryKey: ["interface-speed", routerName ?? "", selectedIface],
+    queryFn: () => {
+      const qs = new URLSearchParams()
+      if (routerName) qs.set("router", routerName)
+      if (selectedIface) qs.set("iface", selectedIface)
+      return apiClient.get<InterfaceSpeedData>(`/api/dashboard/interface-speed?${qs}`)
+    },
+    enabled: !!routerName,
+    refetchInterval: 30_000,
+  })
+
+  const d = query.data
+  const pts = d?.points ?? []
+  const ifaces = d?.interfaces ?? []
+  const effectiveIface = selectedIface || d?.interfaceName || ""
+
+  // SVG line chart — normalize Rx and Tx together to same scale
+  const W = 240, H = 52
+  const maxVal = Math.max(...pts.flatMap((p) => [p.txMbps, p.rxMbps]), 0.1)
+  const toX = (i: number) => (pts.length < 2 ? W / 2 : (i / (pts.length - 1)) * W).toFixed(1)
+  const toY = (v: number) => (H - (v / maxVal) * (H - 2) - 1).toFixed(1)
+  const rxPath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i)},${toY(p.rxMbps)}`).join(" ")
+  const txPath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i)},${toY(p.txMbps)}`).join(" ")
+
+  return (
+    <div className="card-glass rounded-xl p-4">
+      <div className="flex items-start justify-between mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Internet Speed</span>
+        <Activity className="h-4 w-4 text-blue-400" />
+      </div>
+
+      {/* Interface selector */}
+      {!routerName ? (
+        <p className="text-xs text-muted-foreground/60 py-2">Pilih router dulu</p>
+      ) : ifaces.length > 0 ? (
+        <select
+          value={effectiveIface}
+          onChange={(e) => setSelectedIface(e.target.value)}
+          className="text-[10px] bg-muted/40 border border-border/40 rounded px-1.5 py-0.5 text-muted-foreground w-full font-mono mb-2 focus:outline-none"
+        >
+          {ifaces.map((iface) => (
+            <option key={iface} value={iface}>{iface}</option>
+          ))}
+        </select>
+      ) : (
+        <div className="text-[10px] text-muted-foreground/60 font-mono mb-2">
+          {query.isLoading ? "Memuat..." : "Belum ada snapshot"}
+        </div>
+      )}
+
+      {/* Current speed */}
+      {query.isLoading ? (
+        <div className="h-4 w-28 bg-muted rounded animate-pulse mb-2" />
+      ) : (
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xs">
+            <span className="text-red-400 font-bold">↓</span>{" "}
+            <span className="font-bold text-foreground">{(d?.currentRxMbps ?? 0).toFixed(1)}</span>
+            <span className="text-muted-foreground/60 text-[10px]"> Mbps</span>
+          </span>
+          <span className="text-xs">
+            <span className="text-blue-400 font-bold">↑</span>{" "}
+            <span className="font-bold text-foreground">{(d?.currentTxMbps ?? 0).toFixed(1)}</span>
+            <span className="text-muted-foreground/60 text-[10px]"> Mbps</span>
+          </span>
+        </div>
+      )}
+
+      {/* SVG line chart */}
+      {pts.length > 1 && (
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 52 }} preserveAspectRatio="none">
+          <path d={rxPath} fill="none" stroke="#f87171" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d={txPath} fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      )}
+
+      {/* Legend */}
+      {pts.length > 1 && (
+        <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-0.5 rounded bg-red-400" />
+            <span className="text-[10px] text-muted-foreground">Download</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-0.5 rounded bg-blue-400" />
+            <span className="text-[10px] text-muted-foreground">Upload</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DualLineChartCard({ data, loading }: {
+  data: { label: string; vouchers: number; revenue: number }[]
+  loading?: boolean
+}) {
+  const W = 240, H = 80
+  const n = data.length
+  const maxV = Math.max(...data.map((d) => d.vouchers), 1)
+  const maxR = Math.max(...data.map((d) => d.revenue), 1)
+  const toX = (i: number) => (n < 2 ? W / 2 : (i / (n - 1)) * W).toFixed(1)
+  const vPath = data.map((d, i) => `${i === 0 ? "M" : "L"}${toX(i)},${(H - (d.vouchers / maxV) * (H - 2) - 1).toFixed(1)}`).join(" ")
+  const rPath = data.map((d, i) => `${i === 0 ? "M" : "L"}${toX(i)},${(H - (d.revenue / maxR) * (H - 2) - 1).toFixed(1)}`).join(" ")
+
+  return (
+    <div className="card-glass rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-bold text-foreground">Voucher & Pendapatan Bulanan</h3>
+          <p className="text-[11px] text-muted-foreground/70">12 bulan terakhir · skala independen</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-24 bg-muted rounded animate-pulse" />
+      ) : data.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-8 text-center">Belum ada data penjualan</p>
+      ) : (
+        <div>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-24" preserveAspectRatio="none">
+            {/* Revenue line */}
+            <path d={rPath} fill="none" stroke="#fb923c" strokeWidth="1.5" strokeLinejoin="round" />
+            {/* Voucher count line */}
+            <path d={vPath} fill="none" stroke="#34d399" strokeWidth="1.5" strokeLinejoin="round" />
+            {/* Dots for each data point */}
+            {data.map((d, i) => (
+              <g key={i}>
+                <circle
+                  cx={toX(i)} cy={(H - (d.revenue / maxR) * (H - 2) - 1).toFixed(1)}
+                  r="2.5" fill="#fb923c"
+                >
+                  <title>{`${d.label}: ${formatRupiah(d.revenue)}`}</title>
+                </circle>
+                <circle
+                  cx={toX(i)} cy={(H - (d.vouchers / maxV) * (H - 2) - 1).toFixed(1)}
+                  r="2.5" fill="#34d399"
+                >
+                  <title>{`${d.label}: ${d.vouchers} voucher`}</title>
+                </circle>
+              </g>
+            ))}
+          </svg>
+          <div className="flex gap-1 mt-1">
+            {data.map((d, i) => (
+              <div key={i} className="flex-1 text-center text-[10px] text-muted-foreground font-mono truncate">
+                {d.label}
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5 rounded bg-tertiary" />
+              <span className="text-[10px] text-muted-foreground">Voucher</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5 rounded bg-orange-400" />
+              <span className="text-[10px] text-muted-foreground">Pendapatan</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
