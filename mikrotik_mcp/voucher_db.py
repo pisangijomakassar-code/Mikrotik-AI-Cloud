@@ -108,6 +108,17 @@ class VoucherDB:
             total_cost = count * price_per_unit
             batch_timestamp = created_at or _now()
 
+            # Replace existing record for same (tenant, router, profile, month) on re-import.
+            if source.startswith("mikhmon_import:"):
+                cur.execute(
+                    """
+                    DELETE FROM "VoucherBatch"
+                    WHERE "tenantId" = %s AND "routerName" = %s
+                      AND "profile" = %s AND "source" = %s
+                    """,
+                    (tenant_id, router_name, profile, source),
+                )
+
             cur.execute(
                 """
                 INSERT INTO "VoucherBatch"
