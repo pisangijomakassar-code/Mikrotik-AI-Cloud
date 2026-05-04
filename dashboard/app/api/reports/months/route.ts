@@ -16,7 +16,7 @@ export async function GET() {
   // Group by month from source field (format: mikhmon_import:YYYY-MM)
   const monthMap: Record<string, { vouchers: number; revenue: number }> = {}
   for (const b of batches) {
-    const month = b.source.split(":")[1] ?? "unknown"
+    const month = (b.source.split(":")[1] ?? "unknown").substring(0, 7)
     if (!monthMap[month]) monthMap[month] = { vouchers: 0, revenue: 0 }
     monthMap[month].vouchers += b.count
     monthMap[month].revenue += b.totalCost

@@ -2144,19 +2144,20 @@ class HealthHandler(BaseHTTPRequestHandler):
             new_scripts = [s for s in scripts if s.get("username") not in already_imported]
             skipped_dedup = len(scripts) - len(new_scripts)
 
-            # Group by (month_from_date, profile) for batch saving
+            # Group by (date, profile) for per-day accuracy.
+            # Each day+profile gets its own batch so createdAt reflects actual sale date.
+            # source = "mikhmon_import:YYYY-MM-DD" preserves full date.
             groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
             for s in new_scripts:
                 date_str = s.get("date", "unknown")
-                _, month = _parse_mikhmon_date(date_str)
-                if not month:
-                    month = "unknown"
+                parsed_dt, _ = _parse_mikhmon_date(date_str)
+                date_key = parsed_dt.strftime("%Y-%m-%d") if parsed_dt else date_str or "unknown"
                 profile = s.get("profile", "")
-                groups[(month, profile)].append(s)
+                groups[(date_key, profile)].append(s)
 
             imported = 0
             skipped = skipped_dedup
-            for (month, profile), group_scripts in groups.items():
+            for (date_key, profile), group_scripts in groups.items():
                 vouchers = []
                 for s in group_scripts:
                     try:
@@ -2181,19 +2182,17 @@ class HealthHandler(BaseHTTPRequestHandler):
                     try:
                         price_per = vouchers[0]["price"] if vouchers else 0
 
-                        # Parse batch date: use earliest date in the group
-                        batch_timestamp = None
+                        # batch_timestamp = actual sale date for this group
                         parsed_dates = [_parse_mikhmon_date(g.get("date", ""))[0] for g in group_scripts]
                         parsed_dates = [d for d in parsed_dates if d is not None]
-                        if parsed_dates:
-                            batch_timestamp = min(parsed_dates)
+                        batch_timestamp = min(parsed_dates) if parsed_dates else None
 
                         vdb.save_batch(
                             user_id=user_id,
                             router_name=router_display,
                             profile=profile,
                             vouchers=vouchers,
-                            source=f"mikhmon_import:{month}",
+                            source=f"mikhmon_import:{date_key}",
                             price_per_unit=price_per,
                             created_at=batch_timestamp,
                         )
