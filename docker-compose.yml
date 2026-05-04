@@ -45,6 +45,7 @@ services:
       AUTH_TRUST_HOST: "true"
       WG_SERVER_PUBKEY: ${WG_SERVER_PUBKEY:-}
       OVPN_SERVER_HOST: ${VPS_HOST:-localhost}
+      OVPN_HOST: ${OVPN_HOST:-vpn.mikrotikai.my.id}
       AGENT_HEALTH_URL: http://mikrotik-agent:8080
       AGENT_TOKEN: ${AGENT_TOKEN:-}
       WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL:-}

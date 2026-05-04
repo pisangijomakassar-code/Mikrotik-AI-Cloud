@@ -87,6 +87,7 @@ export async function GET(
 
     if (tunnel.method === "OVPN") {
       const vpsHost = process.env.VPS_HOST || ""
+      const ovpnHost = process.env.OVPN_HOST || vpsHost
       const plainPassword = tunnel.vpnPassword
         ? await decryptSecret(tunnel.vpnPassword)
         : null
@@ -94,7 +95,7 @@ export async function GET(
         ? generateOvpnScript({
             vpsHost,
             vpnIp: tunnel.vpnAssignedIp ?? "",
-            ovpnHost: vpsHost,
+            ovpnHost: ovpnHost,
             username: tunnel.vpnUsername,
             password: plainPassword,
             winboxPort: tunnel.winboxPort ?? 0,
