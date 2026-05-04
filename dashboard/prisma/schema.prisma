@@ -122,6 +122,10 @@ model User {
   tokenUsages  TokenUsage[]
   resellerBotToken String?
 
+  // Admin VPN (WireGuard) — untuk akses Winbox router via tunnel
+  wgPubKey  String @default("")
+  wgVpnIp   String @default("")
+
   @@index([telegramId])
   @@index([status])
   @@index([tenantId])

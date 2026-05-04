@@ -710,6 +710,11 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_vpn_user()
             return
 
+        if path == "/generate-wg-keypair":
+            if not self._require_agent_token(): return
+            self._handle_generate_wg_keypair()
+            return
+
         if path == "/wg-peer":
             if not self._require_agent_token(): return
             self._handle_wg_peer(None)
@@ -2504,6 +2509,26 @@ class HealthHandler(BaseHTTPRequestHandler):
 
         else:
             _send_json(self, {"error": f"unknown action: {action!r}"}, 400)
+
+    def _handle_generate_wg_keypair(self):
+        """Generate WireGuard keypair inside the wireguard container."""
+        try:
+            import subprocess
+            docker = shutil.which("docker")
+            if not docker:
+                _send_json(self, {"error": "docker not found"}, 500)
+                return
+            priv = subprocess.run(
+                [docker, "exec", "mikrotik-wireguard", "wg", "genkey"],
+                capture_output=True, check=True
+            ).stdout.decode().strip()
+            pub = subprocess.run(
+                [docker, "exec", "mikrotik-wireguard", "wg", "pubkey"],
+                input=priv.encode(), capture_output=True, check=True
+            ).stdout.decode().strip()
+            _send_json(self, {"privateKey": priv, "publicKey": pub})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
 
     def _handle_wg_peer(self, user_id):
         """Manage WireGuard peers: add or delete.

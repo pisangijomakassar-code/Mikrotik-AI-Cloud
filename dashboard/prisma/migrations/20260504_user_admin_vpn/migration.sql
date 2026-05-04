@@ -1,0 +1,3 @@
+﻿-- Add Admin VPN (WireGuard) columns to User table
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "wgPubKey" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "wgVpnIp"  TEXT NOT NULL DEFAULT '';

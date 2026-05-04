@@ -108,6 +108,7 @@ export const navGroups: NavGroup[] = [
       { label: "Dashboard Users", href: "/settings/users", icon: Users },
       { label: "App Settings", href: "/settings", icon: Settings },
       { label: "LLM Provider", href: "/settings/llm", icon: Bot },
+      { label: "Admin VPN", href: "/settings/vpn", icon: Wifi },
       { label: "Billing & Plan", href: "/settings/billing", icon: CreditCard },
     ],
   },
