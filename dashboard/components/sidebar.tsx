@@ -10,6 +10,7 @@ import { navGroups as defaultNavGroups, type NavGroup } from "@/components/sideb
 import { CollapsibleGroup } from "@/components/sidebar/collapsible-group"
 import { PlanCard } from "@/components/sidebar/plan-card"
 import { ActiveRouterCard } from "@/components/sidebar/active-router-card"
+import { useActiveRouter } from "@/components/active-router-context"
 
 interface SidebarProps {
   /** Navigation config — defaults to admin tenant navGroups. Pass `navGroupsPlatform` for SUPER_ADMIN. */
@@ -53,10 +54,16 @@ export function Sidebar({
   const pathname = usePathname()
   const { user, isAdmin } = useAuth()
   const { isOpen, close } = useSidebar()
+  const { routers, isLoading: routersLoading } = useActiveRouter()
+  const hasRouter = !routersLoading && routers.length > 0
 
   const visibleGroups = useMemo(
-    () => config.filter((g) => !g.adminOnly || isAdmin),
-    [config, isAdmin]
+    () => config.filter((g) => {
+      if (g.adminOnly && !isAdmin) return false
+      if (g.requiresRouter && !hasRouter) return false
+      return true
+    }),
+    [config, isAdmin, hasRouter]
   )
 
   const [openState, setOpenState] = useState<Record<string, boolean>>(() => {

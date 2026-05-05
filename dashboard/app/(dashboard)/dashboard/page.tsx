@@ -8,7 +8,7 @@ import { apiClient } from "@/lib/api-client"
 import { formatRupiah } from "@/lib/formatters"
 import {
   TrendingUp, TrendingDown, Wifi, Activity, Signal, Zap, Printer, Store, BarChart3, Ticket,
-  Network, ArrowUpRight, ArrowDownRight,
+  Network, ArrowUpRight, ArrowDownRight, Globe, CheckCircle2,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -47,7 +47,7 @@ interface InterfaceSpeedData {
 }
 
 export default function DashboardPage() {
-  const { activeRouter } = useActiveRouter()
+  const { activeRouter, routers, isLoading: routersLoading } = useActiveRouter()
 
   const summaryQuery = useQuery({
     queryKey: ["dashboard-summary", activeRouter ?? ""],
@@ -71,6 +71,10 @@ export default function DashboardPage() {
   const data = summaryQuery.data
   const stats = quickStatsQuery.data
   const isOnline = !quickStatsQuery.isError && stats != null
+
+  if (!routersLoading && routers.length === 0) {
+    return <EmptyStateHero />
+  }
 
   return (
     <div className="space-y-6">
@@ -206,6 +210,88 @@ export default function DashboardPage() {
 }
 
 // ── components ──
+
+function EmptyStateHero() {
+  return (
+    <div className="space-y-4">
+      {/* Hero */}
+      <div className="card-glass rounded-2xl p-12 text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none" />
+        <div className="relative">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/20 mb-6">
+            <Globe className="h-10 w-10 text-cyan-400" />
+          </div>
+          <h2 className="text-2xl font-headline font-bold text-foreground mb-2">
+            Selamat datang di MikroTik AI!
+          </h2>
+          <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto">
+            Hubungkan router MikroTik Anda untuk mulai memantau jaringan, generate voucher, dan mengelola reseller secara otomatis.
+          </p>
+          {/* Stepper */}
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {[
+              { num: "✓", label: "Buat akun", done: true },
+              { num: "2", label: "Tambah router", done: false },
+              { num: "3", label: "Rock n Roll!!", done: false },
+            ].map((step) => (
+              <div
+                key={step.label}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border",
+                  step.done
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                    : "bg-muted/30 border-border/50 text-muted-foreground"
+                )}
+              >
+                <span className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
+                  step.done ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                )}>
+                  {step.done ? <CheckCircle2 className="h-3 w-3" /> : step.num}
+                </span>
+                {step.label}
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/routers"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            + Tambah Router Sekarang
+          </Link>
+        </div>
+      </div>
+      {/* Info cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          {
+            icon: "📡",
+            title: "Hubungkan via API",
+            desc: "Masukkan IP, port, username & password RouterOS. Mendukung koneksi langsung atau via tunnel.",
+          },
+          {
+            icon: "🤖",
+            title: "AI Siap Membantu",
+            desc: "Setelah router terhubung, tanyakan apa saja ke AI Assistant — config, troubleshoot, laporan.",
+          },
+          {
+            icon: "🎫",
+            title: "Voucher Otomatis",
+            desc: "Generate ratusan voucher hotspot dalam satu klik. Print, bagikan ke reseller, pantau penjualan.",
+          },
+        ].map((card) => (
+          <div key={card.title} className="card-glass rounded-xl p-5 flex gap-4">
+            <span className="text-2xl mt-0.5">{card.icon}</span>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-1">{card.title}</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function KpiCard({ icon, label, value, delta, subtitle, loading }: {
   icon: React.ReactNode

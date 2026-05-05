@@ -38,6 +38,8 @@ export interface NavGroup {
   items: NavItem[]
   adminOnly?: boolean
   defaultOpen?: boolean
+  /** Sembunyikan group ini kalau user belum punya router sama sekali. */
+  requiresRouter?: boolean
 }
 
 // Mikhmon-style English labels for menu (UX in pages tetap Bahasa Indonesia).
@@ -54,6 +56,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Hotspot",
+    requiresRouter: true,
     items: [
       { label: "Users", href: "/hotspot/users", icon: Wifi },
       { label: "Active Sessions", href: "/hotspot/active", icon: Signal },
@@ -62,6 +65,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "PPP",
+    requiresRouter: true,
     items: [
       { label: "PPP Secrets", href: "/ppp/secrets", icon: Network },
       { label: "PPP Active", href: "/ppp/active", icon: Activity },
@@ -70,6 +74,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Voucher",
+    requiresRouter: true,
     items: [
       { label: "Generate", href: "/vouchers/generate", icon: Zap },
       { label: "Voucher List", href: "/vouchers", icon: Receipt },
@@ -78,6 +83,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Reseller",
+    requiresRouter: true,
     items: [
       { label: "Reseller List", href: "/resellers", icon: Store },
       { label: "Transactions", href: "/resellers/transactions", icon: History },
@@ -97,6 +103,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Reports",
+    requiresRouter: true,
     items: [
       { label: "Reports", href: "/reports", icon: BarChart3 },
     ],
