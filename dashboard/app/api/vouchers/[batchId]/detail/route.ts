@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+﻿import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { getTenantDb } from "@/lib/db-tenant"
@@ -33,16 +33,15 @@ export async function GET(
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { telegramId: true },
+    select: { telegramId: true, id: true },
   })
-  if (!user?.telegramId) return Response.json({ error: "No router configured" }, { status: 400 })
 
   // Live snapshot of /ip hotspot user from agent (so we can derive status).
   const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
   const router = batch.routerName ? `?router=${encodeURIComponent(batch.routerName)}` : ""
   let userMap: Map<string, MikrotikUser> = new Map()
   try {
-    const res = await fetch(`${agentUrl}/hotspot-users/${user.telegramId}${router}`, {
+    const res = await fetch(`${agentUrl}/hotspot-users/${user.telegramId ?? user.id}${router}`, {
       signal: AbortSignal.timeout(8000),
     })
     if (res.ok) {

@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+﻿import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
@@ -13,14 +13,13 @@ export async function POST(request: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { telegramId: true },
+    select: { telegramId: true, id: true },
   })
-  if (!user?.telegramId) return Response.json({ error: "No router configured" }, { status: 400 })
 
   const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
   try {
     const body = await request.json().catch(() => ({}))
-    const res = await fetch(`${agentUrl}/mikhmon-cleanup/${user.telegramId}`, {
+    const res = await fetch(`${agentUrl}/mikhmon-cleanup/${user.telegramId ?? user.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

@@ -1,11 +1,11 @@
-import { type NextRequest } from "next/server"
+﻿import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 
 type Ctx = { params: Promise<{ name: string }> }
 
 async function getUser(userId: string) {
-  return prisma.user.findUnique({ where: { id: userId }, select: { telegramId: true } })
+  return prisma.user.findUnique({ where: { id: userId }, select: { telegramId: true, id: true } })
 }
 
 export async function GET(request: NextRequest, { params }: Ctx) {
@@ -13,7 +13,6 @@ export async function GET(request: NextRequest, { params }: Ctx) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const user = await getUser(session.user.id)
-  if (!user?.telegramId) return Response.json({ error: "No router" }, { status: 400 })
 
   const { name } = await params
   const router = request.nextUrl.searchParams.get("router")
@@ -22,7 +21,7 @@ export async function GET(request: NextRequest, { params }: Ctx) {
 
   try {
     const res = await fetch(
-      `${agentUrl}/hotspot-profiles/${user.telegramId}/${encodeURIComponent(name)}${qs}`,
+      `${agentUrl}/hotspot-profiles/${user.telegramId ?? user.id}/${encodeURIComponent(name)}${qs}`,
       { signal: AbortSignal.timeout(8000) }
     )
     const data = await res.json()
@@ -37,7 +36,6 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const user = await getUser(session.user.id)
-  if (!user?.telegramId) return Response.json({ error: "No router" }, { status: 400 })
 
   const { name } = await params
   const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
@@ -45,7 +43,7 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
   try {
     const body = await request.json()
     const res = await fetch(
-      `${agentUrl}/hotspot-profile/${user.telegramId}/${encodeURIComponent(name)}`,
+      `${agentUrl}/hotspot-profile/${user.telegramId ?? user.id}/${encodeURIComponent(name)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,14 +63,13 @@ export async function DELETE(_request: NextRequest, { params }: Ctx) {
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const user = await getUser(session.user.id)
-  if (!user?.telegramId) return Response.json({ error: "No router" }, { status: 400 })
 
   const { name } = await params
   const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
 
   try {
     const res = await fetch(
-      `${agentUrl}/hotspot-profile/${user.telegramId}/${encodeURIComponent(name)}`,
+      `${agentUrl}/hotspot-profile/${user.telegramId ?? user.id}/${encodeURIComponent(name)}`,
       { method: "DELETE", signal: AbortSignal.timeout(8000) }
     )
     const data = await res.json()

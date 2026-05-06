@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+﻿import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { listVoucherBatches } from "@/lib/services/reseller.service"
@@ -56,15 +56,12 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { telegramId: true },
+      select: { telegramId: true, id: true },
     })
 
-    if (!user?.telegramId) {
-      return Response.json({ error: "User has no Telegram ID configured" }, { status: 400 })
-    }
 
     const agentUrl = process.env.AGENT_HEALTH_URL || "http://mikrotik-agent:8080"
-    const agentRes = await fetch(`${agentUrl}/generate-vouchers/${user.telegramId}`, {
+    const agentRes = await fetch(`${agentUrl}/generate-vouchers/${user.telegramId ?? user.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

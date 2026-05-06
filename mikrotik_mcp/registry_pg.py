@@ -84,12 +84,20 @@ class RouterRegistryPG:
         row = cur.fetchone()
         return row[0] if row else None
 
-    def _get_tenant_id(self, cur, telegram_id: str) -> str | None:
-        """Look up User.tenantId by telegramId. Returns None if user absent
-        or user is SUPER_ADMIN (tenantId NULL)."""
+    def _get_tenant_id(self, cur, identifier: str) -> str | None:
+        """Look up User.tenantId by telegramId first, then by internal id.
+        Returns None if user absent or user is SUPER_ADMIN (tenantId NULL)."""
         cur.execute(
             'SELECT "tenantId" FROM "User" WHERE "telegramId" = %s',
-            (str(telegram_id),),
+            (str(identifier),),
+        )
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        # Fallback: lookup by internal user id (for web/email users without telegramId)
+        cur.execute(
+            'SELECT "tenantId" FROM "User" WHERE id = %s',
+            (str(identifier),),
         )
         row = cur.fetchone()
         return row[0] if row else None

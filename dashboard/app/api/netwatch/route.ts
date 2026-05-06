@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server"
+﻿import { type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { agentFetch } from "@/lib/agent-fetch"
@@ -13,17 +13,14 @@ export async function GET(request: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { telegramId: true },
+    select: { telegramId: true, id: true },
   })
-  if (!user?.telegramId) {
-    return Response.json({ items: [] })
-  }
 
   const router = request.nextUrl.searchParams.get("router")
   const qs = router ? `?router=${encodeURIComponent(router)}` : ""
 
   try {
-    const res = await agentFetch(`/netwatch/${user.telegramId}${qs}`, {
+    const res = await agentFetch(`/netwatch/${user.telegramId ?? user.id}${qs}`, {
       signal: AbortSignal.timeout(10000),
     })
     const data = await res.json()
