@@ -78,6 +78,7 @@ def _resolve_host(host: str) -> str:
 def connect_router(host: str, port: int, username: str, password: str, retries: int = 2):
     """Context manager for a RouterOS API connection with retry."""
     last_err = None
+    api = None
     for attempt in range(retries + 1):
         try:
             resolved = _resolve_host(host) if (host in _resolved_ips or attempt == 0) else host
@@ -88,18 +89,19 @@ def connect_router(host: str, port: int, username: str, password: str, retries: 
                 password=password,
                 timeout=15,
             )
-            try:
-                yield api
-            finally:
-                api.close()
-            return
+            break
         except (socket.gaierror, OSError, librouteros.exceptions.ConnectionClosed) as e:
             last_err = e
             _resolved_ips.pop(host, None)  # force re-resolve
             if attempt < retries:
                 time.sleep(1)
                 logger.warning("Retry %d/%d for %s:%d after: %s", attempt + 1, retries, host, port, e)
-    raise last_err
+    if api is None:
+        raise last_err
+    try:
+        yield api
+    finally:
+        api.close()
 
 
 def _query_path(path: str, host: str, port: int, username: str, password: str, where: dict | None = None) -> list[dict]:

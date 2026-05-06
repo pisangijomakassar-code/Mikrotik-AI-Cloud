@@ -22,13 +22,11 @@ import {
 import { useAuth } from "@/hooks/use-auth"
 import {
   useNanobotSettings,
-  useAgentUsers,
   useSaveSettingsField,
   useSyncAgent,
   useAgentStatus,
   useToggleAgent,
 } from "@/hooks/use-settings"
-import { AgentList } from "@/components/settings/agent-list"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -44,7 +42,6 @@ export default function SettingsPage() {
   const router = useRouter()
 
   const { data: settings, isLoading: settingsLoading } = useNanobotSettings()
-  const { data: agents = [], isLoading: agentsLoading } = useAgentUsers()
   const saveField = useSaveSettingsField()
   const syncAgent = useSyncAgent()
   const { data: agentStatus } = useAgentStatus()
@@ -182,13 +179,6 @@ export default function SettingsPage() {
           <ExternalLink className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors shrink-0" />
         </Link>
       </section>
-
-      {/* Agent List */}
-      <AgentList
-        agents={agents}
-        isLoading={agentsLoading}
-        telegramAllowFromCount={settings?.telegram.allowFrom.length ?? 0}
-      />
 
       {/* SOUL.md -- Agent Personality */}
       <section className="space-y-4">
