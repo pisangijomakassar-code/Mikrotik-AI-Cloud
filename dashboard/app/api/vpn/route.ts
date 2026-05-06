@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { agentFetch } from "@/lib/agent-fetch"
 
 const WG_SERVER_PUBKEY = process.env.WG_SERVER_PUBKEY || ""
-const VPS_HOST = process.env.VPS_HOST || ""
+const WG_ENDPOINT = process.env.WG_ENDPOINT || process.env.VPS_HOST || ""
 const WG_PORT = 51820
 
 // Assign IP di subnet 10.8.0.x (10.8.0.1 = server, .2–.254 = admin PCs)
@@ -108,7 +108,7 @@ ${routerComments}
 [Peer]
 # MikroTik AI VPS
 PublicKey = ${WG_SERVER_PUBKEY}
-Endpoint = ${VPS_HOST}:${WG_PORT}
+Endpoint = ${WG_ENDPOINT}:${WG_PORT}
 AllowedIPs = 10.8.0.0/16
 PersistentKeepalive = 25
 `
