@@ -4,10 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import {
-  Brain,
   SlidersHorizontal,
-  Eye,
-  EyeOff,
   Download,
   Upload,
   Bot,
@@ -19,6 +16,8 @@ import {
   Heart,
   Power,
   PowerOff,
+  ExternalLink,
+  Cpu,
 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -30,13 +29,12 @@ import {
   useToggleAgent,
 } from "@/hooks/use-settings"
 import { AgentList } from "@/components/settings/agent-list"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import Link from "next/link"
 
 interface SettingsFormValues {
-  model: string
   soul: string
   heartbeat: string
 }
@@ -44,7 +42,6 @@ interface SettingsFormValues {
 export default function SettingsPage() {
   const { isAdmin, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [showApiKey, setShowApiKey] = useState(false)
 
   const { data: settings, isLoading: settingsLoading } = useNanobotSettings()
   const { data: agents = [], isLoading: agentsLoading } = useAgentUsers()
@@ -53,15 +50,14 @@ export default function SettingsPage() {
   const { data: agentStatus } = useAgentStatus()
   const toggleAgent = useToggleAgent()
 
-  const { register, handleSubmit, reset, getValues } = useForm<SettingsFormValues>({
-    defaultValues: { model: "", soul: "", heartbeat: "" },
+  const { register, reset, getValues } = useForm<SettingsFormValues>({
+    defaultValues: { soul: "", heartbeat: "" },
   })
 
   // Reset form values when settings load
   useEffect(() => {
     if (settings) {
       reset({
-        model: settings.agent.model,
         soul: settings.soul ?? "",
         heartbeat: settings.heartbeat ?? "",
       })
@@ -157,73 +153,34 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* LLM Configuration */}
+      {/* LLM Provider \u2014 link ke /settings/llm */}
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#4cd7f6]/10 rounded-lg">
-            <Brain className="h-5 w-5 text-primary" />
+            <Cpu className="h-5 w-5 text-primary" />
           </div>
-          <h3 className="text-lg font-semibold font-headline text-foreground">LLM Configuration</h3>
+          <h3 className="text-lg font-semibold font-headline text-foreground">LLM Provider</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-surface-low p-6 rounded-xl border border-border/20 space-y-4">
+        <Link
+          href="/settings/llm"
+          className="flex items-center justify-between p-5 bg-surface-low rounded-xl border border-border/20 hover:border-[#4cd7f6]/40 hover:bg-muted transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <Bot className="h-5 w-5 text-primary" />
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Model</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  className="flex-1 bg-muted border-none rounded-lg text-sm px-4 py-2.5 font-mono-tech text-foreground focus:ring-1 focus:ring-[#4cd7f6] outline-none"
-                  placeholder="openai/gpt-5.4-nano"
-                  {...register("model")}
-                />
-                <button
-                  onClick={() => onSaveField("model")}
-                  disabled={saveField.isPending}
-                  className="p-2.5 bg-muted rounded-lg text-slate-400 hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  {saveField.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Provider</label>
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-muted rounded-lg">
-                <Bot className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-foreground capitalize">{settings?.agent.provider || "\u2014"}</span>
-              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {settings?.agent.provider ? (
+                  <span className="capitalize">{settings.agent.provider}</span>
+                ) : "Belum dikonfigurasi"}
+                {settings?.agent.model && (
+                  <span className="ml-2 text-[10px] font-mono text-slate-500 font-normal">{settings.agent.model}</span>
+                )}
+              </p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Atur API key, provider, dan model AI di halaman LLM Provider</p>
             </div>
           </div>
-          <div className="bg-surface-low p-6 rounded-xl border border-border/20 space-y-4">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">API Key</label>
-              <div className="relative">
-                <Input
-                  className="w-full bg-muted border-none rounded-lg text-sm px-4 py-2.5 font-mono-tech focus:ring-1 focus:ring-[#4cd7f6] pr-12 text-foreground outline-none"
-                  type={showApiKey ? "text" : "password"}
-                  defaultValue="sk-or-v1-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
-                  readOnly
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-foreground transition-colors"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-2">Managed via .env file on server. Not editable from dashboard.</p>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">MCP Servers</label>
-              <div className="flex flex-wrap gap-2">
-                {settings?.mcpServers.map((s) => (
-                  <span key={s} className="px-2.5 py-1 bg-muted rounded-lg text-xs font-mono text-primary border border-border/20">
-                    {s}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+          <ExternalLink className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors shrink-0" />
+        </Link>
       </section>
 
       {/* Agent List */}
