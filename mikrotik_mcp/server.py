@@ -75,7 +75,7 @@ def _resolve_host(host: str) -> str:
 
 
 @contextmanager
-def connect_router(host: str, port: int, username: str, password: str, retries: int = 2):
+def connect_router(host: str, port: int, username: str, password: str, retries: int = 2, timeout: int = 30):
     """Context manager for a RouterOS API connection with retry."""
     last_err = None
     api = None
@@ -87,7 +87,7 @@ def connect_router(host: str, port: int, username: str, password: str, retries: 
                 port=port,
                 username=username,
                 password=password,
-                timeout=15,
+                timeout=timeout,
             )
             break
         except (socket.gaierror, OSError, librouteros.exceptions.ConnectionClosed) as e:
