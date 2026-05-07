@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { getTenantDb } from "@/lib/db-tenant"
 import { AGENT_URL } from "@/lib/agent-fetch"
+import { prisma } from "@/lib/db"
 
 interface RouterHealth {
   id: string
@@ -21,6 +22,12 @@ export async function GET() {
   if (session.user.role === "SUPER_ADMIN") return Response.json([])
 
   try {
+    const sessionUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { telegramId: true, id: true },
+    })
+    const sessionUserId = sessionUser?.telegramId ?? sessionUser?.id ?? session.user.id
+
     const db = await getTenantDb()
     const dbRouters = await db.router.findMany({
       select: { id: true, name: true, telegramOwnerId: true },
@@ -28,17 +35,14 @@ export async function GET() {
 
     if (!dbRouters.length) return Response.json([])
 
-    // Group routers by their telegramOwnerId so we make one agent call per owner.
+    // Group routers by telegramOwnerId; fall back to session user's identifier
+    // for routers added via web (no telegramOwnerId set).
     const byOwner = new Map<string, typeof dbRouters>()
-    const noOwner: typeof dbRouters = []
     for (const r of dbRouters) {
-      if (r.telegramOwnerId) {
-        const list = byOwner.get(r.telegramOwnerId) ?? []
-        list.push(r)
-        byOwner.set(r.telegramOwnerId, list)
-      } else {
-        noOwner.push(r)
-      }
+      const ownerId = r.telegramOwnerId || sessionUserId
+      const list = byOwner.get(ownerId) ?? []
+      list.push(r)
+      byOwner.set(ownerId, list)
     }
 
     const results: RouterHealth[] = []
@@ -74,9 +78,6 @@ export async function GET() {
         for (const r of routers) results.push({ id: r.id, name: r.name, status: "offline" })
       }
     }
-
-    // Routers with no telegramOwnerId configured — always offline until owner is set.
-    for (const r of noOwner) results.push({ id: r.id, name: r.name, status: "offline" })
 
     return Response.json(results)
   } catch (error) {
