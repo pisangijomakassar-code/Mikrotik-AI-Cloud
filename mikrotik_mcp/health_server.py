@@ -129,6 +129,15 @@ def _get_registry():
     return registry
 
 
+def _get_client_relay():
+    """Singleton relay buat remote client troubleshooting (in-memory, proses ini)."""
+    try:
+        from mikrotik_mcp.client_agent_relay import get_relay
+    except ModuleNotFoundError:
+        from client_agent_relay import get_relay
+    return get_relay()
+
+
 def _connect(host, port, username, password):
     from server import connect_router
     return connect_router(host, port, username, password)
@@ -605,6 +614,20 @@ class HealthHandler(BaseHTTPRequestHandler):
             self._handle_agent_status()
             return
 
+        # Remote client troubleshooting — list device client online milik user
+        if path.startswith("/client-agent/devices/"):
+            user_id = unquote(path.split("/client-agent/devices/")[1].strip("/"))
+            online_only = params.get("all", ["0"])[0] != "1"
+            self._handle_client_agent_devices(user_id, online_only)
+            return
+
+        # Remote client troubleshooting — long-poll dari agent di laptop client
+        if path.startswith("/client-agent/poll/"):
+            token = unquote(path.split("/client-agent/poll/")[1].strip("/"))
+            wait = float(params.get("wait", ["25"])[0])
+            self._handle_client_agent_poll(token, wait)
+            return
+
         self.send_response(404)
         self.end_headers()
 
@@ -805,6 +828,25 @@ class HealthHandler(BaseHTTPRequestHandler):
             return
         if path == "/agent/start":
             self._handle_agent_start()
+            return
+
+        # ── Remote client troubleshooting ──────────────────────────────
+        # Agent di laptop client daftar / refresh kehadiran.
+        if path == "/client-agent/register":
+            self._handle_client_agent_register()
+            return
+
+        # Agent di laptop client kirim hasil eksekusi perintah.
+        if path == "/client-agent/result":
+            self._handle_client_agent_result()
+            return
+
+        # MCP server (internal) antrekan perintah ke device & tunggu hasil.
+        # Dilindungi X-Agent-Token karena dipanggil dari proses lain (localhost).
+        if path == "/client-agent/command":
+            if not self._require_agent_token():
+                return
+            self._handle_client_agent_command()
             return
 
 
@@ -1239,6 +1281,94 @@ class HealthHandler(BaseHTTPRequestHandler):
             start_new_session=True,
         )
         _send_json(self, {"success": True})
+
+    # ── Remote client troubleshooting handlers ────────────────────────────
+
+    def _read_json_body(self):
+        """Baca + parse JSON body. Return dict (kosong kalau gak ada)."""
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length)
+        return json.loads(raw) if raw else {}
+
+    def _handle_client_agent_register(self):
+        try:
+            body = self._read_json_body()
+            token = (body.get("token") or "").strip()
+            user_id = str(body.get("userId") or "").strip()
+            if not token or not user_id:
+                _send_json(self, {"error": "token & userId required"}, 400)
+                return
+            relay = _get_client_relay()
+            res = relay.register(
+                token=token,
+                user_id=user_id,
+                hostname=body.get("hostname", ""),
+                os_name=body.get("os", ""),
+                os_version=body.get("osVersion", ""),
+                agent_version=body.get("agentVersion", ""),
+                allow_actions=bool(body.get("allowActions", False)),
+            )
+            _send_json(self, res)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_client_agent_poll(self, token, wait):
+        try:
+            relay = _get_client_relay()
+            # Clamp wait biar gak bikin koneksi nyangkut kelamaan.
+            wait = max(0.0, min(float(wait), 50.0))
+            res = relay.poll(token, wait=wait)
+            _send_json(self, res)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_client_agent_result(self):
+        try:
+            body = self._read_json_body()
+            command_id = (body.get("commandId") or "").strip()
+            if not command_id:
+                _send_json(self, {"error": "commandId required"}, 400)
+                return
+            relay = _get_client_relay()
+            res = relay.submit_result(command_id, body.get("result", {}))
+            _send_json(self, res)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_client_agent_devices(self, user_id, online_only=True):
+        try:
+            relay = _get_client_relay()
+            devices = relay.list_devices(user_id, online_only=online_only)
+            _send_json(self, {"devices": devices})
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
+
+    def _handle_client_agent_command(self):
+        try:
+            body = self._read_json_body()
+            user_id = str(body.get("userId") or "").strip()
+            action = (body.get("action") or "").strip()
+            if not user_id or not action:
+                _send_json(self, {"error": "userId & action required"}, 400)
+                return
+            device = body.get("device") or None
+            params = body.get("params") or {}
+            reason = body.get("reason", "")
+            timeout = float(body.get("timeout", 45) or 45)
+            relay = _get_client_relay()
+            res = relay.enqueue_and_wait(
+                user_id=user_id,
+                device=device,
+                action=action,
+                params=params,
+                timeout=timeout,
+                reason=reason,
+            )
+            _send_json(self, res)
+        except Exception as e:
+            _send_json(self, {"error": str(e)}, 500)
 
     def _handle_ip_pools(self, user_id, router_name=None):
         """List IP pools (used as hotspot address-pool)."""

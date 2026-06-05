@@ -5033,6 +5033,255 @@ def remove_ppp_profile(user_id: str, name: str, router: str = "") -> dict:
 
 
 # ─────────────────────────────────────────────
+#  REMOTE CLIENT TROUBLESHOOTING
+#  Tools buat troubleshoot laptop client jarak jauh lewat agent kecil yang
+#  jalan di laptop client (lihat client_agent/agent.py). Tools ini thin HTTP
+#  client ke health_server (:8080) yang nyimpen relay + antrian perintah.
+#  Laptop client connect OUTBOUND (nembus NAT), gak perlu buka port — niru
+#  cara TeamViewer, tapi berbasis tool & ke-audit.
+# ─────────────────────────────────────────────
+
+_HEALTH_BASE_URL = os.environ.get("HEALTH_SERVER_URL", "http://127.0.0.1:8080")
+
+# Timeout digedein buat kasih ruang APPROVAL — pemilik laptop butuh waktu nyetujui
+# tiap perintah di console sebelum dijalankan (mode default agent client).
+_CLIENT_TIMEOUT = 100.0
+
+
+def _client_agent_call(user_id: str, device: str, action: str,
+                       params: dict | None = None, timeout: float = _CLIENT_TIMEOUT,
+                       reason: str = "") -> dict:
+    """Kirim 1 perintah diagnostik ke laptop client lewat health_server relay.
+
+    `reason` WAJIB diisi AI: penjelasan singkat (bahasa user) KENAPA perintah ini
+    dijalankan. Alasan ini ditampilkan ke pemilik laptop biar bisa pantau & nyetujui.
+    """
+    import json as _json
+    import urllib.request
+    import urllib.error
+
+    payload = _json.dumps({
+        "userId": str(user_id),
+        "device": device or None,
+        "action": action,
+        "params": params or {},
+        "reason": reason,
+        "timeout": timeout,
+    }).encode()
+    req = urllib.request.Request(
+        f"{_HEALTH_BASE_URL}/client-agent/command",
+        data=payload,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "X-Agent-Token": os.environ.get("AGENT_TOKEN", ""),
+        },
+    )
+    try:
+        # +10s buffer di atas timeout perintah biar relay yang timeout duluan.
+        with urllib.request.urlopen(req, timeout=timeout + 10) as resp:
+            return _json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        try:
+            return _json.loads(e.read())
+        except Exception:
+            return {"ok": False, "error": f"HTTP {e.code}"}
+    except Exception as e:
+        return {"ok": False, "error": f"gagal hubungi relay: {e}"}
+
+
+@mcp.tool()
+def list_client_devices(user_id: str) -> dict:
+    """List laptop/PC client yang online & siap di-troubleshoot dari jarak jauh.
+
+    Device ini menjalankan agent troubleshooting (client_agent) dan connect
+    balik ke cloud. Panggil ini dulu sebelum tool client_* lain.
+
+    Args:
+        user_id: Telegram user ID
+    """
+    import json as _json
+    import urllib.request
+    import urllib.parse
+
+    try:
+        url = f"{_HEALTH_BASE_URL}/client-agent/devices/{urllib.parse.quote(str(user_id))}"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            return _json.loads(resp.read())
+    except Exception as e:
+        return {"error": f"gagal ambil daftar device: {e}"}
+
+
+@mcp.tool()
+def client_system_info(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Info sistem laptop client: OS, hostname, uptime, CPU, RAM, disk.
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "system_info", reason=reason)
+
+
+@mcp.tool()
+def client_network_info(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Konfigurasi jaringan laptop client: IP, gateway, DNS, adapter.
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "network_config", reason=reason)
+
+
+@mcp.tool()
+def client_connectivity_check(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Cek konektivitas laptop client: ping gateway, ping internet (8.8.8.8),
+    dan resolusi DNS. Berguna buat diagnosa "internet mati/lemot".
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "connectivity_check", reason=reason)
+
+
+@mcp.tool()
+def client_ping(user_id: str, host: str, device: str = "", count: int = 4,
+                reason: str = "") -> dict:
+    """Ping sebuah host DARI laptop client.
+
+    Args:
+        user_id: Telegram user ID
+        host: host/IP tujuan (mis. 8.8.8.8 atau google.com)
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        count: jumlah paket ping (default 4, max 10)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "ping",
+                              {"host": host, "count": min(int(count), 10)}, reason=reason)
+
+
+@mcp.tool()
+def client_traceroute(user_id: str, host: str, device: str = "", reason: str = "") -> dict:
+    """Traceroute ke sebuah host DARI laptop client (lihat di hop mana putus).
+
+    Args:
+        user_id: Telegram user ID
+        host: host/IP tujuan
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "traceroute", {"host": host},
+                              timeout=140, reason=reason)
+
+
+@mcp.tool()
+def client_dns_lookup(user_id: str, host: str, device: str = "", reason: str = "") -> dict:
+    """Resolusi DNS sebuah hostname DARI laptop client.
+
+    Args:
+        user_id: Telegram user ID
+        host: hostname yang mau di-resolve (mis. google.com)
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "dns_lookup", {"host": host}, reason=reason)
+
+
+@mcp.tool()
+def client_route_table(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Tabel routing laptop client (route print / ip route).
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "route_table", reason=reason)
+
+
+@mcp.tool()
+def client_list_processes(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Daftar proses yang jalan di laptop client (top by CPU/memory).
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "list_processes", reason=reason)
+
+
+@mcp.tool()
+def client_service_status(user_id: str, service: str, device: str = "", reason: str = "") -> dict:
+    """Cek status sebuah service/daemon di laptop client.
+
+    Args:
+        user_id: Telegram user ID
+        service: nama service (mis. 'Spooler' di Windows, 'NetworkManager' di Linux)
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "service_status", {"name": service}, reason=reason)
+
+
+@mcp.tool()
+def client_open_ports(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Daftar port/koneksi yang listening di laptop client (netstat).
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "netstat", reason=reason)
+
+
+# ── Tool aksi (mengubah state) — WAJIB konfirmasi di layer SKILL ──────────────
+
+@mcp.tool()
+def client_flush_dns(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Flush DNS cache laptop client. **CONFIRM dulu sebelum panggil.**
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "flush_dns", reason=reason)
+
+
+@mcp.tool()
+def client_renew_dhcp(user_id: str, device: str = "", reason: str = "") -> dict:
+    """Release+renew DHCP (ambil IP baru) di laptop client. **CONFIRM dulu.**
+    Catatan: koneksi bisa putus sebentar saat renew.
+
+    Args:
+        user_id: Telegram user ID
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "renew_dhcp", reason=reason)
+
+
+@mcp.tool()
+def client_restart_service(user_id: str, service: str, device: str = "", reason: str = "") -> dict:
+    """Restart sebuah service/daemon di laptop client. **DOUBLE CONFIRM dulu.**
+
+    Args:
+        user_id: Telegram user ID
+        service: nama service yang mau di-restart
+        device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
+    """
+    return _client_agent_call(user_id, device, "restart_service", {"name": service}, reason=reason)
+
+
+# ─────────────────────────────────────────────
 #  ENTRY POINT
 # ─────────────────────────────────────────────
 
