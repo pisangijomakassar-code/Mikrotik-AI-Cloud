@@ -5043,10 +5043,19 @@ def remove_ppp_profile(user_id: str, name: str, router: str = "") -> dict:
 
 _HEALTH_BASE_URL = os.environ.get("HEALTH_SERVER_URL", "http://127.0.0.1:8080")
 
+# Timeout digedein buat kasih ruang APPROVAL — pemilik laptop butuh waktu nyetujui
+# tiap perintah di console sebelum dijalankan (mode default agent client).
+_CLIENT_TIMEOUT = 100.0
+
 
 def _client_agent_call(user_id: str, device: str, action: str,
-                       params: dict | None = None, timeout: float = 45.0) -> dict:
-    """Kirim 1 perintah diagnostik ke laptop client lewat health_server relay."""
+                       params: dict | None = None, timeout: float = _CLIENT_TIMEOUT,
+                       reason: str = "") -> dict:
+    """Kirim 1 perintah diagnostik ke laptop client lewat health_server relay.
+
+    `reason` WAJIB diisi AI: penjelasan singkat (bahasa user) KENAPA perintah ini
+    dijalankan. Alasan ini ditampilkan ke pemilik laptop biar bisa pantau & nyetujui.
+    """
     import json as _json
     import urllib.request
     import urllib.error
@@ -5056,6 +5065,7 @@ def _client_agent_call(user_id: str, device: str, action: str,
         "device": device or None,
         "action": action,
         "params": params or {},
+        "reason": reason,
         "timeout": timeout,
     }).encode()
     req = urllib.request.Request(
@@ -5103,41 +5113,45 @@ def list_client_devices(user_id: str) -> dict:
 
 
 @mcp.tool()
-def client_system_info(user_id: str, device: str = "") -> dict:
+def client_system_info(user_id: str, device: str = "", reason: str = "") -> dict:
     """Info sistem laptop client: OS, hostname, uptime, CPU, RAM, disk.
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "system_info")
+    return _client_agent_call(user_id, device, "system_info", reason=reason)
 
 
 @mcp.tool()
-def client_network_info(user_id: str, device: str = "") -> dict:
+def client_network_info(user_id: str, device: str = "", reason: str = "") -> dict:
     """Konfigurasi jaringan laptop client: IP, gateway, DNS, adapter.
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "network_config")
+    return _client_agent_call(user_id, device, "network_config", reason=reason)
 
 
 @mcp.tool()
-def client_connectivity_check(user_id: str, device: str = "") -> dict:
+def client_connectivity_check(user_id: str, device: str = "", reason: str = "") -> dict:
     """Cek konektivitas laptop client: ping gateway, ping internet (8.8.8.8),
     dan resolusi DNS. Berguna buat diagnosa "internet mati/lemot".
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "connectivity_check", timeout=60)
+    return _client_agent_call(user_id, device, "connectivity_check", reason=reason)
 
 
 @mcp.tool()
-def client_ping(user_id: str, host: str, device: str = "", count: int = 4) -> dict:
+def client_ping(user_id: str, host: str, device: str = "", count: int = 4,
+                reason: str = "") -> dict:
     """Ping sebuah host DARI laptop client.
 
     Args:
@@ -5145,115 +5159,126 @@ def client_ping(user_id: str, host: str, device: str = "", count: int = 4) -> di
         host: host/IP tujuan (mis. 8.8.8.8 atau google.com)
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
         count: jumlah paket ping (default 4, max 10)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
     return _client_agent_call(user_id, device, "ping",
-                              {"host": host, "count": min(int(count), 10)}, timeout=60)
+                              {"host": host, "count": min(int(count), 10)}, reason=reason)
 
 
 @mcp.tool()
-def client_traceroute(user_id: str, host: str, device: str = "") -> dict:
+def client_traceroute(user_id: str, host: str, device: str = "", reason: str = "") -> dict:
     """Traceroute ke sebuah host DARI laptop client (lihat di hop mana putus).
 
     Args:
         user_id: Telegram user ID
         host: host/IP tujuan
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "traceroute", {"host": host}, timeout=90)
+    return _client_agent_call(user_id, device, "traceroute", {"host": host},
+                              timeout=140, reason=reason)
 
 
 @mcp.tool()
-def client_dns_lookup(user_id: str, host: str, device: str = "") -> dict:
+def client_dns_lookup(user_id: str, host: str, device: str = "", reason: str = "") -> dict:
     """Resolusi DNS sebuah hostname DARI laptop client.
 
     Args:
         user_id: Telegram user ID
         host: hostname yang mau di-resolve (mis. google.com)
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "dns_lookup", {"host": host})
+    return _client_agent_call(user_id, device, "dns_lookup", {"host": host}, reason=reason)
 
 
 @mcp.tool()
-def client_route_table(user_id: str, device: str = "") -> dict:
+def client_route_table(user_id: str, device: str = "", reason: str = "") -> dict:
     """Tabel routing laptop client (route print / ip route).
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "route_table")
+    return _client_agent_call(user_id, device, "route_table", reason=reason)
 
 
 @mcp.tool()
-def client_list_processes(user_id: str, device: str = "") -> dict:
+def client_list_processes(user_id: str, device: str = "", reason: str = "") -> dict:
     """Daftar proses yang jalan di laptop client (top by CPU/memory).
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "list_processes")
+    return _client_agent_call(user_id, device, "list_processes", reason=reason)
 
 
 @mcp.tool()
-def client_service_status(user_id: str, service: str, device: str = "") -> dict:
+def client_service_status(user_id: str, service: str, device: str = "", reason: str = "") -> dict:
     """Cek status sebuah service/daemon di laptop client.
 
     Args:
         user_id: Telegram user ID
         service: nama service (mis. 'Spooler' di Windows, 'NetworkManager' di Linux)
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "service_status", {"name": service})
+    return _client_agent_call(user_id, device, "service_status", {"name": service}, reason=reason)
 
 
 @mcp.tool()
-def client_open_ports(user_id: str, device: str = "") -> dict:
+def client_open_ports(user_id: str, device: str = "", reason: str = "") -> dict:
     """Daftar port/koneksi yang listening di laptop client (netstat).
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "netstat")
+    return _client_agent_call(user_id, device, "netstat", reason=reason)
 
 
 # ── Tool aksi (mengubah state) — WAJIB konfirmasi di layer SKILL ──────────────
 
 @mcp.tool()
-def client_flush_dns(user_id: str, device: str = "") -> dict:
+def client_flush_dns(user_id: str, device: str = "", reason: str = "") -> dict:
     """Flush DNS cache laptop client. **CONFIRM dulu sebelum panggil.**
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "flush_dns")
+    return _client_agent_call(user_id, device, "flush_dns", reason=reason)
 
 
 @mcp.tool()
-def client_renew_dhcp(user_id: str, device: str = "") -> dict:
+def client_renew_dhcp(user_id: str, device: str = "", reason: str = "") -> dict:
     """Release+renew DHCP (ambil IP baru) di laptop client. **CONFIRM dulu.**
     Catatan: koneksi bisa putus sebentar saat renew.
 
     Args:
         user_id: Telegram user ID
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "renew_dhcp", timeout=60)
+    return _client_agent_call(user_id, device, "renew_dhcp", reason=reason)
 
 
 @mcp.tool()
-def client_restart_service(user_id: str, service: str, device: str = "") -> dict:
+def client_restart_service(user_id: str, service: str, device: str = "", reason: str = "") -> dict:
     """Restart sebuah service/daemon di laptop client. **DOUBLE CONFIRM dulu.**
 
     Args:
         user_id: Telegram user ID
         service: nama service yang mau di-restart
         device: nama device/hostname (kosong = otomatis kalau cuma 1 device online)
+        reason: alasan singkat (bahasa user) kenapa, ditampilkan ke pemilik laptop
     """
-    return _client_agent_call(user_id, device, "restart_service", {"name": service}, timeout=60)
+    return _client_agent_call(user_id, device, "restart_service", {"name": service}, reason=reason)
 
 
 # ─────────────────────────────────────────────

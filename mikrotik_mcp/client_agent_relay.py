@@ -141,8 +141,13 @@ class ClientAgentRelay:
         action: str,
         params: dict | None = None,
         timeout: float = DEFAULT_COMMAND_TIMEOUT,
+        reason: str = "",
     ) -> dict:
-        """Antrekan 1 perintah ke device dan tunggu hasilnya (blocking, max timeout)."""
+        """Antrekan 1 perintah ke device dan tunggu hasilnya (blocking, max timeout).
+
+        `reason` = penjelasan singkat dari AI kenapa perintah ini dijalankan —
+        ditampilkan ke pemilik laptop di console biar bisa pantau niatnya.
+        """
         token, err = self._resolve_token(user_id, device)
         if err:
             return {"ok": False, "error": err}
@@ -152,6 +157,7 @@ class ClientAgentRelay:
             "id": command_id,
             "action": action,
             "params": params or {},
+            "reason": reason or "",
             "createdAt": time.time(),
         }
         result_event = threading.Event()

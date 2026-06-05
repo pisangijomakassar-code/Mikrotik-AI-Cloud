@@ -1355,6 +1355,7 @@ class HealthHandler(BaseHTTPRequestHandler):
                 return
             device = body.get("device") or None
             params = body.get("params") or {}
+            reason = body.get("reason", "")
             timeout = float(body.get("timeout", 45) or 45)
             relay = _get_client_relay()
             res = relay.enqueue_and_wait(
@@ -1363,6 +1364,7 @@ class HealthHandler(BaseHTTPRequestHandler):
                 action=action,
                 params=params,
                 timeout=timeout,
+                reason=reason,
             )
             _send_json(self, res)
         except Exception as e:

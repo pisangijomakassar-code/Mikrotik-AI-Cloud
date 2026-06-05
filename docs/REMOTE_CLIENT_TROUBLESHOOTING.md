@@ -41,14 +41,37 @@ dipakai dashboard.
 
 ## Alur perintah
 
-1. AI agent memanggil tool, mis. `client_connectivity_check(user_id, device)`.
+1. AI agent memanggil tool, mis. `client_connectivity_check(user_id, device,
+   reason="cek kenapa internet lemot")`.
 2. MCP tool `POST http://127.0.0.1:8080/client-agent/command` (header
-   `X-Agent-Token`).
+   `X-Agent-Token`), membawa `reason`.
 3. Relay meng-enqueue perintah ke antrian device tsb, lalu **blok menunggu**
-   hasil (default 45s).
-4. Agent client (sedang long-poll) menerima perintah, memvalidasi terhadap
-   allowlist, menjalankannya tanpa shell, lalu `POST /client-agent/result`.
-5. Relay membangunkan caller, hasil dikembalikan ke MCP tool → AI → user.
+   hasil (timeout ~100s, ada ruang untuk approval).
+4. Agent client (sedang long-poll) menerima perintah, **menampilkan alasan +
+   aksi ke console** dan (default) **minta persetujuan pemilik laptop**.
+5. Setelah disetujui, agent memvalidasi terhadap allowlist, menjalankan tanpa
+   shell, lalu `POST /client-agent/result`. Kalau ditolak → kirim hasil
+   `{"denied": true}`.
+6. Relay membangunkan caller, hasil dikembalikan ke MCP tool → AI → user.
+
+## Transparansi & kendali pemilik laptop
+
+Tujuan: pemilik laptop bisa **melihat agent berpikir & bekerja**, dan memastikan
+tidak ada yang dikerjakan di luar aturan atau di-"halu"-kan.
+
+- **Alasan (`reason`)** dibawa di setiap perintah. SKILL mewajibkan AI mengisi 1
+  kalimat bahasa user yang menjelaskan kenapa — ditampilkan di console laptop.
+- **Console feed** menampilkan tiap langkah real-time: jam, label aksi, alasan,
+  target, status (disetujui/ditolak), dan ringkasan hasil. Aksi yang mengubah
+  state ditandai `⚠️ MENGUBAH STATE`.
+- **Mode approval (default ON)**: tiap perintah harus disetujui (`y`) sebelum
+  jalan. Tidak dijawab dalam `--approval-timeout` → auto-tolak. Penolakan
+  dikembalikan ke AI sebagai `{"denied": true}` sehingga AI tahu perintah TIDAK
+  dijalankan dan tidak bisa mengklaim hasil palsu.
+- **Anti-halu**: SKILL melarang AI mengklaim hasil yang tidak benar-benar
+  dikembalikan tool; relay hanya meneruskan hasil nyata dari agent client.
+- **Headless**: untuk service tanpa orang di depan laptop, jalankan agent dengan
+  `--no-approval` (tetap dibatasi allowlist + terpantau via log service).
 
 ## Endpoint HTTP (`health_server` :8080)
 

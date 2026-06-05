@@ -7,13 +7,19 @@ ambil perintah diagnostik dari AI agent, jalanin perintah dari ALLOWLIST, lalu
 kirim balik hasilnya. Niru cara TeamViewer nembus NAT — client TIDAK perlu buka
 port apa pun, cukup bisa akses internet keluar.
 
-Keamanan (penting):
-  - Agent ini cuma jalanin perintah dari ALLOWLIST di bawah. Walau cloud
-    dikompromi, dia gak bakal jalanin perintah sembarangan.
-  - Perintah yang MENGUBAH state (flush dns, renew dhcp, restart service) cuma
-    aktif kalau dijalanin dengan --allow-actions. Default = read-only.
-  - Argumen host/service divalidasi ketat + subprocess TANPA shell (anti command
-    injection).
+TRANSPARANSI + KONTROL (biar klien bisa pantau):
+  - Tiap perintah ditampilkan jelas di console: ALASAN dari AI, aksi apa, target
+    apa, lalu hasilnya. Klien yang di depan laptop bisa lihat agent "mikir &
+    kerja" secara real-time.
+  - Mode APPROVAL (default ON): tiap perintah HARUS disetujui klien (ketik y)
+    sebelum dijalankan. Kalau ditolak / timeout → perintah TIDAK jalan dan AI
+    dikasih tahu. Ini ngejamin agent gak kerja di luar kemauan klien / halu.
+    Untuk deployment headless (tanpa orang di depan), pakai --no-approval.
+
+Keamanan:
+  - Cuma jalanin perintah dari ALLOWLIST. Aksi yang mengubah state butuh
+    --allow-actions. Argumen host/service divalidasi ketat; subprocess TANPA
+    shell (anti command injection).
 
 Cara pakai:
     python3 agent.py \
@@ -21,22 +27,25 @@ Cara pakai:
         --token  <DEVICE_TOKEN_RAHASIA> \
         --user-id 86340875
 
-Env var alternatif: CLOUD_URL, DEVICE_TOKEN, USER_ID, ALLOW_ACTIONS=1
+Env var alternatif: CLOUD_URL, DEVICE_TOKEN, USER_ID, ALLOW_ACTIONS=1, NO_APPROVAL=1
 """
 
 import argparse
 import json
 import os
 import platform
+import queue
 import re
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime
 
-AGENT_VERSION = "0.1.0"
+AGENT_VERSION = "0.2.0"
 
 # Cap output biar gak banjir + hemat token LLM.
 MAX_OUTPUT_CHARS = 6000
@@ -48,6 +57,24 @@ _SERVICE_RE = re.compile(r"^[A-Za-z0-9._ -]{1,64}$")
 
 IS_WIN = platform.system() == "Windows"
 IS_MAC = platform.system() == "Darwin"
+
+# Label aksi yang gampang dibaca klien (buat tampilan console).
+ACTION_LABELS = {
+    "system_info": "Lihat info sistem",
+    "network_config": "Lihat konfigurasi jaringan",
+    "ping": "Ping ke host",
+    "traceroute": "Traceroute ke host",
+    "dns_lookup": "Cek DNS sebuah host",
+    "route_table": "Lihat tabel routing",
+    "arp_table": "Lihat tabel ARP",
+    "list_processes": "Lihat daftar proses",
+    "service_status": "Cek status service",
+    "netstat": "Lihat port/koneksi (netstat)",
+    "connectivity_check": "Cek konektivitas (gateway/internet/DNS)",
+    "flush_dns": "FLUSH DNS cache",
+    "renew_dhcp": "RELEASE + RENEW DHCP (ambil IP baru)",
+    "restart_service": "RESTART sebuah service",
+}
 
 
 def _trim(s: str) -> str:
@@ -281,16 +308,27 @@ ACTION_ACTIONS = {
     "restart_service": _a_restart_service,
 }
 
+# Aksi yang mengubah state (buat penandaan visual di console).
+STATE_CHANGING = set(ACTION_ACTIONS)
+
 
 class Agent:
-    def __init__(self, cloud_url, token, user_id, allow_actions, poll_wait):
+    def __init__(self, cloud_url, token, user_id, allow_actions, poll_wait,
+                 require_approval=True, approval_timeout=60):
         self.cloud_url = cloud_url.rstrip("/")
         self.token = token
         self.user_id = str(user_id)
         self.allow_actions = allow_actions
         self.poll_wait = poll_wait
+        self.require_approval = require_approval
+        self.approval_timeout = approval_timeout
         self.registered = False
+        self._has_tty = bool(getattr(sys.stdin, "isatty", lambda: False)())
+        self._input_q: "queue.Queue[str]" = queue.Queue()
+        if self.require_approval and self._has_tty:
+            threading.Thread(target=self._stdin_loop, daemon=True).start()
 
+    # ── HTTP ────────────────────────────────────────────────────────────
     def _post(self, path, body, timeout):
         data = json.dumps(body).encode()
         req = urllib.request.Request(
@@ -323,25 +361,116 @@ class Agent:
             "commandId": command_id, "result": result,
         }, timeout=20)
 
+    # ── Console rendering (biar klien bisa pantau) ──────────────────────
+    @staticmethod
+    def _ts():
+        return datetime.now().strftime("%H:%M:%S")
+
+    def _render_request(self, command):
+        action = command.get("action", "")
+        params = command.get("params", {}) or {}
+        reason = command.get("reason", "") or "(tidak disebutkan)"
+        label = ACTION_LABELS.get(action, action)
+        tgt = " ".join(f"{k}={v}" for k, v in params.items()) or "-"
+        danger = "  ⚠️ MENGUBAH STATE" if action in STATE_CHANGING else ""
+        print("\n" + "─" * 60)
+        print(f"[{self._ts()}] 🤖 Agent minta jalanin: {label}{danger}")
+        print(f"   Alasan : {reason}")
+        print(f"   Aksi   : {action}")
+        print(f"   Target : {tgt}")
+
+    def _render_result(self, result):
+        ok = result.get("ok")
+        if result.get("denied"):
+            print(f"[{self._ts()}] ⛔ DITOLAK — perintah tidak dijalankan.")
+        elif ok:
+            data = result.get("data", {})
+            summary = data.get("summary") if isinstance(data, dict) else None
+            if summary:
+                print(f"[{self._ts()}] ✔ Selesai — {summary}")
+            else:
+                print(f"[{self._ts()}] ✔ Selesai (ok).")
+        else:
+            print(f"[{self._ts()}] ✖ Gagal — {result.get('error', 'unknown')}")
+        print("─" * 60)
+
+    # ── Approval gate ───────────────────────────────────────────────────
+    def _stdin_loop(self):
+        try:
+            for line in sys.stdin:
+                self._input_q.put(line.strip())
+        except Exception:
+            pass
+
+    def _ask_approval(self):
+        """Tanya klien y/n dengan timeout. Return True/False (disetujui?)."""
+        if not self._has_tty:
+            # Headless tapi approval ON → auto-tolak (aman).
+            print(f"[{self._ts()}] ⛔ Tidak ada terminal interaktif — auto-tolak. "
+                  f"(pakai --no-approval untuk mode headless)")
+            return False
+        # Buang input basi sebelum nanya.
+        try:
+            while True:
+                self._input_q.get_nowait()
+        except queue.Empty:
+            pass
+        print(f"   Izinkan? ketik 'y' lalu Enter (auto-tolak {self.approval_timeout}s) > ",
+              end="", flush=True)
+        try:
+            ans = self._input_q.get(timeout=self.approval_timeout)
+        except queue.Empty:
+            print(f"\n[{self._ts()}] ⏳ Tidak ada jawaban — auto-tolak.")
+            return False
+        ok = ans.strip().lower() in ("y", "ya", "yes", "ok", "lanjut", "iya")
+        print(f"[{self._ts()}] {'✅ Disetujui — menjalankan…' if ok else '🚫 Ditolak klien.'}")
+        return ok
+
+    # ── Eksekusi ────────────────────────────────────────────────────────
     def execute(self, command):
         action = command.get("action", "")
         params = command.get("params", {}) or {}
+
+        self._render_request(command)
+
+        # Resolve handler + cek izin allowlist dulu (sebelum minta approval).
         handler = READONLY_ACTIONS.get(action)
         if handler is None:
             handler = ACTION_ACTIONS.get(action)
             if handler is not None and not self.allow_actions:
-                return {"ok": False, "error": f"action '{action}' butuh --allow-actions (default read-only)"}
+                res = {"ok": False, "error": f"action '{action}' butuh --allow-actions (default read-only)"}
+                self._render_result(res)
+                return res
         if handler is None:
-            return {"ok": False, "error": f"action tidak dikenal/tidak diizinkan: {action}"}
+            res = {"ok": False, "error": f"action tidak dikenal/tidak diizinkan: {action}"}
+            self._render_result(res)
+            return res
+
+        # Gerbang approval (kalau ON, semua perintah butuh izin klien).
+        if self.require_approval:
+            if not self._ask_approval():
+                res = {"ok": False, "denied": True,
+                       "error": "ditolak oleh pemilik laptop (tidak disetujui)"}
+                self._render_result(res)
+                return res
+
         try:
             out = handler(params)
-            return {"ok": True, "action": action, "data": out}
+            res = {"ok": True, "action": action, "data": out}
         except Exception as e:
-            return {"ok": False, "action": action, "error": str(e)}
+            res = {"ok": False, "action": action, "error": str(e)}
+        self._render_result(res)
+        return res
 
+    # ── Main loop ───────────────────────────────────────────────────────
     def run(self):
-        print(f"[agent] start v{AGENT_VERSION} → {self.cloud_url} "
-              f"(host={socket.gethostname()}, actions={'ON' if self.allow_actions else 'read-only'})")
+        mode = "read-only" if not self.allow_actions else "actions ON"
+        appr = "APPROVAL tiap perintah" if self.require_approval else "auto (tanpa approval)"
+        print(f"[agent] start v{AGENT_VERSION} → {self.cloud_url}")
+        print(f"[agent] host={socket.gethostname()} · mode={mode} · {appr}")
+        if self.require_approval and not self._has_tty:
+            print("[agent] ⚠️  approval ON tapi tidak ada terminal interaktif — "
+                  "semua perintah akan AUTO-TOLAK. Pakai --no-approval untuk headless.")
         backoff = 2
         while True:
             try:
@@ -351,16 +480,14 @@ class Agent:
                         print(f"[agent] register gagal: {reg}")
                         time.sleep(backoff)
                         continue
-                    print("[agent] registered ✓")
+                    print(f"[{self._ts()}] [agent] registered ✓ — nunggu perintah…")
                 res = self.poll()
                 if res.get("needRegister"):
                     self.registered = False
                     continue
                 for command in res.get("commands", []):
-                    cid = command.get("id")
-                    print(f"[agent] exec {command.get('action')} ({cid})")
                     result = self.execute(command)
-                    self.submit(cid, result)
+                    self.submit(command.get("id"), result)
                 backoff = 2  # reset setelah sukses
             except urllib.error.URLError as e:
                 print(f"[agent] koneksi error: {e} — retry {backoff}s")
@@ -388,6 +515,12 @@ def main():
                     action="store_true",
                     default=os.environ.get("ALLOW_ACTIONS", "") in ("1", "true", "yes"),
                     help="izinkan aksi yang mengubah state (flush dns, renew dhcp, restart service)")
+    ap.add_argument("--no-approval",
+                    action="store_true",
+                    default=os.environ.get("NO_APPROVAL", "") in ("1", "true", "yes"),
+                    help="matikan approval (untuk mode headless tanpa orang di depan laptop)")
+    ap.add_argument("--approval-timeout", type=int, default=60,
+                    help="detik nunggu approval sebelum auto-tolak (default 60)")
     ap.add_argument("--poll-wait", type=int, default=25, help="durasi long-poll (detik)")
     args = ap.parse_args()
 
@@ -399,7 +532,15 @@ def main():
         ap.print_help()
         sys.exit(2)
 
-    Agent(args.cloud_url, args.token, args.user_id, args.allow_actions, args.poll_wait).run()
+    Agent(
+        cloud_url=args.cloud_url,
+        token=args.token,
+        user_id=args.user_id,
+        allow_actions=args.allow_actions,
+        poll_wait=args.poll_wait,
+        require_approval=not args.no_approval,
+        approval_timeout=args.approval_timeout,
+    ).run()
 
 
 if __name__ == "__main__":

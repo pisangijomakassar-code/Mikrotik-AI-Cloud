@@ -12,6 +12,10 @@ nembus NAT, tapi berbasis tool diagnostik yang ke-audit, bukan screen-sharing.
   otomatis: cek koneksi, ping, DNS, routing, service, dll.
 - **Aman & terbatas.** Agent cuma menjalankan perintah dari _allowlist_. Walau
   sisi cloud dikompromi, agent gak akan menjalankan perintah sembarangan.
+- **Transparan & klien yang pegang kendali.** Tiap perintah ditampilkan jelas di
+  console (alasan AI + aksi + target + hasil), dan secara default **klien harus
+  menyetujui (ketik `y`) sebelum perintah dijalankan**. Klien bisa pantau agent
+  "mikir & kerja" real-time, dan nolak apa pun yang aneh.
 
 ## Cara kerja
 
@@ -46,7 +50,36 @@ Atau lewat environment variable: `CLOUD_URL`, `DEVICE_TOKEN`, `USER_ID`,
 | `--token` | ✅ | Device token rahasia, dibagikan operator per device |
 | `--user-id` | ✅ | Telegram user ID pemilik device |
 | `--allow-actions` | — | Izinkan aksi yang mengubah state (default: **read-only**) |
+| `--no-approval` | — | Matikan approval (untuk mode **headless**, tanpa orang di depan laptop) |
+| `--approval-timeout` | — | Detik nunggu approval sebelum auto-tolak (default 60) |
 | `--poll-wait` | — | Durasi long-poll, detik (default 25) |
+
+### Mode approval (default ON)
+
+Secara default agent **minta persetujuan klien** untuk SETIAP perintah. Tampilan
+di console:
+
+```
+────────────────────────────────────────────────────────────
+[14:23:01] 🤖 Agent minta jalanin: Cek konektivitas (gateway/internet/DNS)
+   Alasan : cek kenapa internet lemot
+   Aksi   : connectivity_check
+   Target : -
+   Izinkan? ketik 'y' lalu Enter (auto-tolak 60s) > y
+[14:23:04] ✅ Disetujui — menjalankan…
+[14:23:08] ✔ Selesai — {'gatewayReachable': True, 'internetReachable': False, 'dnsWorks': True}
+────────────────────────────────────────────────────────────
+```
+
+- Ketik `y` (atau `ya`/`ok`) untuk setuju, apa pun selain itu = tolak.
+- Tidak dijawab dalam `--approval-timeout` detik → **auto-tolak** (aman).
+- Kalau ditolak/timeout, AI di sisi cloud dikasih tahu bahwa perintah **tidak**
+  dijalankan — jadi AI gak bisa "halu" mengklaim hasil.
+
+> **Headless / systemd:** approval butuh terminal interaktif. Untuk jalan sebagai
+> service tanpa orang di depan laptop, pakai `--no-approval` (tetap dibatasi
+> allowlist + bisa dipantau lewat log service). Kalau approval ON tapi tidak ada
+> terminal, semua perintah akan **auto-tolak**.
 
 ### Jalan sebagai service
 
@@ -58,7 +91,7 @@ Description=Client Troubleshooting Agent
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 /opt/troubleshoot-agent/agent.py
+ExecStart=/usr/bin/python3 /opt/troubleshoot-agent/agent.py --no-approval
 Environment=CLOUD_URL=https://agent.domain-anda.com
 Environment=DEVICE_TOKEN=ganti-dengan-token-rahasia
 Environment=USER_ID=86340875
