@@ -14,6 +14,8 @@ export interface RouterData {
   isDefault: boolean
   userId: string
   createdAt: string
+  // WAN interface untuk kalkulasi traffic
+  wanInterface?: string
   // MikroTik DNS settings
   dnsHotspot?: string
   // Hotspot branding (untuk cetak voucher)
